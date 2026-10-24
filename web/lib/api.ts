@@ -14,6 +14,65 @@ export interface PlatformStats {
 export interface DashboardResponse {
   user_id: string;
   platforms: PlatformStats[];
+  by_format: (PlatformStats & { format: string })[];
+  weekly: (PlatformStats & { week: string })[];
+  recent_posts: RecentPost[];
+  accounts: { platform: Platform; handle: string | null; followers: number | null }[];
+  total_posts: number;
+  last_import_at: string | null;
+}
+
+export interface RecentPost {
+  platform: Platform;
+  external_id: string | null;
+  format: string | null;
+  caption: string;
+  posted_at: string | null;
+  thumbnail_url: string | null;
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  followers: number | null;
+  sentiment: string | null;
+}
+
+export interface IngestResponse {
+  posts_loaded: number;
+  inserted: number;
+  updated: number;
+  duplicates_skipped: number;
+  batch_id: string | null;
+  enriched_posts: number;
+  warnings: string[];
+}
+
+export interface InsightsResponse {
+  user_id: string;
+  summary: string;
+  provider: "snowflake-cortex";
+  model: string;
+}
+
+export interface PredictionHistory {
+  predictions: {
+    id: string;
+    request_id: string | null;
+    platform: Platform;
+    caption: string;
+    score: number;
+    model_score: number | null;
+    content_score: number | null;
+    provider: string | null;
+    created_at: string;
+  }[];
+}
+
+export interface DataStatus {
+  snowflake_configured: boolean;
+  youtube_configured: boolean;
+  missing_settings: string[];
+  connection_checked: boolean;
 }
 
 export interface PredictRequest {
@@ -53,6 +112,8 @@ export interface PlatformScore {
 export interface PredictResponse {
   scores: PlatformScore[];
   suggestions: string[];
+  prediction_id: string | null;
+  storage_warning: string | null;
 }
 
 export interface CombinedScore {
@@ -81,9 +142,12 @@ export interface ScoreResponse {
   model_weight: number;
   gemini_used: boolean;
   warning: string | null;
+  prediction_id: string | null;
+  storage_warning: string | null;
 }
 
 export interface ScoreInput {
+  userId?: string; // Temporary demo identity until wallet authentication is implemented.
   caption: string;
   platforms: Platform[];
   plannedTime?: string; // ISO datetime
@@ -110,29 +174,48 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  dashboard: (userId: string) => request<DashboardResponse>(`/dashboard/${userId}`),
+  dashboard: (userId: string, days?: number) =>
+    request<DashboardResponse>(`/dashboard/${encodeURIComponent(userId)}${days ? `?days=${days}` : ""}`),
+
+  dataStatus: () => request<DataStatus>("/data/status"),
+
+  enrich: (userId: string, limit = 25) => request<{ enriched_posts: number }>("/data/enrich", {
+    method: "POST", body: JSON.stringify({ user_id: userId, limit }),
+  }),
+
+  insights: (userId: string, days = 30) => request<InsightsResponse>(`/dashboard/${encodeURIComponent(userId)}/insights?days=${days}`, {
+    method: "POST",
+  }),
+
+  similarPosts: (userId: string, caption: string, platform?: Platform) =>
+    request<{ posts: (RecentPost & { similarity: number })[] }>(`/data/${encodeURIComponent(userId)}/similar`, {
+      method: "POST", body: JSON.stringify({ caption, platform }),
+    }),
+
+  predictionHistory: (userId: string) => request<PredictionHistory>(`/dashboard/${encodeURIComponent(userId)}/predictions`),
 
   predict: (body: PredictRequest) =>
     request<PredictResponse>("/predict", { method: "POST", body: JSON.stringify(body) }),
 
-  ingestYouTube: (userId: string, channelId: string) =>
-    request<{ posts_loaded: number }>("/ingest/youtube", {
+  ingestYouTube: (userId: string, channelId: string, maxVideos = 50) =>
+    request<IngestResponse>("/ingest/youtube", {
       method: "POST",
-      body: JSON.stringify({ user_id: userId, channel_id: channelId }),
+      body: JSON.stringify({ user_id: userId, channel_id: channelId, max_videos: maxVideos }),
     }),
 
-  ingestCsv: (userId: string, platform: Platform, file: File) => {
+  ingestCsv: (userId: string, platform: Platform | null, file: File) => {
     const form = new FormData();
     form.append("user_id", userId);
-    form.append("platform", platform);
+    if (platform) form.append("platform", platform);
     form.append("file", file);
-    return request<{ posts_loaded: number }>("/ingest/csv", { method: "POST", body: form });
+    return request<IngestResponse>("/ingest/csv", { method: "POST", body: form });
   },
 
   // Our model + Gemini content review (multipart, so the draft's image/video can be attached)
-  score: ({ caption, platforms, plannedTime, context, file }: ScoreInput) => {
+  score: ({ userId = "demo", caption, platforms, plannedTime, context, file }: ScoreInput) => {
     const form = new FormData();
     form.append("caption", caption);
+    form.append("user_id", userId);
     form.append("platforms", platforms.join(","));
     if (plannedTime) form.append("planned_time", plannedTime);
     form.append("context", JSON.stringify(context ?? {}));
