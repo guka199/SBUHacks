@@ -1,11 +1,11 @@
 import type { VideoMetadata } from "./contracts";
-export const MAX_VIDEO_BYTES = 250 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
 export function validateVideo(
   file: Pick<File, "name" | "size" | "type">,
 ): string | null {
   if (!file.size) return "This file is empty. Choose a playable video.";
   if (file.size > MAX_VIDEO_BYTES)
-    return "This file is over 250 MB. Export a smaller video and try again.";
+    return "This file is over 200 MB. Export a smaller video and try again.";
   if (
     !/\.(mp4|webm|mov)$/i.test(file.name) ||
     (file.type &&

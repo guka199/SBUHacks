@@ -20,8 +20,18 @@ ROOT = Path(__file__).resolve().parents[2]
 LOCAL_DB = ROOT / "data" / "local.db"
 LOCAL_UPLOADS = ROOT / "data" / "uploads"  # media files when Snowflake isn't configured
 STAGE = "MEDIA"  # Snowflake internal stage for uploaded images/videos
+ANALYSIS_STAGE = "ANALYSIS_MEDIA"  # SSE permits browser playback through presigned URLs
 
 SCHEMA = [
+    """CREATE TABLE IF NOT EXISTS ANALYSES (
+        id VARCHAR PRIMARY KEY,
+        user_id VARCHAR,
+        caption VARCHAR,
+        report VARCHAR,
+        media_path VARCHAR,
+        media_type VARCHAR,
+        created_at TIMESTAMP_NTZ
+    )""",
     """CREATE TABLE IF NOT EXISTS USERS (
         id VARCHAR PRIMARY KEY,
         email VARCHAR,
@@ -195,7 +205,19 @@ def init() -> None:
         execute(ddl)
     if backend() == "snowflake":
         execute(f"CREATE STAGE IF NOT EXISTS {STAGE} DIRECTORY = (ENABLE = TRUE)")
+        execute(f"CREATE STAGE IF NOT EXISTS {ANALYSIS_STAGE} ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE') DIRECTORY = (ENABLE = TRUE)")
     log.info("database ready (%s)", backend())
+
+
+def close() -> None:
+    """Close the shared connection when the API shuts down."""
+    global _conn
+    with _lock:
+        if _conn is not None:
+            try:
+                _conn.close()
+            finally:
+                _conn = None
 
 
 def remove_folder(folder: str) -> None:
@@ -209,13 +231,16 @@ def remove_folder(folder: str) -> None:
         shutil.rmtree(LOCAL_UPLOADS / folder, ignore_errors=True)
     else:
         execute(f"REMOVE @{STAGE}/{folder}/")
+        execute(f"REMOVE @{ANALYSIS_STAGE}/{folder}/")
 
 
-def store_file(data: bytes, folder: str, filename: str) -> str:
+def store_file(data: bytes, folder: str, filename: str, stage: str = STAGE) -> str:
     """Save an uploaded file: Snowflake stage @MEDIA/<folder>/<filename>, or data/uploads/ locally."""
     import re
     import tempfile
 
+    if stage not in (STAGE, ANALYSIS_STAGE):
+        raise ValueError("invalid media stage")
     safe = re.sub(r"[^\w.-]+", "_", filename)[-120:] or "upload"
     if backend() == "sqlite":
         path = LOCAL_UPLOADS / folder / safe
@@ -225,5 +250,5 @@ def store_file(data: bytes, folder: str, filename: str) -> str:
     with tempfile.TemporaryDirectory() as tmp:
         local = Path(tmp) / safe
         local.write_bytes(data)
-        execute(f"PUT 'file://{local.as_posix()}' @{STAGE}/{folder} AUTO_COMPRESS = FALSE OVERWRITE = TRUE")
-    return f"@{STAGE}/{folder}/{safe}"
+        execute(f"PUT 'file://{local.as_posix()}' @{stage}/{folder} AUTO_COMPRESS = FALSE OVERWRITE = TRUE")
+    return f"@{stage}/{folder}/{safe}"

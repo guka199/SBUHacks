@@ -34,9 +34,16 @@ export const resultSchema = z
         z.object({
           id: platformSchema,
           score,
-          hook: score,
-          pacing: score,
-          format: score,
+          hook: score.nullable(),
+          pacing: score.nullable(),
+          format: score.nullable(),
+          visualQuality: score.nullable().optional(),
+          clarity: score.nullable().optional(),
+          modelScore: score.optional(),
+          contentScore: score.nullable().optional(),
+          geminiUsed: z.boolean().optional(),
+          modelWeight: z.number().min(0).max(1).optional(),
+          strengths: z.array(z.string()).optional(),
           assessment: z.string(),
           opportunities: z.array(z.string()),
           suggestions: suggestionSchema,
@@ -47,6 +54,7 @@ export const resultSchema = z
         (items) => new Set(items.map((item) => item.id)).size === items.length,
         "Duplicate platforms",
       ),
+    warnings: z.array(z.string()).optional(),
     observations: z.array(
       z.object({
         id: z.string(),

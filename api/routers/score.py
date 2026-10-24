@@ -62,14 +62,14 @@ async def score_post(
         mime_type = file.content_type or ""
         if not mime_type.startswith(SUPPORTED_MEDIA):
             raise HTTPException(415, f"only images and videos are supported, got {mime_type or 'unknown type'}")
-        media = await file.read()
+        media = await file.read(MAX_UPLOAD_BYTES + 1)
         if len(media) > MAX_UPLOAD_BYTES:
             raise HTTPException(413, "file is larger than 200 MB")
 
     # 1) Our trained model
     req = PredictRequest(caption=caption, platforms=chosen, planned_time=planned_time, **ctx)
-    model_result = score_with_model(req, user_id)
-    if profile := accounts.audience_summary(user_id):
+    model_result = await run_in_threadpool(score_with_model, req, user_id)
+    if profile := await run_in_threadpool(accounts.audience_summary, user_id):
         ctx = {**ctx, "creator profile": profile}  # lets Gemini tailor the review to this audience
     model_scores = {s.platform: s.score for s in model_result.scores}
     hurting = sorted({f.feature for s in model_result.scores for f in s.top_factors if f.impact < 0 and f.feature in FEATURE_HINTS})

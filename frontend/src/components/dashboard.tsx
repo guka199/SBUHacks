@@ -19,12 +19,14 @@ import {
   type PlatformId,
   type RewriteRequest,
   type Suggestions,
+  type PlatformResult,
 } from "@/lib/contracts";
 import { makeDemoResult, makeSuggestions } from "@/lib/demo";
 import { API_MODE, analysisApi, delay, waitForAnalysis } from "@/lib/api";
 import { timecode } from "@/lib/video";
 import { useSession } from "./session";
 import { CopyButton, PlatformIcon } from "./ui";
+import { useAuth } from "@/lib/auth";
 
 const exampleResult = makeDemoResult({
   name: "Make something.webm",
@@ -33,6 +35,22 @@ const exampleResult = makeDemoResult({
   height: 1280,
 });
 const nameOf = (id: PlatformId) => platforms.find((p) => p.id === id)!.name;
+function metricsOf(
+  platform: PlatformResult,
+  live: boolean,
+): [string, number | null][] {
+  return live
+    ? [
+        ["Hook strength", platform.hook],
+        ["Visual quality", platform.visualQuality ?? null],
+        ["Clarity", platform.clarity ?? null],
+      ]
+    : [
+        ["Hook strength", platform.hook],
+        ["Pacing", platform.pacing],
+        ["Format fit", platform.format],
+      ];
+}
 export function Dashboard({
   demo = false,
   analysisId,
@@ -45,16 +63,19 @@ export function Dashboard({
   embedded?: boolean;
 }) {
   const session = useSession();
+  const { user, loading } = useAuth();
   const [loadError, setLoadError] = useState("");
   const [loadStage, setLoadStage] = useState("Opening your report…");
   const { setResult } = session;
   const result = demo
     ? exampleResult
-    : session.result && (!analysisId || session.result.id === analysisId)
+    : session.result &&
+        (session.result.mode === "demo" || user) &&
+        (!analysisId || session.result.id === analysisId)
       ? session.result
       : null;
   useEffect(() => {
-    if (!analysisId || demo || result || API_MODE !== "live") return;
+    if (!analysisId || demo || result || API_MODE !== "live" || !user) return;
     const controller = new AbortController();
     analysisApi
       .get(analysisId, controller.signal)
@@ -77,7 +98,20 @@ export function Dashboard({
           );
       });
     return () => controller.abort();
-  }, [analysisId, demo, result, setResult]);
+  }, [analysisId, demo, result, setResult, user]);
+  if (!demo && analysisId && API_MODE === "live" && !loading && !user)
+    return (
+      <div className="empty-state">
+        <h1>Your private report.</h1>
+        <p>Sign in to open this analysis.</p>
+        <Link
+          href={`/login?next=${encodeURIComponent(`/analysis/${analysisId}`)}`}
+          className="button button-accent"
+        >
+          Sign in
+        </Link>
+      </div>
+    );
   if (!result && analysisId && API_MODE === "live" && !demo && !loadError)
     return (
       <div className="empty-state" role="status">
@@ -113,7 +147,13 @@ export function Dashboard({
     <AnalysisStudio
       key={result.id + result.video.name}
       result={result}
-      videoUrl={demo ? "/demo.webm" : session.videoUrl}
+      videoUrl={
+        result.mode === "live"
+          ? analysisApi.videoUrl(result.id)
+          : demo
+            ? "/demo.webm"
+            : session.videoUrl
+      }
       initialView={initialView}
       embedded={embedded}
     />
@@ -210,6 +250,11 @@ function AnalysisStudio({
           )}
         </p>
       </div>
+      {result.warnings?.map((warning) => (
+        <p className="error-message" role="status" key={warning}>
+          {warning}
+        </p>
+      ))}
       <div className="studio-tabs" role="tablist" aria-label="Analysis views">
         {[
           ["overview", "Platform overview"],
@@ -252,7 +297,11 @@ function AnalysisStudio({
           <>
             <div className="comparison-heading">
               <h2>Find your strongest fit.</h2>
-              <span>Content-readiness estimates / 100</span>
+              <span>
+                {result.mode === "live"
+                  ? "Combined model + available Gemini review / 100"
+                  : "Content-readiness estimates / 100"}
+              </span>
             </div>
             <div className="score-grid">
               {result.platforms.map((p) => (
@@ -266,7 +315,11 @@ function AnalysisStudio({
                     <PlatformIcon id={p.id} />
                     <span>{nameOf(p.id)}</span>
                     {best.id === p.id && (
-                      <span className="best-label">Best fit</span>
+                      <span className="best-label">
+                        {result.mode === "live"
+                          ? "Highest estimate"
+                          : "Best fit"}
+                      </span>
                     )}
                   </div>
                   <div className="score-number">
@@ -282,6 +335,14 @@ function AnalysisStudio({
                     />
                   </div>
                   <p>{p.assessment}</p>
+                  {result.mode === "live" && (
+                    <p className="score-source">
+                      Model {p.modelScore?.toFixed(1)} ·{" "}
+                      {p.contentScore == null
+                        ? "Gemini unavailable"
+                        : `Gemini ${p.contentScore.toFixed(1)} (${Math.round((p.modelWeight ?? 0.6) * 100)}% model / ${Math.round((1 - (p.modelWeight ?? 0.6)) * 100)}% content)`}
+                    </p>
+                  )}
                 </button>
               ))}
             </div>
@@ -291,25 +352,25 @@ function AnalysisStudio({
                 <p>{active.assessment}</p>
               </div>
               <div className="metric-group">
-                {[
-                  ["Hook strength", active.hook],
-                  ["Pacing", active.pacing],
-                  ["Format fit", active.format],
-                ].map(([label, value]) => (
-                  <div className="metric" key={label}>
-                    <span>{label}</span>
-                    <strong>
-                      {value}
-                      <span>/100</span>
-                    </strong>
-                    <meter
-                      min={0}
-                      max={100}
-                      value={Number(value)}
-                      aria-label={String(label)}
-                    />
-                  </div>
-                ))}
+                {metricsOf(active, result.mode === "live").map(
+                  ([label, value]) => (
+                    <div className="metric" key={label}>
+                      <span>{label}</span>
+                      <strong>
+                        {value ?? "Unavailable"}
+                        {value !== null && <span>/100</span>}
+                      </strong>
+                      {value !== null && (
+                        <meter
+                          min={0}
+                          max={100}
+                          value={Number(value)}
+                          aria-label={String(label)}
+                        />
+                      )}
+                    </div>
+                  ),
+                )}
               </div>
             </div>
             <div className="comparison-details">
@@ -317,31 +378,42 @@ function AnalysisStudio({
                 className="comparison-chart"
                 aria-label="Platform comparison chart"
               >
-                <h3>The same idea, through four lenses.</h3>
+                <h3>
+                  {result.mode === "live"
+                    ? "The content behind the score."
+                    : "The same idea, through four lenses."}
+                </h3>
                 <p>
-                  Hook, pacing and format fit, compared on a 100-point scale.
+                  {result.mode === "live"
+                    ? "Gemini's overall video review: hook, visual quality and clarity. These review metrics are shared across platforms in the same review."
+                    : "Hook, pacing and format fit, compared on a 100-point scale."}
                 </p>
                 <div className="chart-legend">
                   <span>Hook</span>
-                  <span>Pacing</span>
-                  <span>Format</span>
+                  <span>
+                    {result.mode === "live" ? "Visual quality" : "Pacing"}
+                  </span>
+                  <span>{result.mode === "live" ? "Clarity" : "Format"}</span>
                 </div>
                 {result.platforms.map((p) => (
                   <div className="comparison-chart-row" key={p.id}>
                     <strong>{nameOf(p.id)}</strong>
                     <div>
-                      {[
-                        ["Hook", p.hook],
-                        ["Pacing", p.pacing],
-                        ["Format", p.format],
-                      ].map(([label, value], i) => (
-                        <div key={label} className={`comparison-bar bar-${i}`}>
-                          <span style={{ width: `${value}%` }} />
-                          <b>
-                            {label}: {value}
-                          </b>
-                        </div>
-                      ))}
+                      {metricsOf(p, result.mode === "live").map(
+                        ([label, value], i) => (
+                          <div
+                            key={label}
+                            className={`comparison-bar bar-${i}`}
+                          >
+                            {value !== null && (
+                              <span style={{ width: `${value}%` }} />
+                            )}
+                            <b>
+                              {label}: {value ?? "Unavailable"}
+                            </b>
+                          </div>
+                        ),
+                      )}
                     </div>
                   </div>
                 ))}
@@ -444,6 +516,26 @@ function AnalysisStudio({
                 <span>{result.observations.length} observations</span>
               </div>
               <div className="observation-list">
+                {!result.observations.length && (
+                  <div className="whole-video-review">
+                    <p>
+                      This review covers the whole video. No timestamped
+                      observations are available.
+                    </p>
+                    <h3>What works</h3>
+                    <ul>
+                      {active.strengths?.map((text) => (
+                        <li key={text}>{text}</li>
+                      ))}
+                    </ul>
+                    <h3>What to improve</h3>
+                    <ul>
+                      {active.opportunities.map((text) => (
+                        <li key={text}>{text}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 {result.observations.map((o) => (
                   <button
                     key={o.id}
@@ -615,7 +707,9 @@ function Optimizer({
               ? "Preparing…"
               : result.mode === "demo"
                 ? "Try sample tone"
-                : "Regenerate"}
+                : value.hook
+                  ? "Regenerate"
+                  : "Generate copy"}
           </button>
         </div>
       </div>
@@ -661,13 +755,18 @@ function Optimizer({
             <article className={`suggestion suggestion-${key}`} key={key}>
               <header>
                 <h3>{title}</h3>
-                <CopyButton
-                  key={`${selected}-${value[key]}`}
-                  text={value[key]}
-                  label={`Copy ${title.toLowerCase()}`}
-                />
+                {value[key] && (
+                  <CopyButton
+                    key={`${selected}-${value[key]}`}
+                    text={value[key]}
+                    label={`Copy ${title.toLowerCase()}`}
+                  />
+                )}
               </header>
-              <p>{value[key]}</p>
+              <p>
+                {value[key] ||
+                  "Choose a tone and generate publishing copy from your review."}
+              </p>
             </article>
           ))}
           <article className="suggestion edits">

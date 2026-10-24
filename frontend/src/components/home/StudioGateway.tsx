@@ -71,6 +71,14 @@ export function StudioGateway({
             <UploadCloud size={16} />
             Analyze a video
           </Link>
+          <Link href="/reports">
+            <ChartNoAxesCombined size={16} />
+            My reports
+          </Link>
+          <Link href="/accounts">
+            <LayoutDashboard size={16} />
+            Connected accounts
+          </Link>
           <Link href="/demo">
             <ChartNoAxesCombined size={16} />
             Example insights
