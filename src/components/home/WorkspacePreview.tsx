@@ -2,7 +2,9 @@
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { Component, type ReactNode, useEffect, useRef, useState } from "react";
-import { MonitorDesktop } from "./MonitorDesktop";
+import { MonitorExperience } from "./MonitorExperience";
+import { createMonitorLoop } from "./monitor-loop";
+import { gsap } from "gsap";
 const Scene = dynamic(() => import("../three/WorkspaceScene"), { ssr: false });
 class SceneBoundary extends Component<
   { children: ReactNode },
@@ -39,15 +41,25 @@ export function WorkspacePreview() {
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
   }, []);
+  useEffect(() => {
+    if (!enabled || !screenRef.current) return;
+    const context = gsap.context(() => {
+      gsap.set(".product-demonstration,.liquid-field,.monitor-application", {
+        autoAlpha: 0,
+      });
+      createMonitorLoop(screenRef.current!).time(0).pause();
+    }, screenRef.current);
+    return () => context.revert();
+  }, [enabled]);
   return (
     <div className="workspace-render">
       <Image
         className="workspace-backdrop"
-        src="/textures/workspace-room-v3.jpg"
+        src="/textures/workspace-room-v7.jpg"
         fill
         priority
         sizes="(max-width: 900px) 1500px, 100vw"
-        alt="ViralPilot’s original 3D creator workspace: an oak desk, computer, plants and an alpine window view"
+        alt="Modern creator studio with detailed licensed hardware and red accents"
       />
       {enabled && (
         <>
@@ -55,7 +67,7 @@ export function WorkspacePreview() {
             <Scene screenRef={screenRef} />
           </SceneBoundary>
           <div ref={screenRef} className="monitor-overlay">
-            <MonitorDesktop />
+            <MonitorExperience />
           </div>
         </>
       )}

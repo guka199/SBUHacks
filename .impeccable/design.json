@@ -3,21 +3,24 @@
   "source": "DESIGN.md",
   "tokens": {
     "source": [
-      "src/app/app-theme.css",
-      "src/app/cinematic.css"
+      "src/app/identity.css",
+      "src/app/app-theme.css"
     ]
   },
   "motion": {
-    "source": "src/components/home/choreography.ts",
+    "source": [
+      "src/components/home/choreography.ts",
+      "src/components/home/monitor-loop.ts"
+    ],
     "reversible": true,
     "reducedMotion": "Unpinned still hero and normal studio"
   },
   "focus": {
-    "outline": "2px solid #3D6745",
-    "offset": "5px"
+    "outline": "3px solid #BE1A1A",
+    "offset": "4px"
   },
   "glass": {
-    "blur": "14–18px",
+    "blur": "8px local reflection copy; perspective backdrop blur disabled for Chromium artifacts",
     "distortion": "Decorative caustic only"
   },
   "verification": "QA_REPORT.md",

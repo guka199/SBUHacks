@@ -10,33 +10,20 @@ export interface ExperienceMotion {
 }
 export const initialMotion = (): ExperienceMotion => ({
   progress: 0,
-  x: 1.65,
-  y: 2.85,
-  z: 8.2,
-  targetX: 0,
-  targetY: 2.0,
+  x: 1.6,
+  y: 2.65,
+  z: 6.0,
+  targetX: -1.75,
+  targetY: 1.85,
   targetZ: -0.77,
 });
 export const storyStages = [
-  { at: 0, name: "A little room to create", detail: "A peaceful beginning" },
-  { at: 0.27, name: "One more dashboard", detail: "YouTube Studio opens" },
-  {
-    at: 0.46,
-    name: "Every platform needs you",
-    detail: "Instagram and TikTok join",
-  },
-  {
-    at: 0.69,
-    name: "More tabs. Less headspace.",
-    detail: "Notification overload",
-  },
-  {
-    at: 0.83,
-    name: "Bring it all together",
-    detail: "Liquid Glass transformation",
-  },
-  { at: 0.89, name: "Your clarity shouldn’t be", detail: "Meet ViralPilot" },
-  { at: 1, name: "Your creative studio", detail: "Enter the application" },
+  { at: 0, name: "The creator desktop", detail: "The problem" },
+  { at: 0.24, name: "Meet ViralPilot", detail: "Meet ViralPilot" },
+  { at: 0.4, name: "Understand your video", detail: "AI analysis" },
+  { at: 0.58, name: "Find your fit", detail: "Platform comparison" },
+  { at: 0.76, name: "Sharpen the idea", detail: "Content optimization" },
+  { at: 1, name: "Make every post count", detail: "Unified dashboard" },
 ] as const;
 export const notifications = [
   {
@@ -113,5 +100,6 @@ export const notifications = [
   },
 ] as const;
 export function entryProgress(progress: number) {
-  return Math.max(0, Math.min(1, (progress - 0.925) / (1 - 0.925)));
+  const t = Math.max(0, Math.min(1, (progress - 0.925) / (1 - 0.925)));
+  return t * t * (3 - 2 * t);
 }

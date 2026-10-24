@@ -25,7 +25,7 @@ const material = (color, roughness = 0.5, metalness = 0) =>
   new THREE.MeshStandardMaterial({ color, roughness, metalness });
 const oak = material("#bd8655", 0.58);
 oak.name = "Oak";
-const porcelain = material("#e2ddd1", 0.28);
+const porcelain = material("#D0311E", 0.22);
 const aluminum = material("#a7aba8", 0.3, 0.78);
 const black = material("#151a17", 0.55);
 const sage = material("#718676", 0.8);
@@ -164,7 +164,7 @@ rounded(
   desk,
   [0.68, 0.07, 0.94],
   0.025,
-  material("#8c9b7a", 0.94),
+  material("#D0311E", 0.8),
   [-2.25, 0.06, -0.52],
   [0, 0.14, 0],
 );
@@ -172,7 +172,7 @@ rounded(
   desk,
   [0.63, 0.048, 0.86],
   0.012,
-  material("#eee5d0", 0.9),
+  material("#F7D87F", 0.8),
   [-2.25, 0.063, -0.52],
   [0, 0.14, 0],
 );
@@ -212,9 +212,9 @@ tube(
 
 const room = new THREE.Group();
 room.name = "Architectural room and panoramic window";
-const plaster = material("#e6dfcf", 0.96);
-const trim = material("#d8d9c7", 0.67);
-rounded(room, [17, 0.13, 14], 0.02, material("#c5b9a2", 0.94), [0, -3.85, 0]);
+const plaster = material("#eef0f2", 0.94);
+const trim = material("#171717", 0.48, 0.4);
+rounded(room, [17, 0.13, 14], 0.02, material("#d9dbdc", 0.85), [0, -3.85, 0]);
 rounded(room, [17, 5, 0.27], 0.02, plaster, [0, -2.1, -3.5]);
 rounded(room, [17, 2, 0.27], 0.02, plaster, [0, 6.5, -3.5]);
 for (const x of [-6.6, 6.6])
@@ -257,23 +257,10 @@ rounded(
   room,
   [0.73, 1.03, 0.01],
   0.005,
-  material("#ece8d9"),
+  material("#BE1A1A"),
   [-5.38, 2.4, -3.26],
 );
 add(room, new THREE.CircleGeometry(0.19, 36), sage, [-5.38, 2.5, -3.25]);
-const curtainMat = material("#e2dccd", 1);
-for (let i = 0; i < 11; i++) {
-  const curtain = add(
-    room,
-    new THREE.CylinderGeometry(0.09, 0.105, 5.8, 10, 1, false, 0, Math.PI),
-    curtainMat,
-    [-4.97 - i * 0.13, 2.65, -2.91],
-    [0, 0.1, 0],
-  );
-  curtain.name = `LinenCurtain${i}`;
-  curtain.scale.z = 0.6;
-}
-
 const exporter = new GLTFExporter();
 for (const [name, group] of [
   ["desk", desk],

@@ -42,7 +42,7 @@ export function LiquidGlass() {
           <linearGradient id="glass-edge" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor="white" stopOpacity=".95" />
             <stop offset=".35" stopColor="white" stopOpacity=".15" />
-            <stop offset=".68" stopColor="#a9cac1" stopOpacity=".5" />
+            <stop offset=".68" stopColor="#F7D87F" stopOpacity=".5" />
             <stop offset="1" stopColor="white" stopOpacity=".8" />
           </linearGradient>
         </defs>
@@ -53,7 +53,7 @@ export function LiquidGlass() {
           Your clarity <em>shouldn’t be.</em>
         </h2>
       </div>
-      <div className="liquid-field">
+      <div className="liquid-field" aria-hidden="true">
         {Array.from({ length: 6 }, (_, i) => (
           <div className={`liquid-piece liquid-piece-${i}`} key={i}>
             <i />

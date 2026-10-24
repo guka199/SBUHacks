@@ -1,25 +1,20 @@
 ---
 name: ViralPilot
-description: A calm creator studio reached through a cinematic workspace.
+description: An expressive creator workspace with a bold red-and-yellow identity.
 colors:
-  forest: "#172D26"
-  ivory: "#F7F3EA"
-  paper: "#FFFEF9"
-  sage: "#95AB94"
-  sky: "#D5E7EA"
-  action: "#31583B"
-  muted: "#60725F"
-  line: "#D9E1D1"
-  error: "#A5442E"
+  primary: "#BE1A1A"
+  energetic: "#D0311E"
+  yellow: "#F7D87F"
+  lightYellow: "#F8EBAB"
+  ink: "#171717"
 typography:
   display:
-    fontFamily: "Instrument Serif, serif"
+    fontFamily: "Archivo Black, sans-serif"
     fontWeight: 400
-    lineHeight: 1.05
+    lineHeight: 0.94
   body:
     fontFamily: "DM Sans Variable, sans-serif"
     fontSize: "15px"
-    fontWeight: 400
     lineHeight: 1.6
 rounded:
   control: "9px"
@@ -28,67 +23,38 @@ spacing:
   small: "8px"
   medium: "16px"
   large: "24px"
-components:
-  button-primary:
-    backgroundColor: "{colors.action}"
-    textColor: "{colors.paper}"
-    rounded: "{rounded.control}"
 ---
 
-## Overview
+## Direction
 
-ViralPilot makes a fragmented creator workflow feel calm and tangible. The landing page begins in a sunlit workspace, approaches the monitor, illustrates growing analytics overload, and gathers the windows into one usable studio. The application carries the same warm colors and editorial typography into readable reports.
+Preserve the user's approved identity and composition. Expressive Archivo Black headlines, black ink, red actions and yellow surfaces frame a physical creator workspace. DM Sans carries readable controls, charts and reports. The monitor is the narrative focal point. Current tokens and overrides live in src/app/identity.css, imported last.
 
-This document refreshes the earlier workspace checkpoint to reflect the implemented product. Token values come from app-theme.css and cinematic.css; source references and effects are structured in design-system/viralpilot/DNA.json.
+## Composition and controls
 
-Key characteristics:
+Desktop balances the headline left and monitor right. Early camera movement brings detailed analytics forward; glass merges them into a product demonstration and interactive report. Phone demonstrations reflow to a portrait logical layout after the merge; the opening desktop keeps its photographed aspect ratio. App pages retain readable spacing and responsive grids.
 
-- Warm ivory, forest ink, restrained sage and natural materials.
-- Instrument Serif for editorial emphasis; DM Sans for information and controls.
-- Rich spatial storytelling on the homepage; clear, solid report surfaces.
-- Reversible motion with a lightweight mobile path and reduced-motion alternative.
+Primary controls use #BE1A1A with #F8EBAB type; dark controls use #171717/light-yellow. Secondary hero controls have a defined light-yellow surface, dark text and border. Hover raises controls slightly and changes surface; press settles them. Focus uses a 3px red outline with 4px offset. Functional controls target at least 44px; story-dot hit areas exceed visible dots. Floating controls reposition by breakpoint to avoid collisions. Demo labels remain visible.
 
-## Colors
+On red surfaces use light-yellow text; on yellow use black. Numeric labels and platform names supplement chart color. Essential report surfaces remain solid. Glass belongs to narrative/nav accents, not data decoration.
 
-Forest #172D26 carries headlines and primary text. Action green #31583B grounds controls; muted green #60725F supports secondary information. Ivory #F7F3EA and paper #FFFEF9 form the application background and report surfaces, separated by #D9E1D1 borders. Sage #95AB94 and sky #D5E7EA connect charts and glass to the room's nature view. Error #A5442E always accompanies explanatory text.
+## Materials and scenery
 
-Colors identify platform series and selected states alongside names, numbers and icons. Scores and recommendations never depend on color alone.
+Existing licensed monitor, keyboard, desk, mouse, headphones, lamp and plants remain. Graphite photographic wood, red keyboard case, metal, ceramic and woven fabric support the approved identity. Local HDRI, soft window light and cached contact shadows ground objects. Restrained half-float postprocessing protects monitor legibility.
 
-## Typography
+The exact supplied ocean photo is only the desktop wallpaper. Proportional WebP conversion and center/cover preserve horizon/sailboat without stretching. Outside is a separate Poly Haven Meadow 2 CC0 plate, subtly displaced in foliage regions, with soft clouds at separate depths. A low-amplitude 180-second sine cycle creates repeatable motion and parallax. This is a photographic depth plate, not modeled terrain.
 
-Instrument Serif 400, including its italic face, gives large statements a human, editorial cadence. DM Sans Variable carries body copy, forms, metrics, navigation and charts. Both are self-hosted through Fontsource. The app body is 15px/1.6. Hero and section sizes use responsive clamps in experience.css and cinematic.css. Preserve the large display/small interface contrast without shrinking functional controls to cinematic mock-interface sizes.
+## Motion ownership
 
-## Layout
+The independent 16-second loop owns inner analytics windows/tabs/notifications. The scroll timeline owns outer shells, camera, glass and product layers. At scroll progress >0.15 the loop pauses; returning resumes it. User pause, hidden tabs and offscreen visibility also suspend it. Scoped GSAP contexts clean up both timelines.
 
-The first viewport balances a centered headline above the physical monitor. Camera movement begins early and brings the monitor forward before analytics accumulate. The inside-screen composition is a 960x540 DOM coordinate space mapped through the real monitor corners; it grows to viewport dimensions during entry. Keep storytelling captions above the screen, not over important data.
+Keep six scenes: problem → Meet ViralPilot → analysis → comparison → optimization → unified dashboard. Glass uses convergence, skew/stretch/radius deformation, SVG contour morphs, blurred local reflection and a local caustic. Essential text excludes distortion. Scrub0.55, time-based exponential camera damping, eased poses and smoothstep viewport entry soften velocity changes. Scroll-owned state reverses from the same playhead.
 
-Application screens use constrained reading widths, generous section gaps and denser related metric groups. Reports collapse from multiple columns to a single scrolling column. Below 900px the story uses a scene capture and the same HTML sequence instead of loading WebGL. Reduced motion removes the pinned zoom and exposes a normal studio after the still hero.
+Reduced motion removes pinning, camera travel and auto looping, exposing a still hero plus normal studio. WebGL loads lazily at >=900px; smaller screens use the current capture with live bounded HTML. LottieFiles staging/follow-through principles are applied without an extra runtime.
 
-## Elevation & Depth
+## Application conventions
 
-The room combines photographic wood textures, PBR hardware, a local HDR environment, window light, directional shadows and two one-time contact-shadow captures. Fabric uses a procedural weave bump and physical sheen. A restrained half-float postprocessing pass provides antialiasing, a subtle vignette and output color management.
+Use shared button/copy/icon controls, labeled native fields/player, nearby validation, cancellable stages and keyboard report tabs. Copy confirms completion. Updated tone suggestions survive tab switches/export. Fixture processing must never look like real AI; API failures must remain visible.
 
-Glass is reserved for navigation and the narrative transformation. Use 14–18px backdrop blur, translucent neutral surfaces, bright fine edges and soft shadows. The glass contour morphs while panels converge; only a local caustic texture receives SVG refraction distortion, keeping essential text readable. Functional report cards remain opaque enough for reliable contrast.
+## References and skills
 
-## Shapes
-
-Application controls use a 9px radius. Pills belong to navigation and compact story controls. Analytics windows begin as ordinary rounded software windows and deform into asymmetric glass before converging. Fluid organic clipping belongs to this transition, not ordinary data cards.
-
-## Components
-
-Primary buttons use forest/action green and warm white type; hover deepens the surface and keyboard focus uses a visible two-pixel green outline with offset. Native fields retain browser semantics and selected platform controls show an explicit checked state.
-
-Report tabs support arrow keys, Home and End. Comparison bars include numeric labels. Timestamp feedback seeks the native player. Copy controls confirm their result; tone changes persist across report tabs and export. Empty, upload, processing, cancellation and error states offer concrete next actions. Demo labels remain visible around simulated results.
-
-The homepage choreography lives in home/choreography.ts. One GSAP playhead owns cameras, windows, graphs, tabs, bounded notifications and glass. Anticipation, staggered secondary motion and short overshoot/settle phases give weight without an autonomous animation loop. Keep reverse scrolling deterministic.
-
-## Do's and Don'ts
-
-- Do preserve the room-to-monitor-to-studio spatial continuity.
-- Do use the same type and natural palette throughout the application.
-- Do keep author credits and licenses with transformed models and captures.
-- Do support reduced motion, keyboard navigation and a no-WebGL path.
-- Don't represent fixture results or processing stages as real AI inference.
-- Don't introduce unbounded notification timers or independent competing timelines.
-- Don't blur essential report text or place heavy distortion on the entire DOM backdrop.
-- Don't replace the licensed hardware with placeholder primitive geometry.
+Work Louder hardware detail and Henry's expressive typography inform the stronger identity; Yamauchi contributes depth. The desk reference informs composition, Crate the tangible centerpiece, Railroad the window/spatial framing. The later user palette supersedes earlier natural/serif decisions. UI UX Pro Max supports contrast/hierarchy/responsiveness; Taste/Impeccable guide purposeful states and preservation; Design DNA records tokens/feel/effects. Three.js, GSAP, Motion Design and Genjutsu inform materials, lifecycle, performance and choreography. See design-system/viralpilot/MASTER.md.

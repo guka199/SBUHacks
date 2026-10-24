@@ -41,7 +41,7 @@ export function WorkspaceModel({ name }: { name: "desk" | "room" }) {
     fabricTexture.repeat.set(24, 10);
     fabricTexture.needsUpdate = true;
     const oakMaterial = new MeshStandardMaterial({
-      color: "#ffffff",
+      color: "#d8dfe0",
       map: color,
       normalMap: normal,
       normalScale: new Vector2(0.3, 0.3),
@@ -59,10 +59,10 @@ export function WorkspaceModel({ name }: { name: "desk" | "room" }) {
           node.name.startsWith("LinenCurtain")
         ) {
           const fabric = new MeshPhysicalMaterial({
-            color: node.name === "WoolDeskMat" ? "#53634f" : "#ded6c5",
+            color: node.name === "WoolDeskMat" ? "#171717" : "#F8EBAB",
             roughness: 0.96,
             sheen: 0.6,
-            sheenColor: "#d9d8bc",
+            sheenColor: "#b9b9b9",
             sheenRoughness: 0.9,
             bumpMap: fabricTexture,
             bumpScale: 0.004,

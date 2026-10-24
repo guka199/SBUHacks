@@ -37,10 +37,12 @@ export function Dashboard({
   demo = false,
   analysisId,
   initialView = "overview",
+  embedded = false,
 }: {
   demo?: boolean;
   analysisId?: string;
   initialView?: string;
+  embedded?: boolean;
 }) {
   const session = useSession();
   const [loadError, setLoadError] = useState("");
@@ -113,6 +115,7 @@ export function Dashboard({
       result={result}
       videoUrl={demo ? "/demo.webm" : session.videoUrl}
       initialView={initialView}
+      embedded={embedded}
     />
   );
 }
@@ -120,10 +123,12 @@ function AnalysisStudio({
   result,
   videoUrl,
   initialView,
+  embedded,
 }: {
   result: AnalysisResult;
   videoUrl: string | null;
   initialView: string;
+  embedded: boolean;
 }) {
   const [view, setView] = useState(initialView);
   const [report, setReport] = useState(result);
@@ -157,13 +162,17 @@ function AnalysisStudio({
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return (
-    <div className="studio-page page-gutter">
+    <div
+      className={`studio-page page-gutter ${embedded ? "embedded-report" : ""}`}
+    >
       <div className="studio-title">
         <div>
           <Link href="/upload" className="back-link">
             <ArrowLeft size={15} /> Your studio
           </Link>
-          <h1>Your video’s next move.</h1>
+          <h1>
+            {embedded ? "Make every post count." : "Your video’s next move."}
+          </h1>
           <p>
             <FileVideo size={15} />
             {result.video.name}

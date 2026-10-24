@@ -13,7 +13,7 @@ export function ProfessionalHardware() {
   ]);
   const models = useMemo(
     () =>
-      [monitor, desk, keyboard, headphones, mouse].map((gltf) => {
+      [monitor, desk, keyboard, headphones, mouse].map((gltf, index) => {
         const clone = gltf.scene.clone(true);
         clone.traverse((node) => {
           if (node instanceof Mesh) {
@@ -30,6 +30,23 @@ export function ProfessionalHardware() {
                   material.metalness = 0.85;
                   material.roughness = 0.48;
                   material.envMapIntensity = 0.5;
+                }
+                if (index === 1) {
+                  material.color.set("#737f8a");
+                  material.roughness = 0.65;
+                  material.onBeforeCompile = (shader) => {
+                    shader.fragmentShader = shader.fragmentShader.replace(
+                      "#include <map_fragment>",
+                      "#include <map_fragment>\nfloat vpGrain = dot(diffuseColor.rgb, vec3(.2126,.7152,.0722)); diffuseColor.rgb = vec3(vpGrain) * vec3(.72,.77,.82);",
+                    );
+                  };
+                  material.customProgramCacheKey = () =>
+                    "viralpilot-graphite-desk-v1";
+                }
+                if (index === 2 && /CaseBody|CaseEdge/.test(material.name)) {
+                  material.color.set("#BE1A1A");
+                  material.metalness = 0.65;
+                  material.roughness = 0.36;
                 }
                 for (const texture of [
                   material.map,

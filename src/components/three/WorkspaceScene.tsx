@@ -6,26 +6,43 @@ import { initialMotion, type ExperienceMotion } from "@/lib/experience";
 import { RealPlants } from "./RealPlants";
 import { WorkspaceModel } from "./WorkspaceModel";
 import { SceneLighting } from "./SceneLighting";
+
 import { WindowLandscape } from "./WindowLandscape";
 import { ScreenProjection } from "./ScreenProjection";
 import { ProfessionalHardware } from "./ProfessionalHardware";
 import { CinematicPost } from "./CinematicPost";
-import { AgXToneMapping } from "three";
+import { AgXToneMapping, Vector3 } from "three";
 import { DeskLamp } from "./DeskLamp";
 
 function CameraRig({ motionRef }: { motionRef: RefObject<ExperienceMotion> }) {
   const { camera, invalidate, size } = useThree();
+  const position = useRef(new Vector3());
+  const aim = useRef(new Vector3());
+  const targetAim = useRef(new Vector3());
   useEffect(() => {
     const motion = motionRef.current;
+    motion.invalidate = invalidate;
     camera.position.set(motion.x, motion.y, motion.z);
     camera.lookAt(motion.targetX, motion.targetY, motion.targetZ);
+    aim.current.set(motion.targetX, motion.targetY, motion.targetZ);
     camera.updateProjectionMatrix();
     invalidate();
+    return () => {
+      delete motion.invalidate;
+    };
   }, [camera, invalidate, size, motionRef]);
-  useFrame(() => {
+  useFrame((_, delta) => {
     const motion = motionRef.current;
-    camera.position.set(motion.x, motion.y, motion.z);
-    camera.lookAt(motion.targetX, motion.targetY, motion.targetZ);
+    const blend = 1 - Math.exp(-20 * Math.min(delta, 0.05));
+    camera.position.lerp(
+      position.current.set(motion.x, motion.y, motion.z),
+      blend,
+    );
+    aim.current.lerp(
+      targetAim.current.set(motion.targetX, motion.targetY, motion.targetZ),
+      blend,
+    );
+    camera.lookAt(aim.current);
     camera.updateMatrixWorld();
   });
   return null;
@@ -64,6 +81,7 @@ export default function WorkspaceScene({
         <CameraRig motionRef={movement} />
         <SceneLighting />
         <WindowLandscape />
+
         <WorkspaceModel name="room" />
         <WorkspaceModel name="desk" />
         <ProfessionalHardware />

@@ -1,14 +1,14 @@
 /* One warm, readable product language across the real application. */
 :root {
-  --ground: #f7f3ea;
-  --surface: #fffef9;
-  --raised: #e9eee2;
-  --ink: #172d26;
-  --muted: #60725f;
-  --accent: #31583b;
-  --accent-ink: #fffef4;
-  --line: #d9e1d1;
-  --error: #a5442e;
+  --ground: #f8ebab;
+  --surface: #f8ebab;
+  --raised: #f7d87f;
+  --ink: #171717;
+  --muted: #be1a1a;
+  --accent: #171717;
+  --accent-ink: #f8ebab;
+  --line: #f7d87f;
+  --error: #be1a1a;
   --font-body: "DM Sans Variable", sans-serif;
   --font-display: "Instrument Serif", serif;
 }
@@ -21,28 +21,28 @@ body {
 button,
 input,
 select {
-  accent-color: #31583b;
+  accent-color: #171717;
 }
 button:disabled {
   opacity: 0.5;
 }
 :focus-visible {
-  outline-color: #3d6745;
+  outline-color: #171717;
 }
 input[type="range"] {
-  accent-color: #31583b;
+  accent-color: #171717;
 }
 select {
-  background: #fffef9;
-  border-color: #a5b59a;
-  color: #243d2a;
+  background: #f8ebab;
+  border-color: #d0311e;
+  color: #171717;
 }
 .site-header:not(.cinematic-header) {
-  background: #f7f3ea;
-  border-bottom: 1px solid #e0e5d7;
+  background: #f8ebab;
+  border-bottom: 1px solid #f7d87f;
 }
 .brand > svg {
-  color: #31583b;
+  color: #171717;
 }
 .brand {
   font-family: var(--natural-sans);
@@ -53,23 +53,23 @@ select {
 }
 .mode-indicator > span,
 .status-dot {
-  background: #648b4e;
+  background: #be1a1a;
 }
 .button-accent,
 .button-light {
-  background: #254a32;
-  color: #fffef7;
+  background: #171717;
+  color: #f8ebab;
 }
 .button-accent:hover:not(:disabled),
 .button-light:hover {
-  background: #3d6244;
+  background: #171717;
 }
 .button-outline {
-  border-color: #b8c4aa;
+  border-color: #f7d87f;
   background: transparent;
 }
 .button-outline:hover {
-  background: #e6eddd;
+  background: #f7d87f;
 }
 .button {
   border-radius: 9px;
@@ -79,13 +79,13 @@ select {
   font-size: 12px;
 }
 .text-link:hover {
-  color: #426a3b;
+  color: #171717;
 }
 .mobile-nav {
-  background: #eef1e7;
+  background: #f8ebab;
 }
 .mode-indicator {
-  color: #5c7255;
+  color: #be1a1a;
 }
 .upload-title h1 {
   font-family: var(--editorial);
@@ -101,17 +101,17 @@ select {
   gap: 33px;
 }
 .drop-zone {
-  background: #fffef8;
-  border-color: #91a682;
+  background: #f8ebab;
+  border-color: #d0311e;
   border-radius: 15px;
   min-height: 400px;
 }
 .drop-zone.dragging {
-  background: #e8efdd;
-  border-color: #31583b;
+  background: #f7d87f;
+  border-color: #171717;
 }
 .upload-glyph {
-  color: #648552;
+  color: #be1a1a;
 }
 .drop-zone h2 {
   font-size: 27px;
@@ -130,8 +130,8 @@ select {
   font-size: 13px;
 }
 .upload-settings {
-  background: #eef2e7;
-  border: 1px solid #dce4d2;
+  background: #f8ebab;
+  border: 1px solid #f7d87f;
   border-radius: 15px;
   padding: 29px;
 }
@@ -143,26 +143,26 @@ select {
   font-size: 14px;
 }
 .platform-checks label {
-  background: #fffef9;
-  border-color: #d4decb;
+  background: #f8ebab;
+  border-color: #f7d87f;
   min-height: 58px;
   font-size: 14px;
   border-radius: 8px;
 }
 .platform-checks label.checked {
-  border-color: #8da17e;
+  border-color: #be1a1a;
 }
 .platform-checks label:focus-within {
-  outline-color: #31583b;
+  outline-color: #171717;
 }
 .format-label {
   font-size: 11px;
 }
 .checkbox-mark {
-  border-color: #8ca37d;
+  border-color: #be1a1a;
 }
 .checked .checkbox-mark {
-  background: #31583b;
+  background: #171717;
   color: #fff;
 }
 .mode-note {
@@ -179,14 +179,14 @@ select {
   line-height: 1.7;
 }
 .field-note {
-  color: #426b3c;
+  color: #171717;
 }
 .preview-zone {
-  background: #14231b;
+  background: #171717;
 }
 .file-details {
-  background: #e4eadc;
-  color: #273f2b;
+  background: #f7d87f;
+  color: #171717;
 }
 .file-details strong {
   font-size: 14px;
@@ -195,20 +195,20 @@ select {
   font-size: 12px;
 }
 .analysis-progress {
-  background: #fffef8;
-  border: 1px solid #dce4d4;
+  background: #f8ebab;
+  border: 1px solid #f7d87f;
 }
 .analysis-progress > span {
-  color: #527746;
+  color: #be1a1a;
   font-size: 12px;
 }
 .analysis-progress h3 {
   font-size: 18px;
 }
 .error-message {
-  background: #fae7df;
-  color: #9c402e;
-  border: 1px solid #edc8b9;
+  background: #f7d87f;
+  color: #be1a1a;
+  border: 1px solid #f7d87f;
 }
 .upload-footer {
   font-size: 12px;
@@ -227,13 +227,13 @@ select {
   min-height: 52px;
 }
 .studio-tabs button[aria-selected="true"] {
-  color: #254a32;
-  border-color: #557b44;
+  color: #171717;
+  border-color: #be1a1a;
 }
 .demo-notice {
-  background: #e7eedc;
-  color: #456039;
-  border: 1px solid #d7e3c8;
+  background: #f7d87f;
+  color: #171717;
+  border: 1px solid #f7d87f;
   font-size: 12px;
   padding: 13px 16px;
 }
@@ -248,17 +248,17 @@ select {
   gap: 15px;
 }
 .score-card {
-  background: #fffef8;
-  border-color: #dce4d3;
+  background: #f8ebab;
+  border-color: #f7d87f;
   border-radius: 12px;
   padding: 22px;
 }
 .score-card.selected {
-  background: #e9f0dd;
-  border-color: #7c9a68;
+  background: #f7d87f;
+  border-color: #be1a1a;
 }
 .score-card:hover {
-  background: #f1f5e9;
+  background: #f8ebab;
 }
 .score-card-heading {
   font-size: 13px;
@@ -266,8 +266,8 @@ select {
 }
 .best-label {
   font-size: 10px;
-  color: #446b39;
-  background: #d7e5c8;
+  color: #171717;
+  background: #f7d87f;
   border-radius: 4px;
   padding: 3px 6px;
 }
@@ -276,16 +276,16 @@ select {
   font-weight: 400;
 }
 .score-number > svg {
-  color: #7a9569;
+  color: #be1a1a;
 }
 .score-number > span {
   font-size: 12px;
 }
 .score-track {
-  background: #e1e9d8;
+  background: #f7d87f;
 }
 .score-track > div {
-  background: #6b9155;
+  background: #be1a1a;
 }
 .score-card p {
   font-size: 12px;
@@ -313,10 +313,10 @@ select {
   font-size: 10px;
 }
 meter::-webkit-meter-bar {
-  background: #dce5d3;
+  background: #f7d87f;
 }
 meter::-webkit-meter-optimum-value {
-  background: #759661;
+  background: #be1a1a;
 }
 .panel-heading h2 {
   font-size: 20px;
@@ -330,7 +330,7 @@ meter::-webkit-meter-optimum-value {
 }
 .video-screen {
   border-radius: 12px;
-  box-shadow: 0 9px 25px #243c2610;
+  box-shadow: 0 9px 25px #17171710;
 }
 .observation {
   padding: 16px 12px;
@@ -338,11 +338,11 @@ meter::-webkit-meter-optimum-value {
   min-height: 82px;
 }
 .observation.active {
-  background: #eef3e5;
-  border-color: #dce6d0;
+  background: #f8ebab;
+  border-color: #f7d87f;
 }
 .observation:hover {
-  background: #e7efdb;
+  background: #f7d87f;
 }
 .observation strong {
   font-size: 13px;
@@ -354,14 +354,14 @@ meter::-webkit-meter-optimum-value {
 }
 .observation-time {
   font-size: 12px;
-  color: #996542;
+  color: #be1a1a;
   min-width: 58px;
 }
 .observation-time.strength {
-  color: #547d43;
+  color: #be1a1a;
 }
 .observation > svg {
-  color: #78946c;
+  color: #be1a1a;
 }
 .timeline-label {
   font-size: 11px;
@@ -370,20 +370,20 @@ meter::-webkit-meter-optimum-value {
   height: 32px;
 }
 .timeline-observations button::after {
-  background: #bb8d60;
+  background: #be1a1a;
 }
 .timeline-observations button.strength::after {
-  background: #709558;
+  background: #be1a1a;
 }
 .insight-takeaway {
-  background: #f1f4e9;
+  background: #f8ebab;
   border-radius: 9px;
   font-size: 13px;
   line-height: 1.7;
   margin-top: 12px;
 }
 .insight-takeaway svg {
-  color: #5c834a;
+  color: #be1a1a;
 }
 .observations-panel > .text-link {
   font-size: 13px;
@@ -409,34 +409,34 @@ meter::-webkit-meter-optimum-value {
   min-height: 46px;
 }
 .optimizer-platforms button.active {
-  background: #e0ead3;
-  color: #294b30;
+  background: #f7d87f;
+  color: #171717;
 }
 .rewrite-status {
-  color: #476f3c;
+  color: #be1a1a;
   font-size: 12px;
 }
 .suggestion {
-  background: #fffef9;
-  border: 1px solid #e0e6d8;
+  background: #f8ebab;
+  border: 1px solid #f7d87f;
   border-radius: 12px;
   padding: 25px;
 }
 .suggestion h3 {
   font-size: 13px;
-  color: #6c7c60;
+  color: #be1a1a;
 }
 .suggestion p {
   font-size: 17px;
   line-height: 1.7;
 }
 .suggestion-hook {
-  background: #dfebcb;
-  border-color: #c5d8ac;
-  color: #243e27;
+  background: #f7d87f;
+  border-color: #f7d87f;
+  color: #171717;
 }
 .suggestion-hook h3 {
-  color: #536e43;
+  color: #be1a1a;
 }
 .suggestion-hook p {
   font: 400 33px/1.18 var(--editorial);
@@ -446,7 +446,7 @@ meter::-webkit-meter-optimum-value {
   line-height: 1.7;
 }
 .suggestion.edits li svg {
-  color: #618a4e;
+  color: #be1a1a;
 }
 .copy-feedback {
   font-size: 11px;
@@ -461,17 +461,17 @@ meter::-webkit-meter-optimum-value {
   justify-content: center;
 }
 .copy-control .icon-button:hover {
-  background: #e7eedd;
+  background: #f7d87f;
 }
 .score-card,
 .suggestion,
 .upload-settings {
-  box-shadow: 0 4px 15px #253c2604;
+  box-shadow: 0 4px 15px #17171704;
 }
 .platform-opportunities {
   margin-top: 13px;
   font-size: 12px;
-  color: #4e6a43;
+  color: #be1a1a;
   max-width: 550px;
 }
 .platform-opportunities summary {
@@ -706,8 +706,8 @@ meter::-webkit-meter-optimum-value {
 }
 .comparison-chart,
 .platform-opportunities {
-  background: #fffef9;
-  border: 1px solid #d6ddcf;
+  background: #f8ebab;
+  border: 1px solid #f7d87f;
   border-radius: 20px;
   padding: 30px;
 }
@@ -720,7 +720,7 @@ meter::-webkit-meter-optimum-value {
 .comparison-details p {
   font-size: 15px;
   line-height: 1.65;
-  color: #536054;
+  color: #be1a1a;
 }
 .chart-legend {
   display: flex;
@@ -735,13 +735,13 @@ meter::-webkit-meter-optimum-value {
   height: 10px;
   margin-right: 7px;
   border-radius: 2px;
-  background: #254d3e;
+  background: #171717;
 }
 .chart-legend span:nth-child(2)::before {
-  background: #708263;
+  background: #be1a1a;
 }
 .chart-legend span:nth-child(3)::before {
-  background: #a7815f;
+  background: #be1a1a;
 }
 .comparison-chart-row {
   display: grid;
@@ -758,22 +758,22 @@ meter::-webkit-meter-optimum-value {
   position: relative;
   height: 22px;
   margin: 4px 0;
-  background: #edf0e8;
+  background: #f8ebab;
   border-radius: 4px;
   overflow: hidden;
 }
 .comparison-bar > span {
   position: absolute;
   inset: 0 auto 0 0;
-  background: #254d3e;
+  background: #171717;
   opacity: 0.15;
 }
 .bar-1 > span {
-  background: #708263;
+  background: #be1a1a;
   opacity: 0.28;
 }
 .bar-2 > span {
-  background: #a7815f;
+  background: #be1a1a;
   opacity: 0.25;
 }
 .comparison-bar > b {
@@ -820,7 +820,7 @@ meter::-webkit-meter-optimum-value {
   max-width: 850px;
   margin: 0 auto;
   padding: 150px 28px 90px;
-  color: var(--forest, #172d26);
+  color: var(--forest, #171717);
 }
 .asset-credits h1 {
   font-family: var(--editorial);

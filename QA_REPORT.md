@@ -1,58 +1,64 @@
 # Frontend verification — October 24, 2026
 
-Verified locally in the Codex in-app Chromium browser against the Next.js production build at `http://127.0.0.1:3001`. Viewport tests use browser emulation; they are not physical-device or cross-browser certification.
+Tested the red/yellow delivery and final refinement in the Codex in-app Chromium browser, including the Next.js production server at http://127.0.0.1:3001. Sizes below are browser viewport emulation, not physical-device or cross-browser certification.
 
 ## Automated checks
 
-- `npm run lint`: passed without warnings.
-- `npm run typecheck`: passed.
-- `npm test`: 8 passed, 0 failed. Covers API URL/body contracts, errors, polling/cancellation, fixture platform/duration handling, invalid files and response schemas, perspective corner mapping, and reversible viewport-entry interaction gating.
-- `npm run build`: passed; all app routes generated successfully.
+- `npm run check`: ESLint and TypeScript passed; 10 tests passed, zero failures.
+- Tests cover live API URL/body contracts, errors, polling/cancellation, fixture platform/duration handling, file/schema validation, perspective corner mapping, reversible entry gating, captured-scene/HTML alignment, compact-screen clearance and smooth entry endpoints.
+- `npm run build`: passed; all 11 application routes compiled/generated successfully.
 - `git diff --check`: clean before delivery.
-- Public raster provenance scan: 5 rasters, none missing origin/prompt metadata.
+- Public raster origin scan: 6 rasters, zero missing provenance. WebP uses adjacent origin sidecars; JPEG contains a COM origin notice.
 
-## Visual story checks
+## Visual and interaction checks
 
-| Stage | Verified behavior | Evidence |
+| Surface/stage | Checked | Evidence in screenshots/ |
 | --- | --- | --- |
-| Peaceful room | Licensed textured desk/hardware, plants/lamp, nature framing, readable headline and primary action | advanced-01-workspace.jpg |
-| YouTube | Early camera approach, detailed sidebar, metrics, thumbnail row, drawn retention graph | advanced-02-youtube.jpg |
-| Instagram | Detailed Insights window, metrics and animated reach bars over YouTube | advanced-03a-instagram.jpg |
-| TikTok | Dark analytics interface, watch-time metrics, chart bars and overlapping tools | advanced-03-platforms.jpg |
-| Overload | Five windows, seven tabs, fixed pool of 12 notifications, visible growing fragmentation | advanced-04-overload.jpg |
-| Glass | Translucency, softened content, asymmetric stretch/skew, converging panes, Bezier contour morph and local caustic distortion | advanced-05-glass.jpg |
-| Clarity | Settled central glass lens and legible Meet ViralPilot message | advanced-06-clarity.jpg |
-| Entry | Same projected DOM grows to viewport and becomes an interactive studio | advanced-07-studio.jpg |
-| Reverse | Camera, glass, notifications and windows reconstruct in reverse and return to peaceful room | advanced-08-reversed.jpg |
+| Opening | Approved typography/palette/composition, separate green outdoor view, exact ocean wallpaper inside monitor, distinct CTAs | polish-01-desktop-hero.jpg |
+| Automatic desktop | YouTube/Instagram/TikTok HTML, chart growth, tabs, window rearrangement/closing/reopening, notifications | polish-02-automatic-desktop.jpg, polish-03-bounded-overload.jpg, polish-18-mobile-home.jpg |
+| Glass | Convergence, stretch/skew/radius changes, organic contour morph, caustic, stable reflected texture | polish-04-glass-merge.jpg |
+| Analysis | Animated sample upload/progress and hook/pacing/caption/opportunity stages | polish-05-analysis.jpg |
+| Comparison | Four labeled illustrative readiness scores and animated bars | polish-06-comparison.jpg |
+| Optimizer story | Before/after hook plus title/caption/edit examples | polish-07-optimization.jpg |
+| Unified report | Final headline and report composition | polish-08-unified.jpg |
+| Entry | Same HTML screen becomes interactive dashboard; return action works | polish-09-interactive-dashboard.jpg |
+| Laptop / narrow desktop | Controls separated, headline clears monitor content | polish-10-laptop.jpg, polish-11-narrow-desktop.jpg |
+| Tablet | Captured room/live HTML remain aligned; controls and actions separated | polish-12-tablet.jpg |
+| Phone story | Readable portrait demonstrations and working entry, no footer collision | polish-13-mobile-analysis.jpg through polish-18-mobile-home.jpg |
+| Upload | Menu navigates to upload, sample preview/metadata, platform selection and demo processing complete into /analysis | polish-19-upload.jpg |
+| Optimizer app | Playful tone updates hook, copy confirms completion; buttons/selected states readable | polish-20-mobile-optimizer.jpg |
+| Insights app | ArrowLeft switches tabs; timestamp action seeks actual 24-second video to 7.92s, native video readyState4 | polish-21-mobile-insights.jpg |
+| Reduced motion | No Canvas, no auto windows, no pin spacer; still opening and normal studio remain usable | polish-22-reduced-motion.jpg, polish-23-reduced-hero.jpg |
 
-Native wheel reversal at a fixed 1440x1000 desktop viewport was checked at approximately 1.0 -> .893 -> .714 -> .405 -> 0. At .714 all 12 notifications were restored; at .405 notifications were absent and only YouTube/Instagram remained; at 0 the calm layer was fully visible and all chaos windows hidden. Forward/reverse chapter controls and return-to-room were also exercised. Screen controls are inert during storytelling and interactive after entry.
+Viewport coverage: 1440x900 desktop; 1280x720 laptop; 993x694 narrow desktop; 768x1024 tablet; 390x844 phone; 375x667 compact phone; default browser panel size. Temporary viewport and reduced-motion emulation were reset at the end.
 
-The rendered scene was visually inspected, including imported model proportions, monitor UI alignment, wood/plant textures and glass text. Fixes from inspection include earlier camera approach, larger analytics, removal of a Chromium full-backdrop SVG filter that clipped text, explicit chart/metric reveals, caption clearance and reduced-motion navigation. The current fallback capture includes the new licensed hardware.
+The loop advanced from cycle0 to cycle1 while progress/scrollY remained0. Pause held the exact time7.90 across inspections, then resumed. DOM remained bounded at3 platform windows,5 browser tabs and6 notifications. At product-story progress the autonomous loop paused, then resumed when returning to the problem.
 
-## Responsive and accessibility coverage
+Both chapter controls and real wheel events were tested forward/backward. A wheel excursion from progress0.2400 returned to0.2400 with equal opposite input. Reversed analysis/comparison/optimization/glass/opening and dashboard-to-story entry; same timeline reconstructs state. Automated projection/fallback tests independently verify deterministic geometry and interaction gating.
 
-- 1440x1000 desktop: complete WebGL story and reverse wheel sequence.
-- 1366x768 laptop: compact opening typography keeps actions above monitor content.
-- 993x871 narrow desktop: room framing, navigation and headline spacing.
-- 768x1024 tablet: current scene capture, HTML story and responsive navigation.
-- 390x844 mobile: no horizontal document overflow, opening controls, bounded overload, full studio entry and optimizer reflow.
-- Native browser panel widths were also inspected. Crossing 900px switches between WebGL and the lighter capture/HTML mode.
-- Reduced motion: zero pin spacers, no Canvas, still hero and a normal studio. Both hero and bottom entry links go to `/studio`.
-- Keyboard-operable report tabs, native video controls, labeled upload, platform checkboxes and visible focus were checked. Native mobile menu open/close was exercised.
-- Production story console check returned no errors or warnings.
+Outdoor sky/clouds/green trees were visually inspected from the opening and close camera views. The shader compiled without console errors. Tiny masked canopy displacement and cloud sine drift run from R3F refs/uniforms on a180-second seamless cycle; distinct depths provide camera parallax. The small movement remains subordinate to the monitor. The exact ocean image is a proportional ICC-aware conversion; its horizon/sailboat remain in the crop. Analytics windows may naturally occlude parts of it.
 
-## Functional app coverage
+Keyboard focus is visible with the approved red outline and offset. Solid foreground/background contrast calculations: light-yellow/red5.21:1, black/yellow12.88:1, black/light-yellow14.91:1. These are token-pair measurements, not a claim of a complete WCAG audit of every pixel.
 
-The upload/report flows were exercised in this implementation session: unsupported file rejection, valid original demo WebM selection, 24-second metadata/local preview, platform selection, removal/change, processing cancellation and successful demo processing. Demo status is explicit; processing stages do not claim real inference.
+## Issues found and fixed
 
-Reports were checked for platform selection, numeric comparison bars, strengths/opportunities and tab navigation. Timestamp feedback sought the sample player to 7.92 seconds; native playback was exercised. Optimizer tone generation, copy feedback and tab persistence were checked. The downloaded JSON export was inspected and contained the updated playful hook. The browser clipboard contents themselves were not independently read back, so copy verification covers UI success feedback and the standard Clipboard API path.
+- Oversized Chromium backdrop-capture rectangles under perspective transforms: removed backdrop blur from small moving UI. Glass retains deformation/highlights/caustic with a locally blurred reflection copy. No oversized blur slabs in final captures.
+- Compact-phone actions covered monitor content: lightweight/reduced opening now measures the actual caption/action block and fits the monitor between that block and floating controls; font/resize refresh recalculates it.
+- Small phone demonstrations were unreadable: same DOM adapts to a portrait logical layout after the glass merge. Short-screen height cap clears controls.
+- Optimizer footer collision: adjusted phone typography/spacing to fit actual suggestions.
+- Narrow desktop headline touched monitor: refined only that breakpoint's display scale.
+- Camera/entry velocity changes: eased poses, time-based position/aim damping, scrub0.55 and smoothstep entry.
+- Old scenery/wallpaper/capture replaced, with exact sources/licenses/hashes and refreshed v7 capture.
 
-Direct demo/optimizer and empty current-session routes were checked. The final production mobile optimizer was rechecked after the advanced redesign. Screenshots 10–15 document app states; 16–22 document responsive/accessibility states. `/credits` exposes asset authors, sources, license links and modifications.
+Final browser inspection reported no console warnings/errors for the tested UI/shader flows. Startup stderr was clean. No runtime dependency was added for the final polish.
 
-## Practical limits and integration work
+## Limits and integration
 
-No real inference service was connected or represented as tested. The current team backend on `origin/main` was inspected at `6f2e4cf`; it exposes `/score` with a different request/response and a 200 MB limit. The frontend's `/api/analyses` job API and 250 MB local validation require an agreed adapter/contract. See FRONTEND_HANDOFF.txt.
+- No real backend/inference service was available for end-to-end live AI validation. HTTP contracts have meaningful mocked tests; the team must adapt /score to /api/analyses, align upload limits and provide actual model output.
+- Demo processing/results/suggestions are labeled authored examples. Social illustrations do not connect accounts or predict performance.
+- Mobile/no-WebGL uses the current room capture plus live HTML; outdoor motion is desktop WebGL only. Reduced motion intentionally removes the cinematic movement.
+- Outdoor scenery is a photographic depth plate with subtle motion, not a fully modeled forest. Glass refraction is an efficient visual approximation.
+- Local file sessions clear on refresh. Restored live reports lack remote playback URLs; client cancellation does not cancel an accepted server job. MOV codec support varies.
+- No physical-device FPS benchmark, Safari/Firefox certification or recorded-video performance claim. Further target-GPU profiling is recommended before public deployment.
 
-No measured FPS claim, physical mobile-device benchmark, continuous video recording or Safari/Firefox certification is made. The desktop scene uses compressed assets, bounded DOM pools, instanced keys, capped DPR, modest postprocessing and offscreen render suspension. Mobile and reduced-motion paths avoid the full WebGL workload. A real WebGL context-loss event was not induced; the shared lightweight fallback and error-boundary path are implemented.
-
-The view outside is an original generated landscape plate behind real window geometry. It is not a navigable terrain. Sessions are in memory; refresh clears selected local files. Server-side upload validation, authentication, persistence, remote playback and cancellation remain backend/integration work.
+The stale green-version browser captures were removed and replaced with this delivery's red/yellow evidence. Asset attributions remain in ASSET_NOTICES.md, /credits and the manifests.

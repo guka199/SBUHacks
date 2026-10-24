@@ -1,8 +1,8 @@
 [
   {
     "file": "public/models/desk.glb",
-    "before": 329684,
-    "after": 100132,
+    "before": 329696,
+    "after": 100144,
     "savedPercent": 70
   },
   {
@@ -37,9 +37,9 @@
   },
   {
     "file": "public/models/room.glb",
-    "before": 366416,
-    "after": 84232,
-    "savedPercent": 77
+    "before": 329160,
+    "after": 79840,
+    "savedPercent": 76
   },
   {
     "file": "public/assets/polyhaven/plant-01.glb",

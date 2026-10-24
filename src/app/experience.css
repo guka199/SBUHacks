@@ -1156,11 +1156,6 @@
   }
 }
 @media (max-width: 600px) {
-  .mode-flat .experience-poster,
-  .mode-reduced .experience-poster {
-    top: 80px !important;
-    height: calc(100% - 80px) !important;
-  }
   .experience-stage {
     min-height: 750px;
   }

@@ -5,11 +5,11 @@ RectAreaLightUniformsLib.init();
 export function SceneLighting() {
   return (
     <>
-      <hemisphereLight args={["#eaf3ee", "#6c604b", 0.32]} />
+      <hemisphereLight args={["#f6f8ff", "#757579", 0.5]} />
       <directionalLight
         position={[-3, 6, -2.3]}
-        color="#fff0d2"
-        intensity={1.7}
+        color="#fff9eb"
+        intensity={2.1}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-8}
@@ -26,8 +26,8 @@ export function SceneLighting() {
         rotation={[0, Math.PI, 0]}
         width={7}
         height={4}
-        color="#d8eced"
-        intensity={2.0}
+        color="#edf4ff"
+        intensity={2.6}
       />
       <Environment
         files="/assets/polyhaven/sunlit-loft.hdr"

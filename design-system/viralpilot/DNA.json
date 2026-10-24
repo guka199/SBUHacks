@@ -1,8 +1,11 @@
 {
   "meta": {
     "name": "ViralPilot",
-    "description": "Source-derived profile of the implemented warm creator studio; no image color measurement is claimed.",
+    "description": "Source-derived approved red/yellow creator studio and final refinement.",
     "source_references": [
+      "src/app/identity.css",
+      "src/components/home/monitor-loop.ts",
+      "src/components/three/WindowLandscape.tsx",
       "src/app/app-theme.css",
       "src/app/cinematic.css",
       "src/app/experience.css",
@@ -13,49 +16,45 @@
   },
   "design_system": {
     "color": {
-      "palette_type": "analogous",
+      "palette_type": "User-pinned warm high contrast",
       "primary": {
-        "hex": "#172D26",
-        "role": "forest ink"
+        "hex": "#BE1A1A",
+        "role": "Primary/red emphasis"
       },
       "secondary": {
-        "hex": "#95AB94",
-        "role": "sage environmental accent"
+        "hex": "#F7D87F",
+        "role": "Yellow canvas"
       },
       "accent": {
-        "hex": "#31583B",
-        "role": "primary controls"
+        "hex": "#D0311E",
+        "role": "Energetic red-orange"
       },
       "neutral": {
         "scale": [
-          "#FFFEF9",
-          "#F7F3EA",
-          "#D9E1D1",
-          "#60725F",
-          "#172D26"
+          "#F8EBAB",
+          "#FFF9E3",
+          "#171717"
         ],
-        "usage": "Warm light backgrounds to dark readable ink; muted text uses #60725F."
+        "usage": "Light-yellow surfaces/black ink"
       },
       "semantic": {
-        "success": "#648B4E",
-        "warning": "#AA8C57",
-        "error": "#A5442E",
-        "info": "#D5E7EA"
+        "error": "#BE1A1A",
+        "info": "#171717"
       },
       "surface": {
-        "background": "#F7F3EA",
-        "card": "#FFFEF9",
-        "elevated": "#E9EEE2"
+        "background": "#F8EBAB",
+        "card": "#FFF9E3",
+        "elevated": "#F7D87F"
       },
-      "contrast_strategy": "Dark on light; labels and numbers complement color. Essential data uses opaque surfaces."
+      "contrast_strategy": "Solid readable surfaces, exact labels, light-yellow text on red actions."
     },
     "typography": {
       "type_scale": {
         "display": {
-          "size": "responsive clamp in experience.css",
+          "size": "clamp(65px,7.5vw,115px), breakpoint overrides",
           "weight": 400,
-          "line_height": 1.05,
-          "tracking": "-0.055em"
+          "line_height": 0.94,
+          "tracking": "-0.065em approved display"
         },
         "heading_1": {
           "size": "responsive page-title rule",
@@ -101,11 +100,11 @@
         }
       },
       "font_families": {
-        "heading": "Instrument Serif",
+        "heading": "Archivo Black",
         "body": "DM Sans Variable",
         "mono": "browser monospace for code examples only"
       },
-      "font_style_notes": "Self-hosted editorial serif with selective italics; humanist sans for metrics, controls and reading."
+      "font_style_notes": "Expressive heavy sans display, DM Sans metrics/controls/body"
     },
     "spacing": {
       "base_unit": "4px",
@@ -122,7 +121,7 @@
       "section_rhythm": "Large editorial openings; grouped app controls and report sections"
     },
     "layout": {
-      "grid_system": "Responsive CSS grid and flex; projected 960x540 story coordinate space",
+      "grid_system": "Responsive CSS grid/flex; projected960x540 desktop;480x700 phone demonstrations",
       "max_content_width": "Page-specific constrained containers in globals.css",
       "columns": "Multiple columns on desktop, single-column app on mobile",
       "gutter": "Responsive 5vw hero and page padding",
@@ -131,7 +130,7 @@
         "768px",
         "900px"
       ],
-      "alignment_tendency": "Centered cinematic focal point; left-aligned functional reading"
+      "alignment_tendency": "Left headline/right monitor opening, then front-facing product"
     },
     "shape": {
       "border_radius": {
@@ -179,14 +178,14 @@
       "duration_scale": {
         "micro": "Brief control feedback",
         "normal": "Short window settle",
-        "macro": "100-unit scroll-controlled story"
+        "macro": "Independent16-second loop;100-unit reversible product story"
       },
       "entrance_pattern": "Staged two-part transform with small overshoot",
       "exit_pattern": "Converge, deform and contract",
-      "philosophy": "Cinematic narrative with deterministic reversibility; functional app feedback is restrained"
+      "philosophy": "Separate auto/scroll ownership, scrub0.55, damped camera, reduced-motion alternative"
     },
     "components": {
-      "button_style": "Forest action, warm white text, 9px corners, visible focus",
+      "button_style": "Red/light-yellow primary, outlined secondary,9px corners,3px red focus",
       "input_style": "Native semantics, neutral borders, explicit validation",
       "card_style": "Light opaque data surfaces with restrained borders",
       "navigation_pattern": "Translucent hero pill, solid app header, mobile menu",
@@ -198,23 +197,23 @@
   "design_style": {
     "aesthetic": {
       "mood": [
-        "calm",
-        "warm",
-        "focused",
-        "tangible"
+        "bold",
+        "colorful",
+        "playful",
+        "precise"
       ],
-      "visual_metaphor": "Entering a quiet room and gathering fragmented tools",
-      "era_influence": "Contemporary editorial software and architectural visualization",
-      "genre": "Creative studio",
+      "visual_metaphor": "From fragmented creator desktop to one clear next move",
+      "era_influence": "Contemporary creative hardware/expressive typography",
+      "genre": "Creator studio",
       "personality_traits": [
-        "thoughtful",
+        "expressive",
         "clear",
         "approachable"
       ],
       "adjectives": [
-        "natural",
-        "spacious",
-        "precise"
+        "physical",
+        "confident",
+        "readable"
       ]
     },
     "visual_language": {
@@ -228,13 +227,13 @@
     },
     "composition": {
       "hierarchy_method": "Display scale and spatial staging",
-      "balance_type": "Centered focal monitor with asymmetric desk objects",
+      "balance_type": "Asymmetric headline/monitor opening, then centered product",
       "flow_direction": "Room depth into screen; vertical application flow",
       "grouping_strategy": "Platform-related metrics and timestamp observations",
       "negative_space_role": "Separates headline, monitor and controls"
     },
     "imagery": {
-      "photo_treatment": "Natural morning light and atmospheric mountain depth",
+      "photo_treatment": "Exact ocean wallpaper; separate green scenery; neutral room light",
       "illustration_style": "Original detailed HTML software illustrations",
       "graphic_elements": "Retention paths, comparison bars and glass contours",
       "pattern_usage": "Subtle material weave only",
@@ -270,15 +269,16 @@
     },
     "background_effects": {
       "type": "scene-bg",
-      "description": "Real modeled workspace with original generated landscape plate outside window",
+      "description": "Modeled workspace, CC0Meadow2 plate with tiny canopy movement/cloud depth; exact supplied ocean inside monitor",
       "technology": "Three.js",
       "params": {
         "color_palette": [
-          "#F7F3EA",
-          "#95AB94",
-          "#D5E7EA"
+          "#F7D87F",
+          "#F8EBAB",
+          "#BE1A1A",
+          "#171717"
         ],
-        "speed": "Camera follows scroll; subtle plant sway",
+        "speed": "180-second outdoor sine cycle;16-second desktop loop; scroll camera",
         "density": "Bounded scene assets",
         "opacity": 1,
         "blend_mode": "normal"
@@ -319,19 +319,19 @@
           "subtle vignette",
           "OutputPass"
         ],
-        "interaction_model": "Single scroll playhead and HTML homography"
+        "interaction_model": "Independent inner HTML loop, reversible outer scroll/product timeline, homography"
       }
     },
     "shader_effects": {
       "enabled": true,
       "type": "subtle-vignette",
-      "description": "Restrained edge darkening; localized SVG caustic displacement",
+      "description": "Restrained vignette, tiny outdoor vertex motion, graphite material treatment, localized SVG caustic",
       "technology": "GLSL ShaderPass and SVG filter",
       "params": {
         "uniforms": [
           "tDiffuse"
         ],
-        "vertex_manipulation": "none",
+        "vertex_manipulation": "Masked low-amplitude canopy/sky displacement",
         "fragment_output": "Seven-percent maximum vignette attenuation",
         "noise_type": "SVG feTurbulence seed 8",
         "distortion": "Local caustic only; essential text excluded"
@@ -344,23 +344,22 @@
           "workspace",
           "monitor DOM"
         ],
-        "depth_range": "Camera z 8.2 to 2",
+        "depth_range": "Camera z6 to2; outdoorz-14/cloudsz-10,-11",
         "speed_curve": "Authored eased camera poses"
       },
       "scroll_triggered_animations": {
         "enabled": true,
         "trigger_points": [
           0,
-          17,
-          31,
-          48,
-          70,
-          83,
-          90,
+          20,
+          38,
+          55,
+          73,
+          89,
           100
         ],
-        "animation_type": "Camera, windows, graphs, notifications and glass",
-        "scrub_behavior": "One deterministic reversible ScrollTrigger timeline"
+        "animation_type": "Camera, glass, upload/analysis, comparison, optimization, unified report",
+        "scrub_behavior": "Reversible scrub0.55; independent loop pauses beyond0.15"
       },
       "scroll_morphing": {
         "enabled": true,
@@ -375,7 +374,7 @@
         "split_strategy": "Whole statement",
         "animation_per_unit": "Opacity and modest vertical transform",
         "stagger": "Narrative chapter staging",
-        "effect_style": "Editorial calm"
+        "effect_style": "Expressive display/readable whole captions"
       }
     },
     "cursor_effects": {
@@ -398,15 +397,15 @@
         "filter_pipeline": "Color-managed maps; fallback blur",
         "hover_transform": "none",
         "reveal_animation": "Scene loads behind already available fallback",
-        "distortion_type": "No landscape distortion"
+        "distortion_type": "No wallpaper distortion; tiny outdoor movement"
       }
     },
     "glassmorphism_neumorphism": {
       "enabled": true,
       "style": "Restrained liquid glass, no neumorphism",
       "params": {
-        "blur_radius": "14–18px",
-        "transparency": "Neutral translucent panels, strongest during convergence",
+        "blur_radius": "8px on local reflection copy (perspective backdrop fallback)",
+        "transparency": "Translucent panels; small controls use stable surfaces to avoid Chromium capture artifacts",
         "border_treatment": "Fine white edge and SVG gradient contour",
         "shadow_type": "Soft contact and drop shadows",
         "light_source_angle": "Warm upper-left window"
@@ -420,7 +419,7 @@
       "params": {
         "draw_method": "Cached scene graph",
         "animation_loop": "Active only while scene is visible",
-        "color_scheme": "Warm natural",
+        "color_scheme": "Red/yellow identity; neutral PBR room, green outdoors, ocean desktop",
         "responsiveness": "DPR cap, no mobile WebGL",
         "interaction": "Scroll camera"
       }

@@ -1,19 +1,15 @@
 # ViralPilot
 
-Creators upload a video, select TikTok, Instagram Reels, YouTube Shorts, and/or YouTube long-form, compare content-readiness estimates, inspect timestamps, and improve hooks and publishing copy. Estimates are creative guidance; no validated virality claims.
+Creators upload a video, compare content-readiness estimates across TikTok, Reels, Shorts and YouTube, inspect timestamped feedback and improve publishing copy. Scores guide creative decisions, not validated virality predictions.
 
-## Current direction
+## Approved direction
 
-The user’s October 24 brief defines “Creator’s Chaos”: a peaceful natural workspace contrasts with information overload inside the monitor, then ViralPilot restores clarity. Warm ivory, forest ink, pale blue, sage, restrained lime and coral. Instrument Serif headlines and DM Sans interface copy. The monitor is the story; the room is the setting.
+The user approved the bold red/yellow design and requested refinement. Preserve Archivo Black/DM Sans, layout, workspace, independent 16-second desktop loop, six-scene scroll sequence and working app/API behavior. Palette: #BE1A1A, #D0311E, #F7D87F, #F8EBAB, #171717.
 
-## Delivery contract
+Polish improves control contrast/placement, camera/scrub/entry smoothness, a separate green outdoor view with subtle motion/parallax, and the exact supplied ocean photo as monitor wallpaper. Wallpaper and outdoor scenery are different assets. Phone demos adapt for readability. Main copy and story order stay intact.
 
-The latest request authorizes the complete implementation, browser testing, documentation, commit and push to the existing viralpilot branch of guka199/SBUHacks. Earlier approval checkpoints and GitHub deferral are superseded. No merge into main is authorized.
+## Experience and integration
 
-This is a standalone frontend on the existing feature branch. It does not overwrite the team's backend or earlier web app on main. Their current endpoints differ from this frontend contract and require an adapter.
+Problem → Meet ViralPilot/glass merge → AI analysis walkthrough → platform comparison → optimization before/after → unified dashboard. Automatic notifications belong to the desktop loop, not scroll. Product scenes reverse upward. Demo processing/results are labeled; files remain local in demo. Mobile/no-WebGL uses a current capture with live HTML. Reduced motion removes pinned zoom/auto looping.
 
-## Main experience
-
-A peaceful real-time workspace leads to detailed YouTube, Instagram and TikTok analytics windows inside the monitor. A fixed pool of notifications overwhelms the screen. Glass panels deform, converge and contract; ViralPilot appears and the camera enters the same interactive DOM studio. All stages reverse on upward scrolling. The application continues the natural visual language with readable reports, native video controls and clear actions.
-
-Demo mode uses authored fixtures and is explicitly labeled. Local file previews stay in memory and are cleared on refresh. Live mode sends files only after the user starts analysis, through the documented API layer. Scores are creative guidance, not performance predictions. Reduced motion skips the pinned story; mobile and unavailable WebGL use a static room with lightweight HTML choreography.
+Delivery: existing viralpilot branch in guka199/SBUHacks, documentation/checks/browser evidence and normal commit/push. No force push or main merge. Standalone Next frontend; preserve teammates' backend/web. Their /score API requires an adapter to /api/analyses. Actual inference, persistence/auth and remote playback remain backend tasks.

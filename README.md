@@ -1,59 +1,57 @@
 # ViralPilot
 
-A cinematic creator studio built for SBUHacks. Scroll through a real 3D workspace, watch platform analytics turn into overload, and enter a calmer video planning app.
+A cinematic creator studio for SBUHacks. An automatic desktop loop shows the problem; six connected scroll scenes demonstrate video analysis, platform fit, optimization and a unified dashboard. The red/yellow identity continues through the app.
 
 ## Start the frontend
 
-Requires Node.js 22+ and npm.
+Requires Node.js 22+ and npm. From the repository root:
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Open http://localhost:3000. Demo mode works without an account, API key or environment file. Choose **Start creating → Try our sample video → Explore sample analysis**, or open `/demo` directly.
+Open http://localhost:3000. Demo mode needs no account, API key or environment file. Use **Try your video → Try our sample video**, or open `/demo` for an interactive example.
 
 ```sh
-npm run check   # ESLint, TypeScript and 8 API/validation/projection tests
+npm run check   # ESLint, TypeScript and 10 tests
 npm run build
 npm start
 ```
 
-Copy `.env.example` to `.env.local` only when changing configuration. To connect a backend, set `NEXT_PUBLIC_DEMO_MODE=false` and `NEXT_PUBLIC_API_BASE_URL`. These are public browser variables; never put secrets in them. The live contract is documented in [FRONTEND_HANDOFF.txt](FRONTEND_HANDOFF.txt). The team's current `/score` backend requires an adapter to this contract; changing the URL alone is insufficient.
+Copy `.env.example` to ignored `.env.local` only to change configuration. For live mode set `NEXT_PUBLIC_DEMO_MODE=false` and `NEXT_PUBLIC_API_BASE_URL`. Public variables must never contain secrets. The team's `/score` backend needs an adapter to the documented `/api/analyses` contract; changing the URL alone does not connect them. `NEXT_PUBLIC_ENABLE_3D=false` selects the lightweight experience.
 
-## What is included
+## Included
 
-- PBR workspace with licensed GLB desk, monitor, keyboard, mouse, headphones, plants and articulated lamp, photographic oak maps, HDRI reflections and a mountain view.
-- A deterministic GSAP story: detailed YouTube, Instagram and TikTok interfaces, bounded notification overload, deforming glass convergence and continuous monitor-to-app entry. Upward scrolling reverses it.
-- Drag-and-drop upload, local video preview, validation, platform selection, cancellable demo processing and a live API adapter with genuine upload progress.
-- Four-platform readiness reports, labeled comparison charts, timestamped feedback and a native video player.
-- Hooks, titles, captions, descriptions, calls to action, tone variations, copy actions and JSON report export.
-- Mobile/WebGL fallback, reduced-motion view and accessible controls. Demo results are explicitly illustrative.
+- Licensed PBR workspace, graphite desk/red keyboard, HDR reflections, soft shadows and separate subtly animated CC0 outdoor scenery.
+- User's exact ocean photograph as monitor wallpaper, proportionally optimized to WebP.
+- Independent 16-second HTML desktop loop, bounded notifications and pause/resume.
+- Reversible glass merge → analysis → comparison → optimization → unified report; continuous camera/HTML entry.
+- Drag/drop upload, preview, validation, platform selection, cancellable demo stages and validated live API requests.
+- Four-platform readiness scores, video timestamps/player, tone-aware optimizer, copy and JSON export.
+- Responsive controls, mobile/no-WebGL capture with live HTML, readable phone walkthrough and reduced-motion alternative.
 
-## Routes
+Demo analytics, scores, suggestions and processing are explicitly illustrative. Demo files stay local. Real AI/backend integration remains team work.
 
-`/` cinematic story · `/studio` studio entry · `/analyze` or `/upload` upload and processing · `/demo` example report · `/analysis` current session report · `/analysis/[id]` live report retrieval · `/analysis/[id]/optimize` optimizer (`demo` opens the example) · `/workspace-preview` isolated scene · `/credits` asset attribution.
+## Routes and handoff
 
-## Team handoff
+`/` story · `/studio` entry · `/analyze` or `/upload` · `/demo` · `/analysis` · `/analysis/[id]` · `/analysis/[id]/optimize` · `/workspace-preview` · `/credits`.
 
-- [FRONTEND_HANDOFF.txt](FRONTEND_HANDOFF.txt): architecture, setup, complete API examples and integration notes.
-- [ASSET_NOTICES.md](ASSET_NOTICES.md): model sources, licenses and provenance.
-- [DESIGN.md](DESIGN.md): design tokens and component/motion conventions.
-- [QA_REPORT.md](QA_REPORT.md): tested viewports, story stages and limitations.
-- `screenshots/`: browser evidence for the story and app.
+[FRONTEND_HANDOFF.txt](FRONTEND_HANDOFF.txt) covers architecture, complete API JSON examples and integration. [ASSET_NOTICES.md](ASSET_NOTICES.md) records artists/licenses. [DESIGN.md](DESIGN.md) and `design-system/viralpilot` describe tokens/motion. [QA_REPORT.md](QA_REPORT.md) and `screenshots/` contain browser evidence and limits.
 
-Work is on the existing `viralpilot` frontend branch. The backend and existing web app on `main` are preserved. When integrating into that monorepo, place this frontend in an agreed directory and migrate the contracts through a normal reviewed change.
+Work is on the existing **viralpilot** feature branch of guka199/SBUHacks. Teammates' backend/web work on main is preserved. Agree on a frontend directory before integrating into that monorepo.
 
-## Rebuilding assets
+## Optional asset preparation
 
-Runtime assets are committed, so no download step is required to run the app.
+Runtime assets are committed; no download is required to run the app.
 
 ```sh
-npm run build:assets   # original architecture and desk accessories
-npm run fetch:assets   # fetch and pack the named Poly Haven CC0 assets
-npm run fetch:hardware # optional hardware + pinned keyboard sources
-npm run build:keyboard # assemble the downloaded sculpted keyboard
-npm run optimize:assets # Meshopt and WebP compression; preserves runtime oak UVs
+npm run build:assets
+npm run fetch:assets
+npm run fetch:hardware
+npm run build:keyboard
+npm run optimize:assets
+node scripts/prepare-polish-assets.mjs /absolute/path/to/user-ocean-photo.jpg
 ```
 
-The official UI UX Pro Max CLI was installed and initialized for Codex. Its generated skill folder is local tooling and ignored; the applied design recommendations are recorded in `design-system/viralpilot/MASTER.md`. The installed Three.js, GSAP, Design DNA, LottieFiles Motion Design and Genjutsu skills were also applied alongside Taste and Impeccable. See the design-system notes for concrete decisions. React Three Fiber is used as a library, not presented as a skill.
+The last command downloads the CC0 Meadow 2 backplate and processes the supplied photograph. Raw user originals are not distributed. See manifests for exact hashes/source URLs. UI UX Pro Max and the requested Three.js/GSAP/Design DNA/Motion Design/Genjutsu/Taste/Impeccable guidance are applied; local skill tooling is ignored.

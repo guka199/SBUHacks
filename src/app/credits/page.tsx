@@ -27,7 +27,17 @@ export default function Credits() {
           </a>{" "}
           by Amazon.com —{" "}
           <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
-          Scaled, repositioned and compressed.
+          Scaled, repositioned and compressed; graphite surface treatment
+          preserves grain.
+        </li>
+        <li>
+          <a href="https://polyhaven.com/a/meadow_2">
+            Meadow 2 outdoor backplate
+          </a>{" "}
+          by Sergej Majboroda —{" "}
+          <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.
+          Resized, compressed and animated subtly behind the windows. The ocean
+          wallpaper is a separate exact photograph supplied by the user.
         </li>
         <li>
           <a href="https://www.innerscene.com/tools/library/3d-parts/27-inch-monitor-office-technology-961fb20e">
@@ -71,10 +81,10 @@ export default function Credits() {
       </ul>
       <p>
         Architecture, desk accessories, analytics illustrations, demo footage
-        and interface code were authored for ViralPilot. The mountain backdrop
-        is an original generated image. Full provenance and changes are recorded
-        in ASSET_NOTICES.md and the asset manifests. Platform names identify
-        illustrative interfaces; no affiliation or endorsement is implied.
+        and interface code were authored for ViralPilot. Full provenance and
+        changes are recorded in ASSET_NOTICES.md and the asset manifests.
+        Platform names identify illustrative interfaces; no affiliation or
+        endorsement is implied.
       </p>
       <Link className="button button-dark" href="/">
         Back to the room

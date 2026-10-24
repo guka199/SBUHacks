@@ -43,6 +43,7 @@ export function applyProjection(
   points: Point[],
   viewport: { width: number; height: number },
   progress: number,
+  logical = { width: 960, height: 540 },
 ) {
   const entry = entryProgress(progress);
   const target = [
@@ -55,8 +56,8 @@ export function applyProjection(
     x: p.x + (target[i].x - p.x) * entry,
     y: p.y + (target[i].y - p.y) * entry,
   }));
-  const width = 960 + (viewport.width - 960) * entry,
-    height = 540 + (viewport.height - 540) * entry;
+  const width = logical.width + (viewport.width - logical.width) * entry,
+    height = logical.height + (viewport.height - logical.height) * entry;
   const matrix = screenTransform(quad, width, height);
   if (!matrix) return;
   element.style.width = `${width}px`;

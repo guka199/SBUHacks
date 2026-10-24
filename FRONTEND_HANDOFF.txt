@@ -5,160 +5,148 @@ Frontend branch: viralpilot
 
 1. PROJECT OVERVIEW
 
-ViralPilot is a video planning studio for creators. It helps compare a video's
-content readiness across TikTok, Instagram Reels, YouTube Shorts and YouTube
-long-form, inspect timestamped observations, and improve publishing copy.
-Scores are estimates for creative decisions, not promises of virality.
+ViralPilot is a video planning studio for creators: upload a video, compare
+content readiness for TikTok, Instagram Reels, YouTube Shorts and YouTube
+long-form, inspect timestamped feedback and improve hooks/publishing copy.
+Scores inform creative decisions; they do not promise views or virality.
 
-The homepage starts in a peaceful, real-time creator workspace. Detailed
-illustrative analytics tools accumulate INSIDE the monitor. A fixed pool of
-notifications creates overload. Glass panels deform and converge, the chaos
-contracts, ViralPilot appears, and the camera enters the actual interactive
-studio. Scrolling upward reverses the same timeline.
-
-The main app flow is studio -> upload -> processing -> report -> video insights
-or content optimizer. Demo data is clearly labeled. No login is required.
+The homepage uses the approved red/yellow identity and real 3D workspace.
+An independent 16-second creator desktop loop runs inside the monitor.
+Scrolling demonstrates six connected scenes: problem -> Meet ViralPilot/glass
+merge -> AI analysis -> platform comparison -> content optimization -> unified
+dashboard. The same projected HTML screen expands into an interactive example
+report. Upward scroll reverses the product story; the auto loop resumes near
+the opening. Main app: studio -> upload -> processing -> report/insights/optimizer.
 
 2. TECHNOLOGIES USED
 
-- Next.js 16 App Router, React 19, TypeScript.
-- Tailwind v4 base processing and custom CSS; no component-suite dependency.
-- Three.js, React Three Fiber, Drei, GLB/glTF, PBR textures and local HDRI.
-- GSAP ScrollTrigger for the entire reversible cinematic sequence.
-- Framer Motion for restrained app transitions, respecting reduced motion.
-- Lucide React icons; original reusable controls in components/ui.tsx.
-- Zod schemas validate live API responses and shared TypeScript types.
-- Self-hosted Instrument Serif and DM Sans through Fontsource.
-- glTF Transform, Meshoptimizer and Sharp for development-time asset packing
-  and compression. Node test runner with tsx. Exact versions: package-lock.json.
+- Next.js 16 App Router, React 19, TypeScript; Tailwind v4 base and custom CSS.
+- Three.js 0.180, React Three Fiber 9, Drei 10, local GLB/PBR/HDR assets.
+- GSAP + ScrollTrigger: separate scoped automatic and scroll timelines.
+- Motion for React (framer-motion package) for restrained app transitions.
+- Lucide React; original reusable UI; no UI component-suite dependency.
+- Zod validates live responses and supplies inferred TypeScript contracts.
+- Self-hosted Archivo Black display type and DM Sans Variable interface type.
+- glTF Transform, Meshoptimizer, Sharp for development-time asset preparation.
+- ESLint, TypeScript, Node tests via tsx. Locked versions: package-lock.json.
 
-UI UX Pro Max was installed with npm install -g ui-ux-pro-max-cli, initialized
-with uipro init --ai codex, read, and used for accessible controls, readable
-charts, responsive layout, reduced motion, Three.js and scroll guidance.
-The user's pinned natural palette overrides its generic dark/violet suggestion.
-Applied guidance is recorded in design-system/viralpilot/MASTER.md and DNA.json. Taste and
-Impeccable guidance were also used. Three.js Skills, official GSAP Skills,
-Design DNA, LottieFiles Motion Design and Genjutsu (official website installer)
-were installed, read and applied. Fiber is a compatible library, not a skill.
-Concrete applications are listed in MASTER.md. Skill tooling is not committed.
+UI UX Pro Max was installed using its official CLI and initialized for Codex.
+Three.js Skills, official GSAP Skills, Design DNA, LottieFiles Motion Design,
+Genjutsu's supported installer, Taste and Impeccable were applied. Concrete
+decisions: design-system/viralpilot/MASTER.md. Downloaded skill tooling is ignored.
+Fiber is a library. No Lottie runtime, unsupported integration or agent swarm is
+needed. The user's exact palette and approved composition take priority.
 
-3. PROJECT STRUCTURE AND ROUTES
+3. PROJECT STRUCTURE
 
-src/app/layout.tsx         Fonts, metadata, navigation and in-memory session.
-src/app/page.tsx           Cinematic homepage.
-src/app/studio/            Standalone interactive studio entry.
-src/app/analyze/           Upload and processing; /upload is an alias.
-src/app/analysis/          Current session report.
-src/app/analysis/[id]/     Live report retrieval; id=demo uses the fixed example.
-.../[id]/optimize/         Direct optimizer route; /analysis/demo/optimize works.
-src/app/demo/              Fixed example report without uploading anything.
-src/app/workspace-preview/ Isolated scene for visual inspection.
-src/app/globals.css        Base resets and app layout primitives.
-src/app/cinematic.css      Natural palette and peaceful monitor desktop.
-src/app/app-theme.css      Consistent app surfaces, report/chart/upload styles.
-src/app/experience.css     Story, analytics windows, glass and studio styles.
+src/app/layout.tsx          Fonts, metadata, shared header and memory session.
+src/app/page.tsx            Homepage cinematic experience.
+src/app/identity.css        Current identity/responsive polish; imported last.
+src/app/app-theme.css       Upload, reports, charts and optimizer styles.
+src/app/experience.css      Base story, analytics and glass styles.
+src/app/cinematic.css       Inherited room/studio base styles.
+src/app/globals.css         Resets and shared primitives.
 
-src/components/home/ScrollExperience.tsx
-  ScrollTrigger lifecycle, responsive modes, chapter controls, error boundary.
-choreography.ts          Single reversible camera/window/chart/glass timeline.
-LiquidGlass.tsx          Morph-compatible SVG contours and bounded glass pieces.
-MonitorExperience.tsx     Bounded analytics/window/notification/glass/app layers.
-AnalyticsWindow.tsx       Original detailed YouTube/Instagram/TikTok mock UIs.
-MonitorDesktop.tsx        Peaceful desktop with one analytics window.
-StudioGateway.tsx         Real studio UI, used inside the monitor and /studio.
-WorkspacePreview.tsx      Isolated scene and fallback loading.
+Routes:
+/                         Six-scene story and embedded interactive example.
+/studio                   Standalone studio entry.
+/analyze, /upload         Upload and processing.
+/demo                     Interactive authored example report.
+/analysis                 Current in-memory session report.
+/analysis/[id]            Fetch live report; id=demo opens the example.
+/analysis/[id]/optimize   Direct optimizer (demo is supported).
+/workspace-preview        Isolated scene for inspection and fallback captures.
+/credits                  Artists, source links, licenses and changes.
 
-src/components/three/WorkspaceScene.tsx
-  Lazy Canvas, camera rig, scene composition and render suspension.
-WorkspaceModel.tsx        Cached original GLBs and photographic oak PBR maps.
-RealPlants.tsx            Licensed plants and subtle physical sway.
-DeskLamp.tsx              Licensed articulated lamp with PBR materials.
-ProfessionalHardware.tsx  Licensed monitor, desk, keyboard, mouse and headphones.
-CinematicPost.tsx         Half-float antialiasing, vignette and OutputPass.
-SceneLighting.tsx         Window light, soft shadows, HDRI reflections.
-WindowLandscape.tsx       Original generated mountain scenery behind window.
-ScreenProjection.tsx      Camera corner projection into the DOM screen.
+src/components/home/
+ ScrollExperience.tsx     Modes, controls, pause state, GSAP lifecycle/pin.
+ monitor-loop.ts          Independent 16-second inner-window loop.
+ choreography.ts          Reversible 100-unit camera/glass/product timeline.
+ MonitorExperience.tsx    Wallpaper, analytics, glass, product and report layers.
+ AnalyticsWindow.tsx      Detailed original YouTube/Instagram/TikTok HTML.
+ LiquidGlass.tsx          SVG contours, local caustic, six glass panels.
+ ProductDemonstration.tsx Animated upload/analysis/comparison/before-after/report.
+ StudioGateway.tsx        Studio entry and reduced-motion alternative.
+ WorkspacePreview.tsx     Isolated room/capture view.
 
-src/components/upload.tsx Upload, preview, validation and processing workflow.
-src/components/dashboard.tsx
-  Four-platform report, comparison, insights player, optimizer and export.
-src/components/session.tsx
-  In-memory File, object URL, metadata and analysis result; URLs are revoked.
-src/components/ui.tsx     Icons, copy control, reveal and brand mark.
-src/components/ui/animated-link.tsx
-  Attributed Skiper link interaction with keyboard/reduced-motion support.
-src/lib/experience.ts      Camera state, story chapter positions, 12 notifications.
-src/lib/projection.ts      Perspective homography and continuous viewport entry.
-src/lib/contracts.ts       Zod schemas, inferred types and platform definitions.
-src/lib/api.ts             All live analysis HTTP requests and polling.
-src/lib/demo.ts            Authored fixtures and deterministic tone suggestions.
-src/lib/video.ts           File checks, metadata reading and timestamp formatting.
-tests/                     API, validation, schema and projection/reverse tests.
-scripts/                   Reproducible model, texture, download and compression.
-public/assets/polyhaven/   Licensed local assets, sources.json and CC0 license.
-public/models/             Original compressed architecture/accessory GLBs.
-public/assets/hardware/    Licensed detailed hardware, sources/hashes/licenses.
-public/textures/           Scenery and current fallback browser capture.
-src/app/credits/           Visible author/source/license attribution.
-public/demo.webm           Original 24-second sample footage.
-screenshots/               Browser evidence; QA_REPORT.md explains coverage.
+src/components/three/
+ WorkspaceScene.tsx       Lazy Canvas, damped camera, composition/render modes.
+ ProfessionalHardware.tsx Licensed desk, monitor, keyboard, mouse, headphones.
+ WorkspaceModel.tsx       Original architecture/accessories, oak/fabric PBR.
+ RealPlants.tsx           Textured plants with subtle sway.
+ DeskLamp.tsx             Licensed articulated lamp.
+ WindowLandscape.tsx      Separate CC0 outdoor plate, canopy/cloud motion/depth.
+ SceneLighting.tsx        Window light, HDRI reflections, directional shadows.
+ CinematicPost.tsx        Half-float MSAA, restrained vignette, OutputPass.
+ ScreenProjection.tsx     Imported monitor's four physical corners -> DOM.
 
-4. FEATURES IMPLEMENTED AND DEMO BOUNDARY
+src/components/upload.tsx   File, preview, platform and processing workflow.
+src/components/dashboard.tsx Report, player, comparisons, optimizer and export.
+src/components/session.tsx  In-memory File, object URL, metadata and report.
+src/components/ui.tsx       Brand/platform icons, CopyButton, reveal.
+src/components/ui/animated-link.tsx Attributed Skiper interaction.
+src/lib/experience.ts       Camera state, chapters, notifications, entry easing.
+src/lib/projection.ts       Homography and continuous viewport entry.
+src/lib/fallback-layout.ts  Measured capture corners and phone demo geometry.
+src/lib/api.ts              All live HTTP requests and polling.
+src/lib/contracts.ts        Zod schemas and inferred types.
+src/lib/demo.ts             Authored report/tone fixtures.
+src/lib/video.ts            Validation, metadata and timestamp helpers.
 
-Completed frontend:
-- Responsive cinematic landing, actual licensed 3D assets and detailed hardware.
-- Deterministic opening, platform windows, notifications, deforming/merging glass,
-  clean studio reveal, continuous camera entry, and reverse scrolling.
-- Chapter buttons, skip intro and return-to-room action.
-- Drag/drop or browse upload, MP4/WebM/MOV validation up to 250 MB, metadata,
-  local video preview, platform selection, remove/change file and sample video.
-- Cancellable processing stages for hook, pacing, platform fit and suggestions.
-- Four platform readiness scores, numeric comparison bars, strengths and
-  opportunities, selectable platform detail and actionable recommendations.
-- Native playable video, seek slider, timestamp markers and clickable feedback.
-- Hooks, titles, captions, descriptions, CTAs, editing suggestions, copy controls,
-  tone changes and JSON report export including updated optimizer copy.
-- Direct report/optimizer routes, empty and error states, keyboard tab navigation.
-- Mobile/static WebGL fallback and reactive reduced-motion experience.
+public/assets/hardware/     Licensed compressed hardware and source manifests.
+public/assets/polyhaven/    Plants, lamp, PBR oak, HDRI and CC0/source metadata.
+public/assets/scenery/      Separate Meadow 2 backplate, sources/hashes.
+public/models/              Original compressed room/accessory GLBs.
+public/textures/            Exact user ocean WebP and v7 room capture.
+public/demo.webm            Original 24-second typographic sample video.
+scripts/                    Reproducible model/texture preparation.
+tests/                      API/schema/video/projection/fallback tests.
+screenshots/                Browser evidence; see QA_REPORT.md.
 
-Simulated demo functionality:
-- The homepage social analytics accounts, statistics and notifications are
-  original illustrative interfaces, not connected social accounts.
-- Demo processing is a timed walkthrough, not AI analysis of the selected file.
-- Demo results and tone variations are authored fixtures. Scores are constant
-  examples; timestamps scale to the selected video's duration.
-- Demo mode never uploads the file. The file remains in browser memory.
+4. FEATURES IMPLEMENTED
 
-Backend work still required:
-- Real analysis jobs, media storage/validation, actual AI/model scoring, timestamp
-  generation, rewrite generation and any authentication/account persistence.
-- An adapter between the team's current main-branch API and the contract below.
-- No social account OAuth, publishing, scraping or account analytics connection.
+Completed frontend: responsive landing, licensed PBR room, independent detailed
+desktop loop with pause/resume, bounded notifications, glass deformation/merge,
+six-scene product demo, continuous monitor entry and reverse scrolling.
+Improved controls/focus/spacing, exact ocean wallpaper, separate outdoor motion,
+phone/no-WebGL capture with live HTML and readable portrait product walkthrough.
+
+Upload supports drag/drop/browse, MP4/WebM/MOV up to 250 MB, metadata/local
+preview, platform selection, remove/change file, sample video and cancellation.
+Reports include four-platform scores, comparison bars, assessments, strengths/
+opportunities, native player, timeline, timestamp markers and clickable feedback.
+Optimizer supplies hook/title/caption/description/CTA/edit examples, tone changes,
+copy confirmation and JSON export retaining updates. Direct report/optimizer
+routes, error/empty/loading states and keyboard report tabs are implemented.
+
+Demo boundary: social accounts/metrics/notifications are illustrative HTML,
+not connected account data. Homepage upload/analysis is a visual walkthrough.
+Demo processing is timed, not AI inference; reports and tone variations are
+authored fixtures. Timestamps scale to selected duration. Demo files remain in
+browser memory and are not uploaded. Labels identify simulated behavior.
+
+Unfinished/backend: real inference/scoring/suggestions, media storage, saved
+projects/authentication, server validation and the API adapter below. No social
+OAuth, publishing, scraping or validated performance prediction is implemented.
 
 5. HOW TO RUN
 
-Prerequisites: Node.js 22+, npm and a modern browser. WebGL2 enables the desktop
-room; the frontend also works through a static room fallback.
+Node.js 22+, npm and a modern browser. From this branch's repository root:
+ npm ci
+ npm run dev
+Open http://localhost:3000. No account/API key/.env is required for demo.
+ npm run check    ESLint, TypeScript and 10 tests
+ npm run build    Production compilation
+ npm start        Production server
 
-From this branch's repository root:
-  npm ci
-  npm run dev
-Open http://localhost:3000.
-
-Checks: npm run check
-Production: npm run build, then npm start
-
-No environment file is needed for demo mode. To configure, copy .env.example
-to .env.local (ignored):
-  NEXT_PUBLIC_DEMO_MODE=true
-  NEXT_PUBLIC_API_MODE=demo
-  NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-  NEXT_PUBLIC_ENABLE_3D=true
-
-Set NEXT_PUBLIC_DEMO_MODE=false for live requests. This setting takes precedence
-over the legacy NEXT_PUBLIC_API_MODE. Set NEXT_PUBLIC_ENABLE_3D=false to disable WebGL.
-NEXT_PUBLIC values are compiled into browser bundles: restart development or
-rebuild after changing them. NEVER put secrets or private API keys in them.
+Optional: copy .env.example to ignored .env.local:
+ NEXT_PUBLIC_DEMO_MODE=true
+ NEXT_PUBLIC_API_MODE=demo
+ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+ NEXT_PUBLIC_ENABLE_3D=true
+DEMO_MODE=false selects live requests (takes precedence over legacy API_MODE).
+ENABLE_3D=false uses the capture path everywhere. Restart/rebuild after changes.
+NEXT_PUBLIC values reach browser bundles: NEVER put secrets in them.
 
 6. BACKEND INTEGRATION GUIDE
 
@@ -307,127 +295,133 @@ production, add a same-origin server proxy or a deliberate authentication
 contract; keep AI-provider keys on the backend. Validate file content and size
 server-side too. No fixture data should be used to conceal a backend failure.
 
+
 7. THREE.JS AND ANIMATION SYSTEM
 
-WorkspaceScene is lazy-loaded on desktop >=900px with WebGL2 and no reduced-
-motion preference. React 19 uses Fiber 9, Drei 10 and Three 0.180. The Canvas
-caps DPR at 1.5, uses AgX tone mapping, a local 1K HDRI and properly initialized
-rectangular window lighting. Directional light uses a 2048 shadow map; two
-single-frame contact-shadow captures ground the furniture and desk objects.
-CinematicPost uses a half-float render target, 4x MSAA, a restrained vignette
-and OutputPass. It does not add bloom, chromatic aberration or depth-of-field
-that would interfere with screen readability. Rendering suspends offscreen.
+Desktop >=900px, WebGL2 and no reduced-motion preference loads Canvas lazily.
+DPR <=1.5, AgX, local 1K HDRI, initialized rectangular window light, 2048 shadow
+map and two single-frame contact shadows support PBR surfaces. Half-float 4x
+MSAA, slight vignette and OutputPass preserve UI clarity. Rendering switches to
+demand when offscreen/after entry; the scroll playhead invalidates frames for
+reversal. Camera position/aim use time-based exponential damping.
 
-ProfessionalHardware loads actual licensed GLBs: Innerscene monitor/mouse
-(CC0), Amazon.com Rivet desk (CC BY 4.0), AndreiVNK headphones (CC BY 4.0),
-and liweihang's sculpted keyboard case/keycaps (MIT). The keyboard shares key
-geometry across 68 keys and has an original legend atlas. Poly Haven plants,
-articulated lamp, oak PBR maps and HDRI remain CC0. Original architecture and
-accessories complement the licensed hardware. Fabric gets a procedural weave
-bump and physical sheen. Sources, authors, hashes and changes are recorded in
-ASSET_NOTICES.md, public/assets/*/sources.json, license notices and /credits.
-Retain attribution for desk/headphones in derivatives and scene captures.
+Licensed models: Innerscene monitor/mouse CC0; Amazon.com Rivet desk CC BY4;
+AndreiVNK headphones CC BY4; liweihang sculpted keyboard MIT; Poly Haven plants
+and lamp CC0. Keyboard uses shared sculpted geometry across 68 keys. Graphite
+desk treatment preserves photographic grain, keyboard case is red, fabric has
+weave bump and physical sheen. Meshopt/WebP compression and attribution remain
+in ASSET_NOTICES.md, manifests and /credits. Keep attribution with derivatives.
 
-All GLBs use Meshopt compression. Suitable textures become WebP <=1024px;
-normal maps and runtime oak UVs are preserved. Hardware compression reduces
-monitor 84KB to 27KB, desk 2.17MB to 1.39MB, keyboard 5.64MB to 1.17MB,
-headphones 1.15MB to 608KB and mouse 2.57MB to 370KB (decimal rounded sizes).
-The committed optimization manifest records exact byte counts.
+Wallpaper: ocean-wallpaper.webp is the exact supplied
+xxww-KRKW8BKLdrs-unsplash.jpg: proportional 2560px resize, ICC-aware sRGB, WebP95,
+center-cover without stretching, retaining horizon/sailboat. It is only inside
+the monitor. Original user file is not committed. Source hash is in
+public/assets/scenery/sources.json; do not infer a CC0 license from its filename.
 
-ScrollExperience owns one scoped GSAP context/ScrollTrigger. Choreography is
-in home/choreography.ts, with a deterministic 100-unit playhead:
-  0-17  peaceful room; early camera approach begins at 2
-  17-31 detailed YouTube opens, settles; retention graph draws and metrics reveal
-  31-47 Instagram then TikTok open, charts grow and windows rearrange
-  44-70 12 bounded notifications, five windows and seven browser tabs accumulate
-  69-78 windows become translucent, their content softens and motion slows
-  74-87 asymmetric radii, skew, stretch and convergence collect the windows;
-        six separate glass panels follow curved approaches into a central lens
-  79-89 SVG Bezier contour morphs from flowing to stretched to settled;
-        a displaced/blurred local caustic adds refraction-like highlights
-  84-92 Meet ViralPilot appears within the settled glass
-  90-98 the actual interactive studio expands through a rounded inset clip
-  92.5-100 the same projected DOM screen grows continuously to the viewport
+Outdoor: meadow.webp, Meadow 2 backplate15 by Sergej Majboroda/Poly Haven, CC0.
+WindowLandscape uses a subdivided plane behind the actual window, tiny masked
+canopy displacement, and two original soft cloud billboards at distinct depths.
+A 180-second sine cycle repeats smoothly (six foliage oscillations per cycle).
+Uniform/ref updates avoid React state per frame; owned resources are disposed.
+Actual depth provides subtle camera parallax. Reduced motion stops drift. The
+mobile/no-WebGL outdoor view is the static v7 capture, while HTML stays animated.
 
-Glass uses CSS backdrop blur and translucent surfaces, SVG outline highlights,
-shape deformation and converging geometry; it is not just a crossfade. SVG
-refraction affects only a local decorative caustic: applying URL backdrop
-filters to the whole transformed DOM produced clipping in Chromium and was
-removed. Essential text stays outside that distortion. No Lottie runtime is
-required: LottieFiles principles (anticipation, staging, stagger, follow-through,
-short overshoot/settle and reduced-motion alternatives) shape the GSAP motion.
+Two separate GSAP timelines and DOM ownership:
+A. monitor-loop.ts repeats every 16 seconds independently of scroll. Three
+platform interfaces open, rearrange, switch tabs/z-order, close/reopen; six
+bounded notifications arrive. End state matches the start. It owns inner
+.auto-* elements. Pause control, hidden tabs, offscreen visibility and scroll
+progress >0.15 suspend it. Returning resumes its current position. No spawning.
+B. choreography.ts owns outer shells, camera, glass and product demonstrations:
+ 0-13    problem and early camera approach; opening caption exits
+ 13-29   windows deform/skew/contract; six panels converge; SVG contour morph
+ 29-46   upload plus hook/pacing/caption/opportunity walkthrough
+ 46-64   four-platform readiness comparison / animated bars
+ 64-82   before/after hook, title, caption and editing suggestions
+ 82-98   unified report and final headline
+ 95-100  interactive example report reveals in the same screen
+ 92.5-100 monitor-to-viewport entry with smoothstep endpoints
 
-No timers spawn analytics notifications. Scrubbing backward reconstructs each
-stage from the same playhead. Chapter buttons target the same ScrollTrigger;
-context cleanup removes pins/tweens on unmount or responsive changes. Global
-CSS smooth scrolling is disabled because it competed with chapter positioning.
+ScrollTrigger scrub0.55 and eased camera poses smooth the existing sequence.
+Reverse scroll reconstructs scroll-owned state; it does not reverse the auto
+loop. Scoped contexts clean up tweens/pins on unmount/responsive changes. Do not
+let two timelines write the same node's transform. Chapter buttons use the same
+scroll playhead. No CSS smooth-scroll competes with it.
 
-ScreenProjection uses the imported monitor's measured four screen vertices,
-including its physical 5-degree tilt. projection.ts solves a CSS homography.
-The same HTML interface remains aligned with the display while the camera
-moves. Entry blends projected corners into viewport corners and changes the
-layout from 960x540 to viewport size. Controls leave inert mode near completion.
-No abrupt route change or static analytics screenshot substitutes for entry.
-Update the corner coordinates if replacing the monitor asset or its pose.
+Glass combines translucency/local reflection blur, skew/stretch/asymmetric radii,
+converging panels, equal-command Bezier contour morphs and a local displaced
+caustic. It is not just a crossfade. Essential text excludes distortion. No
+full-backdrop URL filter (Chromium clips transformed DOM). LottieFiles staging,
+anticipation/follow-through/settle principles are implemented in GSAP.
 
-Mobile/no-WebGL uses workspace-room-v3.jpg plus the same bounded HTML story.
-Reduced motion removes the pin/zoom and exposes a normal studio beneath a still
-hero. NEXT_PUBLIC_ENABLE_3D=false disables Canvas globally. Edit chapter stops
-in lib/experience.ts, timeline in home/choreography.ts, glass shape/component
-in LiquidGlass.tsx and appearance in experience.css. Preserve reversibility.
+ScreenProjection uses the imported monitor's tilted corners; projection.ts
+solves the homography. The 960x540 logical desktop continuously becomes the
+viewport at entry, with inert controls until nearly complete. flatScreenLayout
+maps the v7 1440x900 capture to its measured screen corners. After glass, phone
+product demos adapt to a 480x700 logical layout for readability. These pure
+progress functions return identical geometry on reversal.
 
-Optional asset rebuild: build:assets; fetch:assets; fetch:hardware;
-build:keyboard; optimize:assets. Normal setup uses committed optimized assets.
-fetch:hardware pins the keyboard source revision; its raw sources go in ignored
-work/assets. Do not redistribute user reference files with the app.
+Edit loop in monitor-loop.ts, scroll story in choreography.ts, chapter stops in
+lib/experience.ts, glass in LiquidGlass.tsx and final styles in identity.css.
+Disable WebGL via NEXT_PUBLIC_ENABLE_3D=false. Reduced motion removes looping,
+pinning and camera travel; a still hero leads into the normal studio.
+Optional rebuild commands and scripts are documented in README. Normal setup
+uses committed optimized assets; raw downloads go in ignored work/.
 
 8. DESIGN SYSTEM
 
-Warm ivory #F7F3EA, forest ink #172D26, pale sky #D5E7EA and sage #95AB94.
-White report surfaces and restrained oak/rose/cyan distinguish data without
-turning the product into a different theme. Instrument Serif carries editorial
-headings; DM Sans carries controls, metrics and reading copy. Fonts are local.
-Glass is purposeful in the cinematic transformation and light navigation;
-functional reports use solid backgrounds and explicit numeric labels.
+Approved exact palette: #BE1A1A primary red, #D0311E energetic red-orange,
+#F7D87F yellow, #F8EBAB light yellow, #171717 ink. Archivo Black expressive
+headlines; DM Sans data/controls. identity.css is imported after base styles.
+Solid functional reports keep the same identity as the cinematic homepage.
 
-Reusable controls: button variants, platform icons, CopyButton, native form
-controls, keyboard-operable report tabs, shared brand mark and AnimatedLink.
-Design tokens and applied skill recommendations: DESIGN.md and
- design-system/viralpilot/MASTER.md.
+Buttons: clear red/yellow/black contrast, practical 44px targets, 9px corners,
+small hover/press motion and 3px red focus/4px offset. Secondary hero action has
+an explicit surface/border. Floating controls separate by breakpoint. Charts
+include labels/numbers as well as color. Glass is a narrative/nav accent.
+Reusable button variants, CopyButton, platform icons, native fields/player,
+keyboard tabs, brand mark and attributed AnimatedLink are shared.
 
-Reference influence: the workspace photograph supplies warm wood/daylight and
-careful desk objects; Crate supplies serif scale and a tangible 3D centerpiece;
-Railroad supplies architectural framing of nature and continuous immersion.
-Earlier Yamauchi, Work Louder and Henry references informed depth, physical
-hardware detail and expressive typography. No reference HTML/image is shipped.
+Reference influence: Work Louder hardware/Henry expressive type; Yamauchi depth;
+desk reference physical detail; Crate tangible centerpiece; Railroad window
+framing/spatial continuity. The later approved red/yellow direction supersedes
+earlier serif/natural choices. The user ocean is now an explicit wallpaper
+asset. Other reference HTML/screenshots are not distributed.
+See DESIGN.md and design-system/viralpilot/{MASTER.md,DNA.json}.
 
 9. IMPORTANT NOTES FOR TEAMMATES
 
-Ready: complete frontend/demo interaction and asset pipeline, plus validated
-live request adapters. See QA_REPORT.md and screenshots for browser coverage.
+Ready: complete frontend/demo flows, optimized assets, independent desktop loop,
+reversible product story, responsive controls and validated live API layer.
+Browser evidence/coverage/limitations: QA_REPORT.md and screenshots/.
 
-Still required: real backend endpoints or adapter, actual AI/model results,
-server upload validation, auth/persistence if desired and production hosting.
-The main branch's PostPilot backend/web code is untouched. This branch contains
-a standalone Next frontend at root; plan a reviewed directory migration instead
-of merging competing root package files blindly.
+Remaining: align /score and /api/analyses, real inference/generation, server file
+validation/limits, persistence/auth if desired, remote signed playback and
+production deployment. No backend behavior was changed. Main's backend/web is
+separate; this branch is a standalone Next frontend at root. Plan a reviewed
+directory migration, not a blind merge of competing root packages.
 
-Limits: demo insights are fixtures; local sessions disappear on refresh; restored
-live reports have no remote video preview; cancel stops client work only; MOV
-codec support depends on browser. 3D quality/performance depends on GPU. Mobile
-uses an intentional lightweight fallback, not the full WebGL room. The scenery
-outside is an original generated image, not a navigable 3D terrain.
+Limits: fixture reports; sessions clear on refresh; restored live reports lack
+video URLs; Cancel only stops client work; MOV depends on browser codecs. GPU
+performance varies. Mobile uses a capture rather than full WebGL. Outdoor is a
+photographic depth plate with subtle motion, not navigable modeled terrain.
+No device FPS certification or real AI validation is claimed.
 
-Future improvements: align the team API, add real inference and signed playback,
-server cancellation, saved projects, authentication, captions/safe-area overlays,
-real creator media fixtures and device-specific performance profiling.
+Future: contract alignment, real inference/playback, server cancellation, saved
+projects, auth, creator test footage, caption/safe-area overlays and GPU profiling.
 
-10. LATEST DELIVERY CHANGES
+10. LATEST CHANGES
 
-The latest delivery commit on viralpilot contains the full reversible Creator's
-Chaos story, licensed/compressed PBR hardware, plants and lamp, photographic oak/HDRI,
-licensed detailed hardware, early readable monitor approach, continuous interactive screen entry, coherent app
-styling, comparison/opportunity details, live report and optimizer routes,
-validated API layer, demo flows, tests, documentation and browser evidence.
-The final commit hash and verified pushed branch URL are reported with delivery.
-Keep this file updated whenever features, endpoints, assets or setup change.
+The delivery on viralpilot completes the red/yellow identity, Archivo Black,
+independent 16-second desktop loop and six-scene product demonstration. Final
+polish preserves that approved design: stronger/separated controls, smoother
+camera/scrub/entry, exact ocean wallpaper, separate licensed animated outdoor
+view, refreshed capture and readable phone walkthrough. Backend unchanged.
+Docs, source/licenses, meaningful geometry/reversal tests and browser captures
+accompany the commit. The delivery message gives the verified pushed hash/URL.
+Keep this file current whenever APIs, assets, features or setup change.
+
+Browser rendering note: perspective-transformed backdrop filters left oversized
+ghost captures in Chromium. Moving notifications/controls now use stable
+translucent fills; glass keeps its deformation/caustic/highlights and a locally
+blurred reflection copy. This preserves the sequence without compositor slabs.

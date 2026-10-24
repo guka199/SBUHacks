@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import "@fontsource/instrument-serif/400.css";
-import "@fontsource/instrument-serif/400-italic.css";
+import "@fontsource/archivo-black/400.css";
+
 import "@fontsource-variable/dm-sans";
 import "./globals.css";
 import "./cinematic.css";
 import "./app-theme.css";
 import "./experience.css";
+import "./identity.css";
 import { Navigation } from "@/components/navigation";
 import { SessionProvider } from "@/components/session";
 export const metadata: Metadata = {

@@ -8,16 +8,26 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
+  Pause,
   Play,
 } from "lucide-react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { initialMotion, storyStages } from "@/lib/experience";
 import { applyProjection } from "@/lib/projection";
+import { flatScreenLayout } from "@/lib/fallback-layout";
 import { MonitorExperience } from "./MonitorExperience";
 import { choreograph } from "./choreography";
+import { createMonitorLoop } from "./monitor-loop";
 import { StudioGateway } from "./StudioGateway";
 const Scene = dynamic(() => import("../three/WorkspaceScene"), { ssr: false });
+function measureOpeningFloor(scope: HTMLElement) {
+  const caption = scope.querySelector<HTMLElement>(".caption-opening");
+  const actions = scope.querySelector<HTMLElement>(".workspace-actions");
+  return caption && actions
+    ? caption.offsetTop + actions.offsetTop + actions.offsetHeight + 18
+    : 392;
+}
 class SceneBoundary extends Component<
   { children: ReactNode; onFailure: () => void },
   { failed: boolean }
@@ -34,20 +44,53 @@ class SceneBoundary extends Component<
   }
 }
 export function ScrollExperience() {
+  const poster = useRef<HTMLImageElement>(null);
   const root = useRef<HTMLElement>(null),
     stage = useRef<HTMLDivElement>(null),
     screen = useRef<HTMLDivElement>(null);
   const motion = useRef(initialMotion()),
     timeline = useRef<gsap.core.Timeline | null>(null),
+    loop = useRef<gsap.core.Timeline | null>(null),
     stageIndex = useRef(0);
   const [mode, setMode] = useState<"pending" | "webgl" | "flat" | "reduced">(
       "pending",
     ),
     [active, setActive] = useState(0),
-    [visible, setVisible] = useState(true);
+    [visible, setVisible] = useState(true),
+    [paused, setPaused] = useState(false);
+  const preference = useRef({ paused: false, visible: true, hidden: false });
   useEffect(() => {
-    const desktop = matchMedia("(min-width: 900px)"),
-      reduce = matchMedia("(prefers-reduced-motion: reduce)");
+    if (mode !== "reduced" || !stage.current || !poster.current) return;
+    const element = stage.current,
+      image = poster.current;
+    const fit = () => {
+      const frame = flatScreenLayout(
+        element.clientWidth,
+        element.clientHeight,
+        0,
+        measureOpeningFloor(root.current!),
+      ).poster;
+      Object.assign(image.style, {
+        width: frame.width + "px",
+        height: frame.height + "px",
+        left: frame.left + "px",
+        top: frame.top + "px",
+        right: "auto",
+        bottom: "auto",
+        objectFit: "fill",
+      });
+    };
+    const observer = new ResizeObserver(fit);
+    observer.observe(element);
+    fit();
+    document.fonts.ready.then(() => {
+      if (poster.current === image) fit();
+    });
+    return () => observer.disconnect();
+  }, [mode]);
+  useEffect(() => {
+    const desktop = matchMedia("(min-width:900px)"),
+      reduce = matchMedia("(prefers-reduced-motion:reduce)");
     const update = () => {
       if (reduce.matches) {
         setMode("reduced");
@@ -72,12 +115,25 @@ export function ScrollExperience() {
   }, []);
   useEffect(() => {
     if (!stage.current) return;
-    const observer = new IntersectionObserver(([entry]) =>
-      setVisible(entry.isIntersecting),
+    const observer = new IntersectionObserver(([e]) =>
+      setVisible(e.isIntersecting),
     );
     observer.observe(stage.current);
     return () => observer.disconnect();
   }, []);
+  useEffect(() => {
+    preference.current.paused = paused;
+    preference.current.visible = visible;
+    const sync = () => {
+      preference.current.hidden = document.hidden;
+      loop.current?.paused(
+        paused || !visible || document.hidden || motion.current.progress > 0.15,
+      );
+    };
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => document.removeEventListener("visibilitychange", sync);
+  }, [paused, visible]);
   useEffect(() => {
     if (
       mode === "pending" ||
@@ -92,57 +148,69 @@ export function ScrollExperience() {
       s = motion.current;
     Object.assign(s, initialMotion());
     const context = gsap.context(() => {
-      const q = gsap.utils.selector(scope),
-        windows = q(".chaos-window"),
-        notes = q(".chaos-notification"),
-        tabs = q(".browser-extra-tab");
-      gsap.set([...windows, ...notes, ...tabs], { autoAlpha: 0 });
-      gsap.set(".liquid-field,.monitor-application", { autoAlpha: 0 });
-      gsap.set(".story-caption:not(.caption-opening)", { autoAlpha: 0 });
+      gsap.set(".chaos-window", {
+        autoAlpha: 1,
+        transformOrigin: "480px 270px",
+      });
+      gsap.set(
+        ".liquid-field,.monitor-application,.product-demonstration,.product-scene,.caption-meet-product",
+        { autoAlpha: 0 },
+      );
+      const auto = createMonitorLoop(scope);
+      loop.current = auto;
+      let openingFloor = measureOpeningFloor(scope);
       const update = () => {
         scope.dataset.progress = s.progress.toFixed(4);
         s.invalidate?.();
         const next = storyStages.reduce(
-          (value, item, index) =>
-            s.progress >= item.at - 0.025 ? index : value,
+          (n, item, i) => (s.progress >= item.at - 0.015 ? i : n),
           0,
         );
         if (next !== stageIndex.current) {
           stageIndex.current = next;
           setActive(next);
         }
+        const p = preference.current;
+        auto.paused(p.paused || !p.visible || p.hidden || s.progress > 0.15);
         if (mode === "flat" && screen.current) {
           const w = element.clientWidth,
-            h = element.clientHeight,
-            p = Math.min(1, s.progress / 0.45),
-            startTop = h * 0.48,
-            endTop = h * (w < 600 ? 0.36 : 0.3);
-          const top = startTop + (endTop - startTop) * p;
+            h = element.clientHeight;
+          const fit = flatScreenLayout(w, h, s.progress, openingFloor);
+          if (poster.current) {
+            Object.assign(poster.current.style, {
+              width: fit.poster.width + "px",
+              height: fit.poster.height + "px",
+              left: fit.poster.left + "px",
+              top: fit.poster.top + "px",
+              right: "auto",
+              bottom: "auto",
+              objectFit: "fill",
+            });
+          }
           applyProjection(
             screen.current,
-            [
-              { x: 16, y: top },
-              { x: w - 16, y: top },
-              { x: w - 16, y: top + (w - 32) * 0.5625 },
-              { x: 16, y: top + (w - 32) * 0.5625 },
-            ],
+            fit.quad,
             { width: w, height: h },
             s.progress,
+            fit.logical,
           );
         }
       };
       const tl = gsap.timeline({
         defaults: { ease: "power2.inOut" },
         scrollTrigger: {
-          id: "creator-chaos",
+          id: "viralpilot-product-story",
           trigger: scope,
           pin: element,
           start: "top top",
-          end: () => `+=${innerHeight * (mode === "flat" ? 3 : 4.2)}`,
-          scrub: 0.32,
+          end: () => `+=${innerHeight * (mode === "flat" ? 5 : 6)}`,
+          scrub: 0.55,
           anticipatePin: 1,
           invalidateOnRefresh: true,
-          onRefresh: update,
+          onRefresh: () => {
+            openingFloor = measureOpeningFloor(scope);
+            update();
+          },
         },
         onUpdate: update,
       });
@@ -156,12 +224,12 @@ export function ScrollExperience() {
     return () => {
       context.revert();
       timeline.current = null;
+      loop.current = null;
     };
   }, [mode]);
   function jump(progress: number) {
     const trigger = timeline.current?.scrollTrigger;
     if (trigger) {
-      // Release focus from the screen before it becomes inert on the return trip.
       if (screen.current?.contains(document.activeElement))
         root.current?.focus({ preventScroll: true });
       window.scrollTo({
@@ -180,16 +248,21 @@ export function ScrollExperience() {
       >
         <div ref={stage} className="experience-stage">
           <Image
+            ref={poster}
             className="experience-poster"
-            src="/textures/workspace-room-v3.jpg"
-            alt="A cozy creator workspace with a large monitor, oak desk and mountain view"
+            src="/textures/workspace-room-v7.jpg"
+            alt="Modern creator studio with a premium monitor, red keyboard, textured desk and bright architectural surroundings"
             fill
             priority
-            sizes="(max-width: 900px) 1500px, 100vw"
+            sizes="(max-width:900px) 1400px,100vw"
           />
           {mode === "webgl" && (
             <SceneBoundary onFailure={() => setMode("flat")}>
-              <Scene screenRef={screen} motionRef={motion} active={visible} />
+              <Scene
+                screenRef={screen}
+                motionRef={motion}
+                active={visible && active < 5}
+              />
             </SceneBoundary>
           )}
           {(mode === "webgl" || mode === "flat") && (
@@ -202,67 +275,72 @@ export function ScrollExperience() {
               <MonitorExperience onBack={() => jump(0)} />
             </div>
           )}
+          <div className="hero-wash" />
           <div className="story-caption caption-opening">
+            <p className="hero-kicker">YOUR CONTENT HAS PLACES TO GO.</p>
             <h1>
-              Your content is
+              One video.
               <br />
-              <em>everywhere.</em>
+              <span>Too many</span>
+              <br />
+              platforms.
             </h1>
-            <p>
-              Creating is hard enough.
-              <br className="mobile-break" /> Managing every platform shouldn’t
-              be.
+            <p className="hero-description">
+              You make the content.
+              <br />
+              We help you make the next move.
             </p>
             <div className="workspace-actions">
               <Link className="natural-button" href="/analyze">
-                Analyze your video <ArrowUpRight size={17} />
+                Try your video <ArrowUpRight size={19} />
               </Link>
-              {mode === "reduced" ? (
-                <Link className="natural-demo" href="/studio">
-                  Enter the studio <ArrowUpRight size={14} />
-                </Link>
-              ) : (
-                <button className="natural-demo" onClick={() => jump(0.27)}>
-                  <Play size={12} fill="currentColor" />
-                  Watch the story
-                </button>
-              )}
+              <Link className="natural-demo" href="/demo">
+                Explore the demo <ArrowUpRight size={17} />
+              </Link>
             </div>
           </div>
-          <div className="story-caption caption-tools">
+          <div className="story-caption caption-meet-product">
+            <p>LESS SWITCHING. MORE CREATING.</p>
             <h2>
-              One video. <em>Three dashboards.</em>
-            </h2>
-          </div>
-          <div className="story-caption caption-overload">
-            <h2>
-              More tabs. <em>Less headspace.</em>
+              Meet <span>ViralPilot.</span>
             </h2>
           </div>
           {mode !== "reduced" && (
             <>
               <button
-                className="experience-scroll"
-                onClick={() =>
-                  jump(Math.min(1, storyStages[Math.min(active + 1, 6)].at))
+                className="hero-loop-control"
+                aria-label={
+                  paused ? "Play monitor animation" : "Pause monitor animation"
                 }
+                aria-pressed={paused}
+                onClick={() => setPaused(!paused)}
               >
-                <span>Scroll to find your clarity</span>
-                <ArrowDown size={16} />
+                <span className={paused ? "" : "live-indicator"} />
+                <span>CREATOR DESKTOP / {paused ? "PAUSED" : "LIVE"}</span>
+                {paused ? <Play size={15} /> : <Pause size={15} />}
+              </button>
+              <button
+                className="experience-scroll"
+                onClick={() => jump(storyStages[Math.min(active + 1, 5)].at)}
+              >
+                See what happens next <ArrowDown size={18} />
               </button>
               <div
                 className="experience-controls"
-                aria-label="Cinematic story controls"
+                aria-label="Product story controls"
               >
                 <button
-                  aria-label="Previous story stage"
+                  aria-label="Previous story scene"
                   disabled={active === 0}
                   onClick={() => jump(storyStages[Math.max(0, active - 1)].at)}
                 >
-                  <ArrowLeft size={14} />
+                  <ArrowLeft size={16} />
                 </button>
                 <div>
-                  <span>{storyStages[active].name}</span>
+                  <span>
+                    {String(active + 1).padStart(2, "0")} /{" "}
+                    {storyStages[active].name}
+                  </span>
                   <div className="experience-dots">
                     {storyStages.map((item, i) => (
                       <button
@@ -276,20 +354,20 @@ export function ScrollExperience() {
                   </div>
                 </div>
                 <button
-                  aria-label="Next story stage"
-                  onClick={() => jump(storyStages[Math.min(6, active + 1)].at)}
+                  aria-label="Next story scene"
+                  onClick={() => jump(storyStages[Math.min(5, active + 1)].at)}
                 >
-                  <ArrowRight size={14} />
+                  <ArrowRight size={16} />
                 </button>
               </div>
               <button className="skip-experience" onClick={() => jump(1)}>
-                Skip intro <ArrowUpRight size={13} />
+                Open the dashboard <ArrowUpRight size={14} />
               </button>
             </>
           )}
           {mode === "reduced" && (
             <div className="reduced-note">
-              A calmer view, with reduced motion.{" "}
+              Motion is reduced. The tools are ready.{" "}
               <Link href="/studio">
                 Enter the studio <ArrowUpRight size={14} />
               </Link>
@@ -300,25 +378,28 @@ export function ScrollExperience() {
       {mode === "reduced" && <StudioGateway />}
       <section className="natural-story" id="story">
         <div>
+          <p>FROM FIRST FRAME TO FINAL CAPTION.</p>
           <h2>
-            Every platform.
+            Make every
             <br />
-            <em>One clear direction.</em>
+            <span>post count.</span>
           </h2>
         </div>
         <div>
           <p>
-            Find your video’s strongest fit, explore the moments that matter,
-            and sharpen your next edit. More perspective. Less switching between
-            tools.
+            Understand your video. Find its strongest platform. Make a sharper
+            edit. All in one creative workspace.
           </p>
           <Link className="natural-button" href="/analyze">
-            Bring your next idea <ArrowUpRight size={17} />
+            Bring your next idea <ArrowUpRight size={18} />
+          </Link>
+          <Link className="footer-demo-link" href="/demo">
+            Explore an illustrative report
           </Link>
         </div>
       </section>
       <footer className="natural-footer">
-        <span>ViralPilot · Made for creators. Built at SBUHacks.</span>
+        <span>ViralPilot® · Built for creators. Made at SBUHacks.</span>
         <span>
           <Link href="/credits">Scene artists &amp; licenses</Link> · Link
           interaction by <a href="https://skiper-ui.com/">Skiper UI</a>
