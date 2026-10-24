@@ -211,3 +211,8 @@ Next (in order):
 
 **Demo flow:** connect YouTube + upload a TikTok CSV → dashboard compares → score a draft → apply a
 suggestion, score rises → play ElevenLabs briefing → share data, receive Solana tokens.
+
+
+## ViralPilot frontend integration (October24,2026)
+
+The user authorized merging the cinematic ViralPilot frontend into main. It lives in frontend/ within this same monorepo; the original web/ and all backend/ML/data code are preserved. Use cd frontend && npm ci && npm run dev for this interface (Node22+). Check with npm run check and npm run build there. frontend/AGENTS.md has its Next.js guide requirement. Root FRONTEND_HANDOFF.txt is the canonical team guide; frontend/ASSET_NOTICES.md retains artist/license attribution. The interface defaults to labeled demo mode and still needs the documented /score-to-/api/analyses adapter. Do not silently remove the working web/ integrations or expose backend keys through NEXT_PUBLIC variables.

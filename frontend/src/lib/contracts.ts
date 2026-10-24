@@ -1,0 +1,136 @@
+import { z } from "zod";
+
+export const platformIds = [
+  "tiktok",
+  "instagram",
+  "shorts",
+  "youtube",
+] as const;
+export const platformSchema = z.enum(platformIds);
+export type PlatformId = z.infer<typeof platformSchema>;
+const score = z.number().min(0).max(100);
+export const suggestionSchema = z.object({
+  hook: z.string(),
+  title: z.string(),
+  caption: z.string(),
+  description: z.string(),
+  cta: z.string(),
+  edits: z.array(z.string()),
+});
+export type Suggestions = z.infer<typeof suggestionSchema>;
+export const resultSchema = z
+  .object({
+    id: z.string().min(1),
+    mode: z.enum(["demo", "live"]),
+    video: z.object({
+      name: z.string(),
+      durationSeconds: z.number().positive(),
+      width: z.number().positive(),
+      height: z.number().positive(),
+    }),
+    summary: z.string(),
+    platforms: z
+      .array(
+        z.object({
+          id: platformSchema,
+          score,
+          hook: score,
+          pacing: score,
+          format: score,
+          assessment: z.string(),
+          opportunities: z.array(z.string()),
+          suggestions: suggestionSchema,
+        }),
+      )
+      .min(1)
+      .refine(
+        (items) => new Set(items.map((item) => item.id)).size === items.length,
+        "Duplicate platforms",
+      ),
+    observations: z.array(
+      z.object({
+        id: z.string(),
+        time: z.number().nonnegative(),
+        end: z.number().nonnegative(),
+        kind: z.enum(["strength", "opportunity"]),
+        title: z.string(),
+        detail: z.string(),
+      }),
+    ),
+  })
+  .superRefine((result, ctx) => {
+    result.observations.forEach((o, i) => {
+      if (o.end < o.time || o.end > result.video.durationSeconds)
+        ctx.addIssue({
+          code: "custom",
+          message: "Observation outside video",
+          path: ["observations", i],
+        });
+    });
+  });
+export type AnalysisResult = z.infer<typeof resultSchema>;
+export type PlatformResult = AnalysisResult["platforms"][number];
+export const jobSchema = z
+  .object({
+    id: z.string().min(1),
+    status: z.enum(["queued", "processing", "complete", "failed"]),
+    progress: z.number().min(0).max(100),
+    stage: z.string(),
+    result: resultSchema.optional(),
+    error: z.string().optional(),
+  })
+  .superRefine((job, ctx) => {
+    if (job.status === "complete" && !job.result)
+      ctx.addIssue({
+        code: "custom",
+        message: "Completed job requires result",
+      });
+  });
+export type AnalysisJob = z.infer<typeof jobSchema>;
+export interface VideoMetadata {
+  name: string;
+  durationSeconds: number;
+  width: number;
+  height: number;
+}
+export interface RewriteRequest {
+  platform: PlatformId;
+  tone: "direct" | "playful" | "educational";
+}
+export const rewriteSchema = z.object({ suggestions: suggestionSchema });
+export const platforms: {
+  id: PlatformId;
+  name: string;
+  short: string;
+  format: string;
+  note: string;
+}[] = [
+  {
+    id: "tiktok",
+    name: "TikTok",
+    short: "TikTok",
+    format: "9:16",
+    note: "Lead with the unexpected. Make the first seconds worth staying for.",
+  },
+  {
+    id: "instagram",
+    name: "Instagram Reels",
+    short: "Reels",
+    format: "9:16",
+    note: "Make it worth saving. Build a visual story people want to send.",
+  },
+  {
+    id: "shorts",
+    name: "YouTube Shorts",
+    short: "Shorts",
+    format: "9:16",
+    note: "One clear idea. A quick payoff. A reason to watch again.",
+  },
+  {
+    id: "youtube",
+    name: "YouTube",
+    short: "YouTube",
+    format: "16:9",
+    note: "Give the idea room. Deliver on the promise of your title.",
+  },
+];

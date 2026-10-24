@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "source": "DESIGN.md",
+  "tokens": {
+    "source": [
+      "src/app/identity.css",
+      "src/app/app-theme.css"
+    ]
+  },
+  "motion": {
+    "source": [
+      "src/components/home/choreography.ts",
+      "src/components/home/monitor-loop.ts"
+    ],
+    "reversible": true,
+    "reducedMotion": "Unpinned still hero and normal studio"
+  },
+  "focus": {
+    "outline": "3px solid #BE1A1A",
+    "offset": "4px"
+  },
+  "glass": {
+    "blur": "8px local reflection copy; perspective backdrop blur disabled for Chromium artifacts",
+    "distortion": "Decorative caustic only"
+  },
+  "verification": "QA_REPORT.md",
+  "profile": "design-system/viralpilot/DNA.json"
+}

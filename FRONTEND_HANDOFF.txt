@@ -1,0 +1,451 @@
+MAIN BRANCH INTEGRATION
+Location: frontend/ in the existing SBUHacks monorepo.
+All source/assets/routes/scripts paths in this guide are relative to frontend/.
+Run npm commands from frontend/. Existing web/, api/, data/, ml/, models/,
+shared/ and tests/ are preserved. The backend adapter is still required.
+This root file is the canonical handoff. The frontend copy points here.
+
+VIRALPILOT FRONTEND HANDOFF
+Updated: October 24, 2026
+Repository: guka199/SBUHacks
+Delivery branch: main (merged from viralpilot)
+
+1. PROJECT OVERVIEW
+
+ViralPilot is a video planning studio for creators: upload a video, compare
+content readiness for TikTok, Instagram Reels, YouTube Shorts and YouTube
+long-form, inspect timestamped feedback and improve hooks/publishing copy.
+Scores inform creative decisions; they do not promise views or virality.
+
+The homepage uses the approved red/yellow identity and real 3D workspace.
+An independent 16-second creator desktop loop runs inside the monitor.
+Scrolling demonstrates six connected scenes: problem -> Meet ViralPilot/glass
+merge -> AI analysis -> platform comparison -> content optimization -> unified
+dashboard. The same projected HTML screen expands into an interactive example
+report. Upward scroll reverses the product story; the auto loop resumes near
+the opening. Main app: studio -> upload -> processing -> report/insights/optimizer.
+
+2. TECHNOLOGIES USED
+
+- Next.js 16 App Router, React 19, TypeScript; Tailwind v4 base and custom CSS.
+- Three.js 0.180, React Three Fiber 9, Drei 10, local GLB/PBR/HDR assets.
+- GSAP + ScrollTrigger: separate scoped automatic and scroll timelines.
+- Motion for React (framer-motion package) for restrained app transitions.
+- Lucide React; original reusable UI; no UI component-suite dependency.
+- Zod validates live responses and supplies inferred TypeScript contracts.
+- Self-hosted Archivo Black display type and DM Sans Variable interface type.
+- glTF Transform, Meshoptimizer, Sharp for development-time asset preparation.
+- ESLint, TypeScript, Node tests via tsx. Locked versions: package-lock.json.
+
+UI UX Pro Max was installed using its official CLI and initialized for Codex.
+Three.js Skills, official GSAP Skills, Design DNA, LottieFiles Motion Design,
+Genjutsu's supported installer, Taste and Impeccable were applied. Concrete
+decisions: design-system/viralpilot/MASTER.md. Downloaded skill tooling is ignored.
+Fiber is a library. No Lottie runtime, unsupported integration or agent swarm is
+needed. The user's exact palette and approved composition take priority.
+
+3. PROJECT STRUCTURE
+
+src/app/layout.tsx          Fonts, metadata, shared header and memory session.
+src/app/page.tsx            Homepage cinematic experience.
+src/app/identity.css        Current identity/responsive polish; imported last.
+src/app/app-theme.css       Upload, reports, charts and optimizer styles.
+src/app/experience.css      Base story, analytics and glass styles.
+src/app/cinematic.css       Inherited room/studio base styles.
+src/app/globals.css         Resets and shared primitives.
+
+Routes:
+/                         Six-scene story and embedded interactive example.
+/studio                   Standalone studio entry.
+/analyze, /upload         Upload and processing.
+/demo                     Interactive authored example report.
+/analysis                 Current in-memory session report.
+/analysis/[id]            Fetch live report; id=demo opens the example.
+/analysis/[id]/optimize   Direct optimizer (demo is supported).
+/workspace-preview        Isolated scene for inspection and fallback captures.
+/credits                  Artists, source links, licenses and changes.
+
+src/components/home/
+ ScrollExperience.tsx     Modes, controls, pause state, GSAP lifecycle/pin.
+ monitor-loop.ts          Independent 16-second inner-window loop.
+ choreography.ts          Reversible 100-unit camera/glass/product timeline.
+ MonitorExperience.tsx    Wallpaper, analytics, glass, product and report layers.
+ AnalyticsWindow.tsx      Detailed original YouTube/Instagram/TikTok HTML.
+ LiquidGlass.tsx          SVG contours, local caustic, six glass panels.
+ ProductDemonstration.tsx Animated upload/analysis/comparison/before-after/report.
+ StudioGateway.tsx        Studio entry and reduced-motion alternative.
+ WorkspacePreview.tsx     Isolated room/capture view.
+
+src/components/three/
+ WorkspaceScene.tsx       Lazy Canvas, damped camera, composition/render modes.
+ ProfessionalHardware.tsx Licensed desk, monitor, keyboard, mouse, headphones.
+ WorkspaceModel.tsx       Original architecture/accessories, oak/fabric PBR.
+ RealPlants.tsx           Textured plants with subtle sway.
+ DeskLamp.tsx             Licensed articulated lamp.
+ WindowLandscape.tsx      Separate CC0 outdoor plate, canopy/cloud motion/depth.
+ SceneLighting.tsx        Window light, HDRI reflections, directional shadows.
+ CinematicPost.tsx        Half-float MSAA, restrained vignette, OutputPass.
+ ScreenProjection.tsx     Imported monitor's four physical corners -> DOM.
+
+src/components/upload.tsx   File, preview, platform and processing workflow.
+src/components/dashboard.tsx Report, player, comparisons, optimizer and export.
+src/components/session.tsx  In-memory File, object URL, metadata and report.
+src/components/ui.tsx       Brand/platform icons, CopyButton, reveal.
+src/components/ui/animated-link.tsx Attributed Skiper interaction.
+src/lib/experience.ts       Camera state, chapters, notifications, entry easing.
+src/lib/projection.ts       Homography and continuous viewport entry.
+src/lib/fallback-layout.ts  Measured capture corners and phone demo geometry.
+src/lib/api.ts              All live HTTP requests and polling.
+src/lib/contracts.ts        Zod schemas and inferred types.
+src/lib/demo.ts             Authored report/tone fixtures.
+src/lib/video.ts            Validation, metadata and timestamp helpers.
+
+public/assets/hardware/     Licensed compressed hardware and source manifests.
+public/assets/polyhaven/    Plants, lamp, PBR oak, HDRI and CC0/source metadata.
+public/assets/scenery/      Separate Meadow 2 backplate, sources/hashes.
+public/models/              Original compressed room/accessory GLBs.
+public/textures/            Exact user ocean WebP and v7 room capture.
+public/demo.webm            Original 24-second typographic sample video.
+scripts/                    Reproducible model/texture preparation.
+tests/                      API/schema/video/projection/fallback tests.
+screenshots/                Browser evidence; see QA_REPORT.md.
+
+4. FEATURES IMPLEMENTED
+
+Completed frontend: responsive landing, licensed PBR room, independent detailed
+desktop loop with pause/resume, bounded notifications, glass deformation/merge,
+six-scene product demo, continuous monitor entry and reverse scrolling.
+Improved controls/focus/spacing, exact ocean wallpaper, separate outdoor motion,
+phone/no-WebGL capture with live HTML and readable portrait product walkthrough.
+
+Upload supports drag/drop/browse, MP4/WebM/MOV up to 250 MB, metadata/local
+preview, platform selection, remove/change file, sample video and cancellation.
+Reports include four-platform scores, comparison bars, assessments, strengths/
+opportunities, native player, timeline, timestamp markers and clickable feedback.
+Optimizer supplies hook/title/caption/description/CTA/edit examples, tone changes,
+copy confirmation and JSON export retaining updates. Direct report/optimizer
+routes, error/empty/loading states and keyboard report tabs are implemented.
+
+Demo boundary: social accounts/metrics/notifications are illustrative HTML,
+not connected account data. Homepage upload/analysis is a visual walkthrough.
+Demo processing is timed, not AI inference; reports and tone variations are
+authored fixtures. Timestamps scale to selected duration. Demo files remain in
+browser memory and are not uploaded. Labels identify simulated behavior.
+
+Unfinished/backend: real inference/scoring/suggestions, media storage, saved
+projects/authentication, server validation and the API adapter below. No social
+OAuth, publishing, scraping or validated performance prediction is implemented.
+
+5. HOW TO RUN
+
+Node.js 22+, npm and a modern browser. From frontend/ (run cd frontend from the monorepo root first):
+ npm ci
+ npm run dev
+Open http://localhost:3000. No account/API key/.env is required for demo.
+ npm run check    ESLint, TypeScript and 10 tests
+ npm run build    Production compilation
+ npm start        Production server
+
+Optional: copy .env.example to ignored .env.local:
+ NEXT_PUBLIC_DEMO_MODE=true
+ NEXT_PUBLIC_API_MODE=demo
+ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+ NEXT_PUBLIC_ENABLE_3D=true
+DEMO_MODE=false selects live requests (takes precedence over legacy API_MODE).
+ENABLE_3D=false uses the capture path everywhere. Restart/rebuild after changes.
+NEXT_PUBLIC values reach browser bundles: NEVER put secrets in them.
+
+6. BACKEND INTEGRATION GUIDE
+
+All live requests are in src/lib/api.ts. Components do not scatter fetch calls.
+Upload uses analysisApi.create, then waitForAnalysis. Dashboard direct links
+use analysisApi.get and polling. Optimizer uses analysisApi.rewrite.
+
+Default demo mode is deliberate. Live errors are shown and never silently
+replaced by successful-looking demo results.
+
+IMPORTANT EXISTING BACKEND DIFFERENCE
+The fetched main branch (6f2e4cf, October 24) currently exposes POST /score, requiring caption,
+comma-separated platforms, context and optional file, with a 200 MB upload
+limit. This frontend expects asynchronous /api/analyses jobs, four format IDs,
+and timestamped video feedback; it accepts 250 MB locally. Changing API_BASE
+alone does not integrate these interfaces. Agree on one contract, adapt the
+backend or src/lib/api.ts, align upload limits, and map YouTube short/long
+formats deliberately. Do not invent missing hook/timestamp scores from a
+backend response or mislabel model-only fallback as complete AI analysis.
+No teammate backend files were overwritten or merged.
+
+Expected browser API contract:
+A. POST /api/analyses
+Content-Type: multipart/form-data (the browser supplies the boundary).
+Fields:
+  video: the original File bytes and filename
+  platforms: a JSON string, e.g. ["tiktok","instagram","shorts","youtube"]
+XHR reports actual upload progress. Upload timeout: 120 seconds.
+Example initial response:
+{
+  "id": "job_42",
+  "status": "queued",
+  "progress": 0,
+  "stage": "Waiting for analysis"
+}
+
+B. GET /api/analyses/job_42
+Polls approximately every two seconds, maximum 150 polls. IDs are URL encoded.
+Example intermediate response:
+{
+  "id": "job_42",
+  "status": "processing",
+  "progress": 60,
+  "stage": "Comparing platform suitability"
+}
+
+Example complete response (one selected platform; return all selected platforms
+using the same shape). Every field below matches the actual Zod schema:
+{
+  "id": "job_42",
+  "status": "complete",
+  "progress": 100,
+  "stage": "Ready",
+  "result": {
+    "id": "job_42",
+    "mode": "live",
+    "video": {
+      "name": "my-video.mp4",
+      "durationSeconds": 24,
+      "width": 720,
+      "height": 1280
+    },
+    "summary": "The opening is clear; shorten the pause before the payoff.",
+    "platforms": [{
+      "id": "tiktok",
+      "score": 86,
+      "hook": 91,
+      "pacing": 82,
+      "format": 94,
+      "assessment": "A strong short-form opening with a clear visual payoff.",
+      "opportunities": ["Trim the pause at 0:08.", "Add readable captions."],
+      "suggestions": {
+        "hook": "You do not need a perfect idea. Start with this.",
+        "title": "Make something before you feel ready",
+        "caption": "Less overthinking. More making. #CreativeProcess",
+        "description": "A short experiment in turning an idea into a story.",
+        "cta": "What would you make? Tell me below.",
+        "edits": ["Show the finished result first.", "Trim the pause at 0:08."]
+      }
+    }],
+    "observations": [{
+      "id": "pace-1",
+      "time": 8,
+      "end": 10,
+      "kind": "opportunity",
+      "title": "Tighten this pause",
+      "detail": "The story stops advancing here. Cut to the next action."
+    }]
+  }
+}
+
+A failed job is:
+{"id":"job_42","status":"failed","progress":60,"stage":"Failed",
+ "error":"This video's codec is unsupported. Export H.264 and try again."}
+Non-2xx responses also surface errors. A completed job MUST include result.
+Scores must be 0-100; platform IDs must be unique; observation timestamps must
+fit within the actual positive video duration. Live mode requires mode="live".
+
+C. POST /api/analyses/job_42/rewrite
+Content-Type: application/json
+Request:
+{"platform":"tiktok","tone":"playful"}
+Supported tones: direct, playful, educational.
+Response:
+{
+  "suggestions": {
+    "hook": "Your next good idea is hiding in plain sight.",
+    "title": "Make something before you feel ready",
+    "caption": "One small idea. A little less overthinking. #MakeSomething",
+    "description": "A short experiment in making a story your own.",
+    "cta": "What will you start today?",
+    "edits": ["Open on the result.", "Trim the first pause."]
+  }
+}
+The response updates the selected platform, remains available when switching
+report tabs and is included in export. Changing tone alone does not call the
+server; the user presses Regenerate (or Try sample tone in demo mode).
+
+TypeScript source of truth: src/lib/contracts.ts.
+  PlatformId = "tiktok" | "instagram" | "shorts" | "youtube"
+  AnalysisJob = {id, status, progress, stage, result?, error?}
+  AnalysisResult = {id, mode, video, summary, platforms, observations}
+  PlatformResult = {id, score, hook, pacing, format, assessment,
+                    opportunities, suggestions}
+  Suggestions = {hook, title, caption, description, cta, edits:string[]}
+  VideoMetadata = {name, durationSeconds, width, height}
+  RewriteRequest = {platform:PlatformId, tone:"direct"|"playful"|"educational"}
+Most are inferred directly from Zod; extend the schema first, then UI consumers.
+
+Video handling: readVideo creates a temporary object URL for metadata. Session
+creates another URL for local previews and revokes it on replacement/unmount.
+No base64 conversion, localStorage video, or persistent file database is used.
+Only live Analyze sends the actual File. Cancel aborts XHR/polling but does not
+currently delete/cancel a job already accepted by the server. Add a backend
+cancel endpoint if server-side cancellation is required.
+
+Results display: setResult feeds Dashboard. Platform IDs select cards, meters,
+comparison bars and optimizer copy. Observations drive player seek positions.
+After refresh, local previews are gone. Live /analysis/[id] retrieves a report,
+but there is no remote video URL in this contract, so a restored report shows a
+clear unavailable-preview state. Add a signed playback URL if required.
+
+CORS: allow the actual frontend origin (localhost:3000 in development) and the
+required POST/GET methods. No authentication headers are implemented. For
+production, add a same-origin server proxy or a deliberate authentication
+contract; keep AI-provider keys on the backend. Validate file content and size
+server-side too. No fixture data should be used to conceal a backend failure.
+
+
+7. THREE.JS AND ANIMATION SYSTEM
+
+Desktop >=900px, WebGL2 and no reduced-motion preference loads Canvas lazily.
+DPR <=1.5, AgX, local 1K HDRI, initialized rectangular window light, 2048 shadow
+map and two single-frame contact shadows support PBR surfaces. Half-float 4x
+MSAA, slight vignette and OutputPass preserve UI clarity. Rendering switches to
+demand when offscreen/after entry; the scroll playhead invalidates frames for
+reversal. Camera position/aim use time-based exponential damping.
+
+Licensed models: Innerscene monitor/mouse CC0; Amazon.com Rivet desk CC BY4;
+AndreiVNK headphones CC BY4; liweihang sculpted keyboard MIT; Poly Haven plants
+and lamp CC0. Keyboard uses shared sculpted geometry across 68 keys. Graphite
+desk treatment preserves photographic grain, keyboard case is red, fabric has
+weave bump and physical sheen. Meshopt/WebP compression and attribution remain
+in ASSET_NOTICES.md, manifests and /credits. Keep attribution with derivatives.
+
+Wallpaper: ocean-wallpaper.webp is the exact supplied
+xxww-KRKW8BKLdrs-unsplash.jpg: proportional 2560px resize, ICC-aware sRGB, WebP95,
+center-cover without stretching, retaining horizon/sailboat. It is only inside
+the monitor. Original user file is not committed. Source hash is in
+public/assets/scenery/sources.json; do not infer a CC0 license from its filename.
+
+Outdoor: meadow.webp, Meadow 2 backplate15 by Sergej Majboroda/Poly Haven, CC0.
+WindowLandscape uses a subdivided plane behind the actual window, tiny masked
+canopy displacement, and two original soft cloud billboards at distinct depths.
+A 180-second sine cycle repeats smoothly (six foliage oscillations per cycle).
+Uniform/ref updates avoid React state per frame; owned resources are disposed.
+Actual depth provides subtle camera parallax. Reduced motion stops drift. The
+mobile/no-WebGL outdoor view is the static v7 capture, while HTML stays animated.
+
+Two separate GSAP timelines and DOM ownership:
+A. monitor-loop.ts repeats every 16 seconds independently of scroll. Three
+platform interfaces open, rearrange, switch tabs/z-order, close/reopen; six
+bounded notifications arrive. End state matches the start. It owns inner
+.auto-* elements. Pause control, hidden tabs, offscreen visibility and scroll
+progress >0.15 suspend it. Returning resumes its current position. No spawning.
+B. choreography.ts owns outer shells, camera, glass and product demonstrations:
+ 0-13    problem and early camera approach; opening caption exits
+ 13-29   windows deform/skew/contract; six panels converge; SVG contour morph
+ 29-46   upload plus hook/pacing/caption/opportunity walkthrough
+ 46-64   four-platform readiness comparison / animated bars
+ 64-82   before/after hook, title, caption and editing suggestions
+ 82-98   unified report and final headline
+ 95-100  interactive example report reveals in the same screen
+ 92.5-100 monitor-to-viewport entry with smoothstep endpoints
+
+ScrollTrigger scrub0.55 and eased camera poses smooth the existing sequence.
+Reverse scroll reconstructs scroll-owned state; it does not reverse the auto
+loop. Scoped contexts clean up tweens/pins on unmount/responsive changes. Do not
+let two timelines write the same node's transform. Chapter buttons use the same
+scroll playhead. No CSS smooth-scroll competes with it.
+
+Glass combines translucency/local reflection blur, skew/stretch/asymmetric radii,
+converging panels, equal-command Bezier contour morphs and a local displaced
+caustic. It is not just a crossfade. Essential text excludes distortion. No
+full-backdrop URL filter (Chromium clips transformed DOM). LottieFiles staging,
+anticipation/follow-through/settle principles are implemented in GSAP.
+
+ScreenProjection uses the imported monitor's tilted corners; projection.ts
+solves the homography. The 960x540 logical desktop continuously becomes the
+viewport at entry, with inert controls until nearly complete. flatScreenLayout
+maps the v7 1440x900 capture to its measured screen corners. After glass, phone
+product demos adapt to a 480x700 logical layout for readability. These pure
+progress functions return identical geometry on reversal.
+
+Edit loop in monitor-loop.ts, scroll story in choreography.ts, chapter stops in
+lib/experience.ts, glass in LiquidGlass.tsx and final styles in identity.css.
+Disable WebGL via NEXT_PUBLIC_ENABLE_3D=false. Reduced motion removes looping,
+pinning and camera travel; a still hero leads into the normal studio.
+Optional rebuild commands and scripts are documented in README. Normal setup
+uses committed optimized assets; raw downloads go in ignored work/.
+
+8. DESIGN SYSTEM
+
+Approved exact palette: #BE1A1A primary red, #D0311E energetic red-orange,
+#F7D87F yellow, #F8EBAB light yellow, #171717 ink. Archivo Black expressive
+headlines; DM Sans data/controls. identity.css is imported after base styles.
+Solid functional reports keep the same identity as the cinematic homepage.
+
+Buttons: clear red/yellow/black contrast, practical 44px targets, 9px corners,
+small hover/press motion and 3px red focus/4px offset. Secondary hero action has
+an explicit surface/border. Floating controls separate by breakpoint. Charts
+include labels/numbers as well as color. Glass is a narrative/nav accent.
+Reusable button variants, CopyButton, platform icons, native fields/player,
+keyboard tabs, brand mark and attributed AnimatedLink are shared.
+
+Reference influence: Work Louder hardware/Henry expressive type; Yamauchi depth;
+desk reference physical detail; Crate tangible centerpiece; Railroad window
+framing/spatial continuity. The later approved red/yellow direction supersedes
+earlier serif/natural choices. The user ocean is now an explicit wallpaper
+asset. Other reference HTML/screenshots are not distributed.
+See DESIGN.md and design-system/viralpilot/{MASTER.md,DNA.json}.
+
+9. IMPORTANT NOTES FOR TEAMMATES
+
+Ready: complete frontend/demo flows, optimized assets, independent desktop loop,
+reversible product story, responsive controls and validated live API layer.
+Browser evidence/coverage/limitations: QA_REPORT.md and screenshots/.
+
+Remaining: align /score and /api/analyses, real inference/generation, server file
+validation/limits, persistence/auth if desired, remote signed playback and
+production deployment. No backend behavior was changed. The existing backend/web remain intact at the monorepo root. ViralPilot is in
+frontend/; run its npm commands there and integrate the API through a reviewed adapter.
+
+Limits: fixture reports; sessions clear on refresh; restored live reports lack
+video URLs; Cancel only stops client work; MOV depends on browser codecs. GPU
+performance varies. Mobile uses a capture rather than full WebGL. Outdoor is a
+photographic depth plate with subtle motion, not navigable modeled terrain.
+No device FPS certification or real AI validation is claimed.
+
+Future: contract alignment, real inference/playback, server cancellation, saved
+projects, auth, creator test footage, caption/safe-area overlays and GPU profiling.
+
+10. LATEST CHANGES
+
+The delivery integrated into main from viralpilot completes the red/yellow identity, Archivo Black,
+independent 16-second desktop loop and six-scene product demonstration. Final
+polish preserves that approved design: stronger/separated controls, smoother
+camera/scrub/entry, exact ocean wallpaper, separate licensed animated outdoor
+view, refreshed capture and readable phone walkthrough. Backend unchanged.
+Docs, source/licenses, meaningful geometry/reversal tests and browser captures
+accompany the commit. The delivery message gives the verified pushed hash/URL.
+Keep this file current whenever APIs, assets, features or setup change.
+
+Browser rendering note: perspective-transformed backdrop filters left oversized
+ghost captures in Chromium. Moving notifications/controls now use stable
+translucent fills; glass keeps its deformation/caustic/highlights and a locally
+blurred reflection copy. This preserves the sequence without compositor slabs.
+
+SCROLLBAR FOLLOW-UP (October 24, 2026)
+The embedded .monitor-application used overflow:auto inside the document's
+scrollbar. It now has natural height and overflow:clip during the preview;
+at full entry, the stage/monitor clipping opens and the document scrolls the
+whole report. ResizeObserver reserves report overflow as document-flow space,
+including tab/viewport size changes. The original pin height/end, GSAP timeline,
+camera poses and projection math are unchanged. Back-to-story remains in the
+report's normal flow (sticky inside the transformed pin was inappropriate).
+The root uses standard thin #171717/transparent scrollbars plus an 8px rounded
+WebKit fallback. No body scroll lock or wheel interception is used.
+
+
+MAIN DELIVERY: merged the complete licensed frontend and single-page scrollbar
+fix into main under frontend/. Existing backend/ML/data/web files are unchanged.
+No force push, history replacement, credentials, dependencies or build artifacts
+are part of the delivery. Latest startup commands: cd frontend; npm ci;
+npm run dev. Run npm run check and npm run build in the same directory.

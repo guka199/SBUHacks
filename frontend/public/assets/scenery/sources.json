@@ -1,0 +1,21 @@
+{
+  "outdoor": {
+    "name": "Meadow 2 backplate 15",
+    "authors": {
+      "Sergej Majboroda": "All"
+    },
+    "source": "https://polyhaven.com/a/meadow_2",
+    "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Backplates/meadow_2/jpg_pretty/15.jpg",
+    "license": "CC0-1.0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "originalSha256": "ab1c2af0ac30f2bec54b2298106234d69078bcf9c28f020e7c8f9b199fbd2a98",
+    "changes": "Resized to 2560px and WebP encoded. Used on a subdivided outdoor plane with subtle masked foliage displacement."
+  },
+  "wallpaper": {
+    "name": "xxww-KRKW8BKLdrs-unsplash.jpg",
+    "source": "Exact photograph supplied by the user for the monitor wallpaper",
+    "originalSha256": "2cca075e183867a347e34783a33e20d0b69bb6caffc4838eff88edc79966421a",
+    "originalSize": "7008x4672",
+    "changes": "ICC-aware sRGB conversion, proportional 2560px resize and high-quality WebP encoding. No retouching or generated replacement. Runtime center-cover crop preserves the horizon and sailboat."
+  }
+}

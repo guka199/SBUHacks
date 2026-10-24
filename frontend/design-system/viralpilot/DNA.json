@@ -1,0 +1,440 @@
+{
+  "meta": {
+    "name": "ViralPilot",
+    "description": "Source-derived approved red/yellow creator studio and final refinement.",
+    "source_references": [
+      "src/app/identity.css",
+      "src/components/home/monitor-loop.ts",
+      "src/components/three/WindowLandscape.tsx",
+      "src/app/app-theme.css",
+      "src/app/cinematic.css",
+      "src/app/experience.css",
+      "src/components/home/choreography.ts",
+      "DESIGN.md"
+    ],
+    "created_at": "2026-10-24"
+  },
+  "design_system": {
+    "color": {
+      "palette_type": "User-pinned warm high contrast",
+      "primary": {
+        "hex": "#BE1A1A",
+        "role": "Primary/red emphasis"
+      },
+      "secondary": {
+        "hex": "#F7D87F",
+        "role": "Yellow canvas"
+      },
+      "accent": {
+        "hex": "#D0311E",
+        "role": "Energetic red-orange"
+      },
+      "neutral": {
+        "scale": [
+          "#F8EBAB",
+          "#FFF9E3",
+          "#171717"
+        ],
+        "usage": "Light-yellow surfaces/black ink"
+      },
+      "semantic": {
+        "error": "#BE1A1A",
+        "info": "#171717"
+      },
+      "surface": {
+        "background": "#F8EBAB",
+        "card": "#FFF9E3",
+        "elevated": "#F7D87F"
+      },
+      "contrast_strategy": "Solid readable surfaces, exact labels, light-yellow text on red actions."
+    },
+    "typography": {
+      "type_scale": {
+        "display": {
+          "size": "clamp(65px,7.5vw,115px), breakpoint overrides",
+          "weight": 400,
+          "line_height": 0.94,
+          "tracking": "-0.065em approved display"
+        },
+        "heading_1": {
+          "size": "responsive page-title rule",
+          "weight": 400,
+          "line_height": 1.05,
+          "tracking": "normal"
+        },
+        "heading_2": {
+          "size": "responsive natural-story rule",
+          "weight": 400,
+          "line_height": 1.05,
+          "tracking": "normal"
+        },
+        "heading_3": {
+          "size": "component-specific 18–24px",
+          "weight": 500,
+          "line_height": 1.2,
+          "tracking": "normal"
+        },
+        "body": {
+          "size": "15px",
+          "weight": 400,
+          "line_height": 1.6,
+          "tracking": "normal"
+        },
+        "body_small": {
+          "size": "13px",
+          "weight": 400,
+          "line_height": 1.5,
+          "tracking": "normal"
+        },
+        "caption": {
+          "size": "12px",
+          "weight": 400,
+          "line_height": 1.4,
+          "tracking": "normal"
+        },
+        "overline": {
+          "size": "11px",
+          "weight": 600,
+          "line_height": 1.4,
+          "tracking": "0.08em"
+        }
+      },
+      "font_families": {
+        "heading": "Archivo Black",
+        "body": "DM Sans Variable",
+        "mono": "browser monospace for code examples only"
+      },
+      "font_style_notes": "Expressive heavy sans display, DM Sans metrics/controls/body"
+    },
+    "spacing": {
+      "base_unit": "4px",
+      "scale": [
+        "8px",
+        "12px",
+        "16px",
+        "24px",
+        "32px",
+        "48px",
+        "64px"
+      ],
+      "content_density": "comfortable, denser within related metric groups",
+      "section_rhythm": "Large editorial openings; grouped app controls and report sections"
+    },
+    "layout": {
+      "grid_system": "Responsive CSS grid/flex; projected960x540 desktop;480x700 phone demonstrations",
+      "max_content_width": "Page-specific constrained containers in globals.css",
+      "columns": "Multiple columns on desktop, single-column app on mobile",
+      "gutter": "Responsive 5vw hero and page padding",
+      "breakpoints": [
+        "600px",
+        "768px",
+        "900px"
+      ],
+      "alignment_tendency": "Left headline/right monitor opening, then front-facing product"
+    },
+    "shape": {
+      "border_radius": {
+        "small": "9px controls",
+        "medium": "component-specific report rounding",
+        "large": "28px transitioning windows",
+        "pill": "40px navigation"
+      },
+      "border_usage": "Subtle one-pixel neutral separators and bright glass edges",
+      "divider_style": "Thin solid neutral lines"
+    },
+    "elevation": {
+      "shadow_style": "Soft diffused",
+      "levels": {
+        "low": "Tonal report grouping",
+        "medium": "Window and navigation shadows",
+        "high": "Overlapping analytics and central glass lens"
+      },
+      "depth_cues": [
+        "PBR materials",
+        "HDR reflections",
+        "contact shadows",
+        "overlap",
+        "glass blur"
+      ]
+    },
+    "iconography": {
+      "style": "Outline",
+      "stroke_weight": "Lucide component defaults",
+      "size_scale": [
+        "10",
+        "14",
+        "17",
+        "20",
+        "24"
+      ],
+      "preferred_set": "Lucide React"
+    },
+    "motion": {
+      "easing": [
+        "power2.inOut",
+        "power3.out",
+        "sine.inOut"
+      ],
+      "duration_scale": {
+        "micro": "Brief control feedback",
+        "normal": "Short window settle",
+        "macro": "Independent16-second loop;100-unit reversible product story"
+      },
+      "entrance_pattern": "Staged two-part transform with small overshoot",
+      "exit_pattern": "Converge, deform and contract",
+      "philosophy": "Separate auto/scroll ownership, scrub0.55, damped camera, reduced-motion alternative"
+    },
+    "components": {
+      "button_style": "Red/light-yellow primary, outlined secondary,9px corners,3px red focus",
+      "input_style": "Native semantics, neutral borders, explicit validation",
+      "card_style": "Light opaque data surfaces with restrained borders",
+      "navigation_pattern": "Translucent hero pill, solid app header, mobile menu",
+      "modal_style": "No custom modal system implemented",
+      "list_style": "Named, actionable timestamp and opportunity rows",
+      "component_notes": "Keyboard tabs; numeric chart labels; copy confirmation; visible demo labels"
+    }
+  },
+  "design_style": {
+    "aesthetic": {
+      "mood": [
+        "bold",
+        "colorful",
+        "playful",
+        "precise"
+      ],
+      "visual_metaphor": "From fragmented creator desktop to one clear next move",
+      "era_influence": "Contemporary creative hardware/expressive typography",
+      "genre": "Creator studio",
+      "personality_traits": [
+        "expressive",
+        "clear",
+        "approachable"
+      ],
+      "adjectives": [
+        "physical",
+        "confident",
+        "readable"
+      ]
+    },
+    "visual_language": {
+      "complexity": "Rich homepage, restrained app",
+      "ornamentation": "Purposeful physical objects and glass highlights",
+      "whitespace_usage": "Generous around statements; economical within reports",
+      "visual_weight_distribution": "Scene first, then readable monitor, then functional studio",
+      "focal_strategy": "Progressive reveal",
+      "contrast_level": "Dark ink on warm light",
+      "texture_usage": "Photographic wood, realistic plant textures, metal, procedural fabric"
+    },
+    "composition": {
+      "hierarchy_method": "Display scale and spatial staging",
+      "balance_type": "Asymmetric headline/monitor opening, then centered product",
+      "flow_direction": "Room depth into screen; vertical application flow",
+      "grouping_strategy": "Platform-related metrics and timestamp observations",
+      "negative_space_role": "Separates headline, monitor and controls"
+    },
+    "imagery": {
+      "photo_treatment": "Exact ocean wallpaper; separate green scenery; neutral room light",
+      "illustration_style": "Original detailed HTML software illustrations",
+      "graphic_elements": "Retention paths, comparison bars and glass contours",
+      "pattern_usage": "Subtle material weave only",
+      "image_shape": "Architectural frame; no decorative image masking"
+    },
+    "interaction_feel": {
+      "feedback_style": "Direct, visible and stateful",
+      "hover_behavior": "Small color/position changes",
+      "transition_personality": "Smooth glide with weighted settle",
+      "loading_style": "Clearly labeled cancellable demo stages or real upload progress",
+      "microinteraction_density": "Low in app; deliberate narrative motion"
+    },
+    "brand_voice_in_ui": {
+      "tone": "Clear and encouraging",
+      "formality": "Conversational professional",
+      "cta_style": "Direct invitation",
+      "empty_state_approach": "Explain next action and offer sample",
+      "error_tone": "Concrete problem with recovery action"
+    }
+  },
+  "visual_effects": {
+    "overview": {
+      "effect_intensity": "Heavy immersive homepage",
+      "performance_tier": "WebGL desktop; lightweight HTML fallback",
+      "fallback_strategy": "Current scene capture plus HTML story; reduced motion uses unpinned still and studio",
+      "primary_technology": [
+        "React Three Fiber",
+        "Three.js",
+        "GSAP",
+        "SVG",
+        "CSS"
+      ]
+    },
+    "background_effects": {
+      "type": "scene-bg",
+      "description": "Modeled workspace, CC0Meadow2 plate with tiny canopy movement/cloud depth; exact supplied ocean inside monitor",
+      "technology": "Three.js",
+      "params": {
+        "color_palette": [
+          "#F7D87F",
+          "#F8EBAB",
+          "#BE1A1A",
+          "#171717"
+        ],
+        "speed": "180-second outdoor sine cycle;16-second desktop loop; scroll camera",
+        "density": "Bounded scene assets",
+        "opacity": 1,
+        "blend_mode": "normal"
+      }
+    },
+    "particle_systems": {
+      "enabled": false,
+      "type": "none",
+      "description": "No particles; no unbounded notification spawning",
+      "technology": "none",
+      "params": {
+        "count": 0,
+        "shape": "none",
+        "size_range": [
+          0,
+          0
+        ],
+        "movement_pattern": "none",
+        "color_behavior": "none",
+        "interaction": "none",
+        "spawn_area": "none"
+      }
+    },
+    "3d_elements": {
+      "enabled": true,
+      "type": "scene-bg",
+      "description": "Licensed hardware, plants and lamp with original room/accessories",
+      "technology": "Fiber 9 / Drei 10 / Three 0.180",
+      "params": {
+        "renderer": "WebGL2, DPR <=1.5, AgX",
+        "lighting": "HDRI, directional sun, initialized rectangular window light, two one-time contact shadows",
+        "camera": "Early close approach; imported monitor tilt accounted for",
+        "materials": "PBR, photographic maps, physical sheen and weave bump",
+        "geometry": "Licensed GLB hardware; instanced sculpted keys; Meshopt compressed",
+        "post_processing": [
+          "4x MSAA",
+          "half-float target",
+          "subtle vignette",
+          "OutputPass"
+        ],
+        "interaction_model": "Independent inner HTML loop, reversible outer scroll/product timeline, homography"
+      }
+    },
+    "shader_effects": {
+      "enabled": true,
+      "type": "subtle-vignette",
+      "description": "Restrained vignette, tiny outdoor vertex motion, graphite material treatment, localized SVG caustic",
+      "technology": "GLSL ShaderPass and SVG filter",
+      "params": {
+        "uniforms": [
+          "tDiffuse"
+        ],
+        "vertex_manipulation": "Masked low-amplitude canopy/sky displacement",
+        "fragment_output": "Seven-percent maximum vignette attenuation",
+        "noise_type": "SVG feTurbulence seed 8",
+        "distortion": "Local caustic only; essential text excluded"
+      }
+    },
+    "scroll_effects": {
+      "parallax": {
+        "enabled": true,
+        "layers": [
+          "workspace",
+          "monitor DOM"
+        ],
+        "depth_range": "Camera z6 to2; outdoorz-14/cloudsz-10,-11",
+        "speed_curve": "Authored eased camera poses"
+      },
+      "scroll_triggered_animations": {
+        "enabled": true,
+        "trigger_points": [
+          0,
+          20,
+          38,
+          55,
+          73,
+          89,
+          100
+        ],
+        "animation_type": "Camera, glass, upload/analysis, comparison, optimization, unified report",
+        "scrub_behavior": "Reversible scrub0.55; independent loop pauses beyond0.15"
+      },
+      "scroll_morphing": {
+        "enabled": true,
+        "description": "Asymmetric panel convergence, Bezier contour morph and continuous monitor-to-viewport projection"
+      }
+    },
+    "text_effects": {
+      "type": "staged reveal",
+      "description": "Whole readable captions; no letter scramble",
+      "technology": "GSAP",
+      "params": {
+        "split_strategy": "Whole statement",
+        "animation_per_unit": "Opacity and modest vertical transform",
+        "stagger": "Narrative chapter staging",
+        "effect_style": "Expressive display/readable whole captions"
+      }
+    },
+    "cursor_effects": {
+      "enabled": false,
+      "type": "none",
+      "description": "Native pointer retained",
+      "params": {
+        "shape": "native",
+        "size": "native",
+        "blend_mode": "normal",
+        "trail": false,
+        "interaction_zone": "normal controls"
+      }
+    },
+    "image_effects": {
+      "type": "PBR/environment",
+      "description": "Natural textured assets; fallback image only softens as HTML story begins",
+      "technology": "Three.js / CSS",
+      "params": {
+        "filter_pipeline": "Color-managed maps; fallback blur",
+        "hover_transform": "none",
+        "reveal_animation": "Scene loads behind already available fallback",
+        "distortion_type": "No wallpaper distortion; tiny outdoor movement"
+      }
+    },
+    "glassmorphism_neumorphism": {
+      "enabled": true,
+      "style": "Restrained liquid glass, no neumorphism",
+      "params": {
+        "blur_radius": "8px on local reflection copy (perspective backdrop fallback)",
+        "transparency": "Translucent panels; small controls use stable surfaces to avoid Chromium capture artifacts",
+        "border_treatment": "Fine white edge and SVG gradient contour",
+        "shadow_type": "Soft contact and drop shadows",
+        "light_source_angle": "Warm upper-left window"
+      }
+    },
+    "canvas_drawings": {
+      "enabled": true,
+      "type": "WebGL scene",
+      "description": "No separate decorative 2D canvas",
+      "technology": "R3F Canvas",
+      "params": {
+        "draw_method": "Cached scene graph",
+        "animation_loop": "Active only while scene is visible",
+        "color_scheme": "Red/yellow identity; neutral PBR room, green outdoors, ocean desktop",
+        "responsiveness": "DPR cap, no mobile WebGL",
+        "interaction": "Scroll camera"
+      }
+    },
+    "svg_animations": {
+      "enabled": true,
+      "type": "Chart draw and contour morph",
+      "description": "Retention graph stroke reveal, bar growth and glass Bezier interpolation",
+      "params": {
+        "animation_method": "GSAP",
+        "path_morphing": "Equal-command normalized Bezier paths",
+        "stroke_animation": "Normalized dash offset",
+        "filter_effects": "Turbulence + displacement + blur on decorative caustic only"
+      }
+    },
+    "composite_notes": "The exact source files remain authoritative. Values described as responsive/component-specific are deliberately not invented fixed tokens. No full-backdrop SVG URL filter is used because Chromium clipped the projectively transformed interface."
+  }
+}

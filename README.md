@@ -4,6 +4,24 @@ See how your content performs on every platform, predict how a new post will do 
 
 **Stack:** Next.js (TypeScript) · FastAPI (Python) · XGBoost + SHAP · Snowflake + Cortex · ElevenLabs · Solana (devnet)
 
+## ViralPilot frontend (latest cinematic interface)
+
+The completed ViralPilot website is in **frontend/** on main. The existing web/, api/, data/, ml/, models/, shared/ and tests/ code is preserved. Both interfaces remain in this monorepo.
+
+Requires Node.js22+ and npm:
+
+```sh
+cd frontend
+npm ci
+npm run dev
+# checks: npm run check
+# production: npm run build && npm start
+```
+
+Open http://localhost:3000. This frontend works in explicitly labeled demo mode without credentials. Its live /api/analyses contract still needs an adapter to the team's /score API; copying backend secrets into browser variables does not integrate it. Use frontend/.env.example for frontend configuration, and keep the existing root .env.example for backend setup.
+
+[FRONTEND_HANDOFF.txt](FRONTEND_HANDOFF.txt) is the canonical ten-section team guide. [Frontend README](frontend/README.md), [asset sources/licenses](frontend/ASSET_NOTICES.md) and [browser QA](frontend/QA_REPORT.md) cover the implementation. Set frontend/ as the project root when running or deploying this interface. The original integrated web/ app remains available through its existing commands below.
+
 ## Repo layout
 
 | Folder | What lives there | Owner |

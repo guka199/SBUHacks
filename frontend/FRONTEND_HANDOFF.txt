@@ -1,0 +1,9 @@
+VIRALPILOT FRONTEND HANDOFF
+
+The canonical ten-section team handoff is ../FRONTEND_HANDOFF.txt at the root
+of the SBUHacks repository. All source paths in that guide are relative to
+this frontend/ directory. Delivery branch: main; source branch: viralpilot.
+
+Run here: npm ci; npm run dev
+Checks: npm run check
+Production: npm run build; npm start

@@ -1,0 +1,146 @@
+{
+  "checked": "2026-10-24",
+  "assets": [
+    {
+      "file": "monitor-27.glb",
+      "title": "27 inch monitor",
+      "author": "Innerscene",
+      "license": "CC0-1.0",
+      "source": "https://www.innerscene.com/tools/library/3d-parts/27-inch-monitor-office-technology-961fb20e",
+      "download": "https://www.innerscene.com/api/library/27-inch-monitor-office-technology-961fb20e/download",
+      "bytes": 83544,
+      "originalSha256": "287eebc3736f36854293ff6a761730d93faac2dca0a7d63060d48075e278ecdd",
+      "modifications": "Scaled/repositioned, Meshopt compressed; suitable textures converted to WebP. Monitor stand material tuned at runtime."
+    },
+    {
+      "file": "mouse.glb",
+      "title": "Wireless mouse",
+      "author": "Innerscene",
+      "license": "CC0-1.0",
+      "source": "https://www.innerscene.com/tools/library/3d-parts/wireless-mouse-office-technology-7e0e880d",
+      "download": "https://www.innerscene.com/api/library/wireless-mouse-office-technology-7e0e880d/download",
+      "bytes": 2571264,
+      "originalSha256": "45395c2614fca3d7306882d3c6fe8b332b64b5957c2c3ff92b7a9976a28eb47e",
+      "modifications": "Scaled/repositioned, Meshopt compressed; suitable textures converted to WebP. Monitor stand material tuned at runtime."
+    },
+    {
+      "file": "headphones.glb",
+      "title": "Sony MDR-7506 headphones",
+      "author": "AndreiVNK",
+      "license": "CC-BY-4.0",
+      "source": "https://sketchfab.com/3d-models/sony-mdr-7506-headphones-05735b74d3524f00b648231138122a28",
+      "download": "https://sceneview.github.io/models/platforms/sony_mdr_7506.glb",
+      "licenseEvidence": "https://sceneview.github.io/credits.html",
+      "bytes": 1153892,
+      "originalSha256": "ee80c833c6604c73b398c9d3f552342bc0339a1c1ad47da6e639d996c9030be7",
+      "modifications": "Scaled/repositioned, Meshopt compressed; suitable textures converted to WebP. Monitor stand material tuned at runtime."
+    },
+    {
+      "file": "rivet-desk.glb",
+      "title": "Rivet desk (Amazon Berkeley Objects B07B7DL32P)",
+      "author": "Amazon.com",
+      "license": "CC-BY-4.0",
+      "source": "https://amazon-berkeley-objects.s3.amazonaws.com/3dmodels/original/P/B07B7DL32P.glb",
+      "download": "https://amazon-berkeley-objects.s3.amazonaws.com/3dmodels/original/P/B07B7DL32P.glb",
+      "licenseEvidence": "https://sceneview.github.io/credits.html",
+      "bytes": 2167736,
+      "originalSha256": "a92090220cee5df753443445264e65d86aa5ae92da51b26c2f7c4764d73a4bfa",
+      "modifications": "Scaled/repositioned, Meshopt compressed; suitable textures converted to WebP. Monitor stand material tuned at runtime."
+    },
+    {
+      "file": "keyboard.glb",
+      "title": "Keyboard Designer ANSI 65% case and sculpted keycaps",
+      "author": "liweihang",
+      "license": "MIT",
+      "source": "https://github.com/Hanggesimida/keyboard-designer",
+      "revision": "330bfe740de931854a8092630ed5364a9273e8a2",
+      "sources": [
+        {
+          "file": "layout.json",
+          "source": "https://raw.githubusercontent.com/Hanggesimida/keyboard-designer/330bfe740de931854a8092630ed5364a9273e8a2/apps/web/modules/design/data/layouts/ansi-65.json",
+          "sha256": "543f7930e5446d07f90e576dd2efce4aef53fa31bc0e63fa7e3474daf93ad749",
+          "bytes": 8440
+        },
+        {
+          "file": "case.glb",
+          "source": "https://raw.githubusercontent.com/Hanggesimida/keyboard-designer/330bfe740de931854a8092630ed5364a9273e8a2/apps/web/public/models/cases/ansi-68.glb",
+          "sha256": "f447511831775aa48c71e7dedc0a5b1f67d8595733dbe822f7f6ec4dbb97aea7",
+          "bytes": 747632
+        },
+        {
+          "file": "R4_1u.glb",
+          "source": "https://raw.githubusercontent.com/Hanggesimida/keyboard-designer/330bfe740de931854a8092630ed5364a9273e8a2/apps/web/public/models/keycaps/standard/R4_1u.glb",
+          "sha256": "00768aca18ec9e6294e67e7f1f0a6f47c5c551d4f40e1bb786445cb6c955ad8d",
+          "bytes": 284596
+        },
+        {
+          "file": "R4_2u.glb",
+          "source": "https://raw.githubusercontent.com/Hanggesimida/keyboard-designer/330bfe740de931854a8092630ed5364a9273e8a2/apps/web/public/models/keycaps/standard/R4_2u.glb",
+          "sha256": "0274ea9f6180c528b45e6114c3b84848dd3099f036de08ba2608374367ea3a28",
+          "bytes": 657740
+        },
+        {
+          "file": "R3_1_5u.glb",
+          "source": "https://raw.githubusercontent.com/Hanggesimida/keyboard-designer/330bfe740de931854a8092630ed5364a9273e8a2/apps/web/public/models/keycaps/standard/R3_1_5u.glb",
+          "sha256": "51dc5bf0af37deb3c55b5887dd12daf41c30c8165b210cd6566c510c81db970c",
+          "bytes": 285752
+        },
+        {
+          "file": "R3_1u.glb",
+          "source": "https://raw.githubusercontent.com/Hanggesimida/keyboard-designer/330bfe740de931854a8092630ed5364a9273e8a2/apps/web/public/models/keycaps/standard/R3_1u.glb",
+          "sha256": "c7379a5c3771db9a1454bf18e76dca3142176c6b730912ec0ad406e07d960914",
+          "bytes": 285748
+        },
+        {
+          "file": "R2_1_75u.glb",
+          "source": "https://raw.githubusercontent.com/Hanggesimida/keyboard-designer/330bfe740de931854a8092630ed5364a9273e8a2/apps/web/public/models/keycaps/standard/R2_1_75u.glb",
+          "sha256": "1b7015f597da0d35c947b3fce47f368b97dfe37d566498cf5d724e74c9c1e8f9",
+          "bytes": 285756
+        },
+        {
+          "file": "R2_1u.glb",
+          "source": "https://raw.githubusercontent.com/Hanggesimida/keyboard-designer/330bfe740de931854a8092630ed5364a9273e8a2/apps/web/public/models/keycaps/standard/R2_1u.glb",
+          "sha256": "3ce381554471efb26ed5d17cc2bd678280c793efef3f1d9914627f7ed2522e01",
+          "bytes": 285748
+        },
+        {
+          "file": "R2_2_25u.glb",
+          "source": "https://raw.githubusercontent.com/Hanggesimida/keyboard-designer/330bfe740de931854a8092630ed5364a9273e8a2/apps/web/public/models/keycaps/standard/R2_2_25u.glb",
+          "sha256": "e76f1ffa1f4a39cdee33e390fe952bd1c0b3c1e0233276d57093ddb4459e0022",
+          "bytes": 645316
+        },
+        {
+          "file": "R1_2_25u.glb",
+          "source": "https://raw.githubusercontent.com/Hanggesimida/keyboard-designer/330bfe740de931854a8092630ed5364a9273e8a2/apps/web/public/models/keycaps/standard/R1_2_25u.glb",
+          "sha256": "58337caa6279232386d2d18277f3f45808197d058113d178923e1d9d90bfeae2",
+          "bytes": 645312
+        },
+        {
+          "file": "R1_1u.glb",
+          "source": "https://raw.githubusercontent.com/Hanggesimida/keyboard-designer/330bfe740de931854a8092630ed5364a9273e8a2/apps/web/public/models/keycaps/standard/R1_1u.glb",
+          "sha256": "90646634ec7b222076d95a80f9df5b35ca56f8d9038b7d0e218b7b799699b620",
+          "bytes": 285748
+        },
+        {
+          "file": "R1_1_75u.glb",
+          "source": "https://raw.githubusercontent.com/Hanggesimida/keyboard-designer/330bfe740de931854a8092630ed5364a9273e8a2/apps/web/public/models/keycaps/standard/R1_1_75u.glb",
+          "sha256": "857584c6668a4f27897accfd2b1ba626ec1014d982c72b1d6cc3c21449f8eb83",
+          "bytes": 365492
+        },
+        {
+          "file": "R1_1_25u.glb",
+          "source": "https://raw.githubusercontent.com/Hanggesimida/keyboard-designer/330bfe740de931854a8092630ed5364a9273e8a2/apps/web/public/models/keycaps/standard/R1_1_25u.glb",
+          "sha256": "4a7b384d2b2d1828272ceee8d954d4c9c64e9d5e7df8aa6736daee674f9ede0f",
+          "bytes": 285752
+        },
+        {
+          "file": "R1_6_25u.glb",
+          "source": "https://raw.githubusercontent.com/Hanggesimida/keyboard-designer/330bfe740de931854a8092630ed5364a9273e8a2/apps/web/public/models/keycaps/standard/R1_6_25u.glb",
+          "sha256": "89752327aa3f26e461d4efee33d9610329f95283b4649eb59d43785c02223c22",
+          "bytes": 724672
+        }
+      ],
+      "modifications": "68-key assembly with shared instances, forest/cream material palette, original legend atlas, Meshopt compression. Run build:keyboard then optimize:assets."
+    }
+  ]
+}
