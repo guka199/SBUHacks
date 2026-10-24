@@ -11,18 +11,32 @@ from fastapi.responses import JSONResponse
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
-from api.routers import contribute, dashboard, data, ingest, predict, score, voice  # noqa: E402
+from contextlib import asynccontextmanager  # noqa: E402
+
+from api.routers import accounts, auth, contribute, dashboard, data, drafts, ingest, predict, score, voice  # noqa: E402
+from api.services import db  # noqa: E402
 from api.services.errors import ServiceError  # noqa: E402
 
-app = FastAPI(title="PostPilot API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db.init()  # create tables (Snowflake if configured, else data/local.db)
+    yield
+
+
+app = FastAPI(title="PostPilot API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if origin.strip()],
+    allow_credentials=True,  # the sign-in cookie
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
+app.include_router(accounts.router)
+app.include_router(drafts.router)
 app.include_router(ingest.router)
 app.include_router(dashboard.router)
 app.include_router(data.router)

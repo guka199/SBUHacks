@@ -15,12 +15,13 @@ import logging
 import os
 from datetime import datetime
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from starlette.concurrency import run_in_threadpool
 
 from api.routers.predict import CONTEXT_FIELDS, FEATURE_HINTS, score_with_model
 from api.schemas import CombinedScore, ContentAnalysis, ContentScore, PredictRequest, ScoreResponse, UserId
-from api.services import gemini
+from api.services import accounts, drafts, gemini
+from api.services.auth import current_user_id
 from api.services.predictions import persist
 from shared.features import PLATFORMS
 
@@ -37,13 +38,16 @@ def model_weight() -> float:
 
 @router.post("/score", response_model=ScoreResponse)
 async def score_post(
+    background: BackgroundTasks,
     caption: str = Form(...),
     platforms: str = Form("youtube,tiktok,instagram"),
     planned_time: datetime | None = Form(None),
     context: str = Form("{}"),
     file: UploadFile | None = File(None),
-    user_id: UserId | None = Form(None),
+    user_id: UserId | None = Form(None),  # explicit user (e.g. the demo user) when nobody is signed in
+    session_user_id: str | None = Depends(current_user_id),
 ) -> ScoreResponse:
+    user_id = session_user_id or user_id
     chosen = [p.strip().lower() for p in platforms.split(",") if p.strip()]
     unknown = [p for p in chosen if p not in PLATFORMS]
     if not chosen or unknown:
@@ -64,7 +68,9 @@ async def score_post(
 
     # 1) Our trained model
     req = PredictRequest(caption=caption, platforms=chosen, planned_time=planned_time, **ctx)
-    model_result = score_with_model(req)
+    model_result = score_with_model(req, user_id)
+    if profile := accounts.audience_summary(user_id):
+        ctx = {**ctx, "creator profile": profile}  # lets Gemini tailor the review to this audience
     model_scores = {s.platform: s.score for s in model_result.scores}
     hurting = sorted({f.feature for s in model_result.scores for f in s.top_factors if f.impact < 0 and f.feature in FEATURE_HINTS})
 
@@ -115,5 +121,11 @@ async def score_post(
         gemini_used=analysis is not None,
         warning=warning,
     )
-    return await run_in_threadpool(persist, user_id, caption, result,
-                                  {**ctx, "planned_time": planned_time, "platforms": chosen})
+    result = await run_in_threadpool(persist, user_id, caption, result,
+                                     {**ctx, "planned_time": planned_time, "platforms": chosen})
+    if session_user_id:  # signed-in users also keep the draft itself (caption, media file) - saved after responding
+        background.add_task(
+            drafts.save_draft, user_id, caption, chosen, planned_time.isoformat() if planned_time else None,
+            media, file.filename if media else None, mime_type, result.model_dump(),
+        )
+    return result

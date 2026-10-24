@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { api, type Platform, type ScoreResponse } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 const PLATFORMS: Platform[] = ["tiktok", "instagram", "youtube", "linkedin"];
 
@@ -17,6 +19,7 @@ function Bar({ value, muted = false }: { value: number; muted?: boolean }) {
 }
 
 export default function ScorePage() {
+  const { user } = useAuth();
   const [caption, setCaption] = useState("");
   const [platforms, setPlatforms] = useState<Platform[]>(["tiktok", "instagram", "youtube"]);
   const [file, setFile] = useState<File | null>(null);
@@ -54,7 +57,22 @@ export default function ScorePage() {
 
   return (
     <section className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Score a post</h1>
+      <div>
+        <h1 className="text-2xl font-semibold">Score a post</h1>
+        <p className="text-sm opacity-70">
+          {user ? (
+            <>
+              Scores use your <Link href="/accounts" className="underline">connected accounts</Link> (followers,
+              typical views, audience). Fill the fields below only to override them.
+            </>
+          ) : (
+            <>
+              <Link href="/signup" className="underline">Create an account</Link> and connect your socials for scores
+              personalized to your audience.
+            </>
+          )}
+        </p>
+      </div>
       {/* TODO: planned posting time picker */}
       <textarea
         value={caption}

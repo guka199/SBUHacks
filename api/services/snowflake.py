@@ -26,8 +26,8 @@ def identifier(value: str) -> str:
 
 def missing_settings() -> list[str]:
     missing = [key for key in ["SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER"] if not os.getenv(key, "").strip()]
-    if not (os.getenv("SNOWFLAKE_TOKEN") or os.getenv("SNOWFLAKE_PASSWORD")):
-        missing.append("SNOWFLAKE_TOKEN or SNOWFLAKE_PASSWORD")
+    if not (os.getenv("SNOWFLAKE_PRIVATE_KEY_PATH") or os.getenv("SNOWFLAKE_PASSWORD")):
+        missing.append("SNOWFLAKE_PRIVATE_KEY_PATH (or SNOWFLAKE_PASSWORD)")
     return missing
 
 
@@ -37,22 +37,20 @@ def is_configured() -> bool:
 
 @contextmanager
 def get_connection(*, bootstrap: bool = False):
+    """One Snowflake connection, configured like api/services/db.py (key-pair login, POSTPILOT.APP)."""
+    from api.services.db import snowflake_params
+
     missing = missing_settings()
     if missing:
         raise ConfigurationError("Add " + ", ".join(missing) + " to the repo's .env, then restart the API")
     options = {
-        "account": os.environ["SNOWFLAKE_ACCOUNT"].strip(),
-        "user": os.environ["SNOWFLAKE_USER"].strip(),
-        "password": os.getenv("SNOWFLAKE_TOKEN") or os.environ.get("SNOWFLAKE_PASSWORD"),
-        "role": os.getenv("SNOWFLAKE_ROLE") or None,
+        **snowflake_params(),
         "login_timeout": 15, "network_timeout": 30, "socket_timeout": 30,
         "session_parameters": {"QUERY_TAG": "postpilot", "STATEMENT_TIMEOUT_IN_SECONDS": 60, "WEEK_START": 1},
     }
-    # PATs are supported by the Python connector as the password argument.
     if not bootstrap:
-        options.update(warehouse=os.getenv("SNOWFLAKE_WAREHOUSE") or "COMPUTE_WH",
-                       database=os.getenv("SNOWFLAKE_DATABASE") or "POSTPILOT",
-                       schema=os.getenv("SNOWFLAKE_SCHEMA") or "PUBLIC")
+        options.update(database=os.getenv("SNOWFLAKE_DATABASE") or "POSTPILOT",
+                       schema=os.getenv("SNOWFLAKE_SCHEMA") or "APP")
     conn = None
     try:
         conn = snowflake.connector.connect(**options)
@@ -60,7 +58,7 @@ def get_connection(*, bootstrap: bool = False):
     except snowflake.connector.Error as exc:
         log.warning("Snowflake request failed: code=%s sqlstate=%s", exc.errno, exc.sqlstate)
         if exc.errno == 390432:
-            raise ConfigurationError("Snowflake token login requires a network policy allowing this connection's public IP. Configure it in Snowsight, then retry") from None
+            raise ConfigurationError("Snowflake requires a network policy allowing this connection's public IP. Configure it in Snowsight, then retry") from None
         raise StorageError("Snowflake request failed. Check credentials, role permissions, and run python -m data.setup") from None
     finally:
         if conn is not None:
@@ -97,13 +95,16 @@ def _ensure_user(cur, user_id: str) -> None:
 def _save_account(cur, user_id: str, account: dict | None) -> None:
     if not account:
         return
+    # One account per user and platform (same rule as the Accounts page in api/services/accounts.py)
     account_id = uuid.uuid5(uuid.NAMESPACE_URL, f"{user_id}:{account['platform']}:{account['external_id']}").hex
     cur.execute("""MERGE INTO ACCOUNTS t USING
-        (SELECT %s AS id, %s AS user_id, %s AS platform, %s AS handle, %s AS followers) s ON t.id=s.id
-        WHEN MATCHED THEN UPDATE SET handle=s.handle, followers=s.followers
-        WHEN NOT MATCHED THEN INSERT (id, user_id, platform, handle, followers)
-        VALUES (s.id, s.user_id, s.platform, s.handle, s.followers)""",
-        (account_id, user_id, account["platform"], account["handle"], account["followers"]))
+        (SELECT %s AS id, %s AS user_id, %s AS platform, %s AS handle, %s AS external_id, %s AS followers) s
+        ON t.user_id = s.user_id AND t.platform = s.platform
+        WHEN MATCHED THEN UPDATE SET handle = s.handle, external_id = s.external_id, followers = s.followers,
+                                     updated_at = CURRENT_TIMESTAMP()
+        WHEN NOT MATCHED THEN INSERT (id, user_id, platform, connection_type, handle, external_id, followers, updated_at)
+        VALUES (s.id, s.user_id, s.platform, 'import', s.handle, s.external_id, s.followers, CURRENT_TIMESTAMP())""",
+        (account_id, user_id, account["platform"], account["handle"], account.get("external_id"), account["followers"]))
 
 
 def upsert_posts(user_id: str, batch: PostBatch, source: str, account: dict | None = None) -> dict:

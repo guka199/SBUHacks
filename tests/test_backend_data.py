@@ -167,12 +167,14 @@ class StorageTests(unittest.TestCase):
         conn.commit.assert_not_called()
         self.assertTrue(any(s.startswith('DROP TABLE') for s, _ in events))
 
-    def test_token_authentication_and_bootstrap_omit_missing_namespace(self):
-        values = {'SNOWFLAKE_ACCOUNT': 'test', 'SNOWFLAKE_USER': 'test', 'SNOWFLAKE_TOKEN': 'private-token'}
+    def test_key_pair_authentication_and_bootstrap_omit_missing_namespace(self):
+        values = {'SNOWFLAKE_ACCOUNT': 'test', 'SNOWFLAKE_USER': 'test', 'SNOWFLAKE_PRIVATE_KEY_PATH': '/tmp/test_key.p8'}
         with patch.dict(os.environ, values, clear=True), patch.object(snowflake.snowflake.connector, 'connect', return_value=MagicMock()) as connect:
             with snowflake.get_connection(bootstrap=True):
                 pass
-        self.assertEqual(connect.call_args.kwargs['password'], 'private-token')
+        self.assertEqual(connect.call_args.kwargs['private_key_file'], '/tmp/test_key.p8')
+        self.assertEqual(connect.call_args.kwargs['authenticator'], 'SNOWFLAKE_JWT')
+        self.assertNotIn('password', connect.call_args.kwargs)
         self.assertNotIn('database', connect.call_args.kwargs)
         self.assertEqual(connect.call_args.kwargs['login_timeout'], 15)
 

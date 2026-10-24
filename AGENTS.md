@@ -48,6 +48,33 @@ the Files API). Blend weight `SCORE_MODEL_WEIGHT` (default 0.6), model `GEMINI_M
 Without `GEMINI_API_KEY`, or if Gemini fails, `/score` returns model-only scores plus a `warning` (never an error).
 `/predict` stays model-only. The `/score` web page uploads media and shows combined + model + content scores.
 
+## Users & linked accounts (built)
+
+- **Sign up / sign in / settings**: `api/routers/auth.py` (`/auth/signup|login|logout`, `GET|PATCH /auth/me` profile,
+  `POST /auth/password`, `POST /auth/delete-account` - password-confirmed; deletes the user's rows in every table and
+  their `@MEDIA/<user_id>/` files). Web: `/settings` (name in the nav links there). Passwords hashed with scrypt; session =
+  HMAC-signed httpOnly cookie `pp_session` (secret: `SESSION_SECRET` in `.env`). Web: `/signup`, `/login`,
+  `web/lib/auth.tsx` (`useAuth()`), every `fetch` sends `credentials: "include"`.
+- **Linked accounts**: `api/routers/accounts.py`, one per platform per user. YouTube links automatically from a channel
+  URL/@handle (`youtube.channel_summary`: subscribers, typical views = median of uploads older than 7 days, engagement,
+  posts/week, Shorts share, top categories; recent videos saved to POSTS). TikTok/Instagram/LinkedIn: manual stats form
+  (their APIs need approved developer apps). Target audience (age range, % female, countries, interests, language)
+  for every platform. Web page: `/accounts`.
+- **Scoring uses them**: `/predict` and `/score` fill missing model inputs (followers, typical views, ...) per platform
+  from the signed-in user's linked accounts (`accounts.model_context`); request values win. Gemini gets a one-line
+  creator/audience profile (`accounts.audience_summary`).
+- **Storage (live in Snowflake)**: `api/services/db.py` - Snowflake when `SNOWFLAKE_ACCOUNT` is set, otherwise local
+  SQLite `data/local.db` (git-ignored). Tables (auto-created at API startup in POSTPILOT.APP): USERS, ACCOUNTS,
+  DRAFTS (every draft a signed-in user scores: caption, scores, suggestions, Gemini review), POSTS (linked YouTube
+  videos). Uploaded images/videos go to the internal stage `@MEDIA/<user_id>/` (locally `data/uploads/`).
+  Use `db.query` / `db.execute` / `db.execute_many` (bulk inserts: one round trip) with `%s` placeholders.
+  **Reserved words in Snowflake** (`following`, `connection`, ...) can't be column names - `accounts.COLUMNS` maps them.
+- **Snowflake access**: service user `POSTPILOT_SVC` (role `POSTPILOT_APP`, warehouse `POSTPILOT_WH`) with key-pair
+  auth: private key `.secrets/snowflake_key.p8` (git-ignored; `SNOWFLAKE_PRIVATE_KEY_PATH`). Setup script:
+  `data/sql/000_snowflake_setup.sql`. In Snowsight, select ALL text then run (Run alone executes only the
+  statement under the cursor). Teammates need their own key pair registered on the user (`ALTER USER ... SET
+  RSA_PUBLIC_KEY_2 = '...'` allows a second key).
+
 ## Training data and labels
 
 Raw downloads in `data/raw/<platform>/` (git-ignored; see "Getting the data"). `python -m data.prepare` writes
@@ -201,7 +228,7 @@ must be connected by the login/wallet implementation before public deployment.
 Next (in order):
 - [ ] **Solana**: Phantom connect on `/rewards` (window.phantom.solana, no extra deps) + a script that creates the devnet
       payout wallet and reward token and writes `REWARD_WALLET_SECRET_KEY` / `REWARD_MINT_ADDRESS` to `.env`
-- [x] **Snowflake live setup**: POSTPILOT_APP PAT, schema, repeat demo import, dashboard, history and Cortex verified
+- [x] **Snowflake live**: key-pair service user, POSTPILOT.APP tables, users/accounts/drafts + Cortex analytics
 - [ ] **Dashboard UI**: wire YouTube/CSV controls and chart the backend's `platforms`, `by_format`, `weekly` data
 - [ ] **ElevenLabs**: needs `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_ID`; weekly briefing + hook tester
 - [ ] Copy `.env` to `web/.env.local` (Next.js reads env from web/)

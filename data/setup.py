@@ -15,7 +15,7 @@ from api.services import snowflake
 from api.services.errors import ServiceError
 
 ROOT = Path(__file__).resolve().parents[1]
-TABLES = ["USERS", "ACCOUNTS", "RAW_POSTS", "POSTS", "POST_FEATURES", "PREDICTIONS", "CONTRIBUTIONS"]
+TABLES = ["USERS", "ACCOUNTS", "DRAFTS", "RAW_POSTS", "POSTS", "POST_FEATURES", "PREDICTIONS", "CONTRIBUTIONS"]
 
 
 def setup(create_warehouse: bool = False) -> None:
@@ -37,6 +37,9 @@ def setup(create_warehouse: bool = False) -> None:
                     raise
                 cur.execute(f"CREATE {kind} IF NOT EXISTS {name}")
                 cur.execute(f"USE {kind} {name}")
+        from api.services import db
+
+        db.init()  # core app tables (USERS, ACCOUNTS, POSTS, DRAFTS) + MEDIA stage - defined in api/services/db.py
         with (ROOT / "data/sql/001_create_tables.sql").open() as source:
             for statement, _ in split_statements(source):
                 if statement.strip():
@@ -55,7 +58,7 @@ def check() -> dict:
 def main() -> None:
     load_dotenv(ROOT / ".env")
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--check", action="store_true", help="Check connection and all seven tables, without creating anything")
+    parser.add_argument("--check", action="store_true", help="Check connection and all tables, without creating anything")
     parser.add_argument("--create-warehouse", action="store_true", help="Create an X-Small auto-suspending warehouse if missing")
     args = parser.parse_args()
     try:

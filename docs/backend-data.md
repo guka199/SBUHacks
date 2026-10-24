@@ -11,41 +11,29 @@ Create a Snowflake trial through the [MLH Snowflake link](https://mlh.link/snowf
 [Snowflake API prize](https://www.mlh.com/events/sbuhacks-5f/prizes); PostPilot uses Cortex AI functions
 for sentiment, embeddings, semantic search and a dashboard briefing.
 
+Snowflake login uses a **key pair** for the service user (password-only and token logins are not used).
+One-time setup: run `data/sql/000_snowflake_setup.sql` in a Snowsight SQL file (select ALL text, then run) with
+your public key filled in; it creates the `POSTPILOT_WH` warehouse, `POSTPILOT.APP` schema, `POSTPILOT_APP` role and
+`POSTPILOT_SVC` user. Teammates get their own user with their own key (see AGENTS.md).
+
 Edit the **repo root** `.env` (never paste keys into source files):
 
 ```dotenv
 SNOWFLAKE_ACCOUNT=your-organization-your-account
-SNOWFLAKE_USER=your-login-name
-SNOWFLAKE_TOKEN=
-# A PAT in SNOWFLAKE_TOKEN takes precedence over a password.
-SNOWFLAKE_PASSWORD=
-SNOWFLAKE_WAREHOUSE=COMPUTE_WH
+SNOWFLAKE_USER=POSTPILOT_SVC
+SNOWFLAKE_PRIVATE_KEY_PATH=.secrets/snowflake_key.p8
+SNOWFLAKE_WAREHOUSE=POSTPILOT_WH
 SNOWFLAKE_DATABASE=POSTPILOT
-SNOWFLAKE_SCHEMA=PUBLIC
-SNOWFLAKE_ROLE=
+SNOWFLAKE_SCHEMA=APP
+SNOWFLAKE_ROLE=POSTPILOT_APP
 SNOWFLAKE_CORTEX_MODEL=llama3.3-70b
 CORTEX_ENRICH_ON_INGEST=true
 CORTEX_MAX_POSTS_PER_IMPORT=25
 YOUTUBE_API_KEY=
 ```
 
-Use the account identifier (organization/account), not the full Snowsight URL. Get it from account details
-in Snowsight. Use the user's **login name**. For accounts requiring MFA, a
-[programmatic access token](https://docs.snowflake.com/en/user-guide/programmatic-access-tokens)
-can authenticate the connector without interactive login. Follow the account's network-policy requirements.
-The connector also accepts a password where the account's authentication policy permits it.
-
-A token restricted to `PUBLIC` cannot create the app's tables or switch to another role.
-An administrator can run `data/sql/000_app_access.sql` manually in a Snowsight worksheet
-(adjust the user name first) to provision a role scoped to the app's namespace.
-Generate a **new** token restricted to `POSTPILOT_APP`, replace the token in `.env`, and set
-`SNOWFLAKE_ROLE=POSTPILOT_APP`. A token's role restriction cannot be changed after creation.
-
-If login fails with error **390432 / Network policy is required**, sign in to a Snowflake worksheet and
-run `SELECT CURRENT_IP_ADDRESS(), CURRENT_USER();`. Have an account administrator allow that client IP
-in a network rule/policy scoped to the token's user. Verify the IP corresponds to the computer running the
-backend before applying the policy. A changed public IP requires updating the allowlist. See
-[Snowflake network policies](https://docs.snowflake.com/en/user-guide/network-policies).
+Core app tables (USERS, ACCOUNTS, POSTS, DRAFTS) and the `@MEDIA` stage are defined in `api/services/db.py` and
+created at API startup. `python -m data.setup` creates those plus the analytics tables below.
 
 The Google key must have **YouTube Data API v3** enabled; a Gemini key by itself does not provide YouTube
 access. See Google's [YouTube setup guide](https://developers.google.com/youtube/v3/getting-started).

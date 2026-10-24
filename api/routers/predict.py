@@ -1,9 +1,10 @@
 """Score a draft post per platform and suggest changes."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from api.schemas import AccountComparison, Factor, PlatformScore, PredictRequest, PredictResponse
-from api.services import model
+from api.services import accounts, model
+from api.services.auth import current_user_id
 from api.services.predictions import persist
 from shared.features import build_features
 
@@ -35,24 +36,28 @@ CONTEXT_FIELDS = ["format", "followers", "following", "num_posts", "duration_sec
 
 
 @router.post("/predict", response_model=PredictResponse)
-def predict(req: PredictRequest) -> PredictResponse:
+def predict(req: PredictRequest, user_id: str | None = Depends(current_user_id)) -> PredictResponse:
     """Our trained model only (fast, no Gemini). /score adds Gemini's content review on top."""
-    result = score_with_model(req)
-    return persist(req.user_id, req.caption, result, req.model_dump(exclude={"caption", "user_id"}))
+    uid = user_id or req.user_id  # signed-in user, else an explicit user_id (e.g. the demo user)
+    result = score_with_model(req, uid)
+    return persist(uid, req.caption, result, req.model_dump(exclude={"caption", "user_id"}))
 
 
-def score_with_model(req: PredictRequest) -> PredictResponse:
-    post = {"caption": req.caption, "posted_at": req.planned_time, **req.model_dump(include=set(CONTEXT_FIELDS))}
+def score_with_model(req: PredictRequest, user_id: str | None = None) -> PredictResponse:
+    """Values in the request win; anything missing is filled from the user's linked account for that platform."""
+    given = {k: v for k, v in req.model_dump(include=set(CONTEXT_FIELDS)).items() if v is not None}
+    linked = accounts.model_context(user_id)
 
     scores: list[PlatformScore] = []
     negatives: list[tuple[str, float]] = []
     for platform in req.platforms:
+        post = {"caption": req.caption, "posted_at": req.planned_time, **linked.get(platform, {}), **given}
         features = build_features(platform, post)
         value, factors = model.score(platform, features, req.caption)
         comparison = None
         if (rel := model.vs_account(platform, features, req.caption)) is not None:
             ratio, reliability = rel
-            typical = req.creator_typical_views if platform in ("tiktok", "youtube") else None
+            typical = post.get("creator_typical_views") if platform in ("tiktok", "youtube") else None
             comparison = AccountComparison(
                 ratio=round(ratio, 3), percent=round((ratio - 1) * 100, 1), reliability=reliability,
                 expected_views=round(ratio * typical) if typical else None,

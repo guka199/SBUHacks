@@ -30,3 +30,11 @@ data/**/*.zip
 models/benchmark/smoke/
 models/benchmark/*.log
 models/benchmark/partial/
+
+# Local stand-in for Snowflake (users, accounts) until Snowflake is configured
+data/local.db
+data/uploads/
+
+# Private keys (Snowflake key-pair auth)
+.secrets/
+*.p8

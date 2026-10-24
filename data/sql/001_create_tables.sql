@@ -1,22 +1,8 @@
 -- PostPilot schema. Run: python -m data.setup
 -- In a worksheet, first select/create the database and schema you want to use.
 -- Safe to run repeatedly; existing rows are preserved.
-
-CREATE TABLE IF NOT EXISTS USERS (
-    id              STRING PRIMARY KEY,
-    wallet_address  STRING,          -- Solana wallet doubles as login
-    display_name    STRING,
-    type            STRING,          -- 'creator' or 'business'
-    created_at      TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
-);
-
-CREATE TABLE IF NOT EXISTS ACCOUNTS (
-    id          STRING PRIMARY KEY,
-    user_id     STRING,
-    platform    STRING,              -- youtube | tiktok | instagram | linkedin
-    handle      STRING,
-    followers   NUMBER
-);
+-- USERS, ACCOUNTS, POSTS and DRAFTS are defined in api/services/db.py (created first by data.setup and
+-- at API startup) - define them only there, so the app and this script never disagree.
 
 -- Posts exactly as they arrived (API JSON or CSV row), before cleaning
 CREATE TABLE IF NOT EXISTS RAW_POSTS (
@@ -28,22 +14,6 @@ CREATE TABLE IF NOT EXISTS RAW_POSTS (
 );
 
 -- One cleaned row per post, same shape for every platform
-CREATE TABLE IF NOT EXISTS POSTS (
-    user_id         STRING,          -- NULL for public training data (Kaggle)
-    platform        STRING,
-    format          STRING,
-    external_id     STRING,
-    caption         STRING,
-    posted_at       TIMESTAMP_NTZ,
-    thumbnail_url   STRING,
-    views           NUMBER,
-    likes           NUMBER,
-    comments        NUMBER,
-    shares          NUMBER,
-    followers       NUMBER,
-    loaded_at       TIMESTAMP_NTZ DEFAULT CURRENT_TIMESTAMP()
-);
-
 CREATE TABLE IF NOT EXISTS POST_FEATURES (
     user_id              STRING,
     external_id          STRING,
