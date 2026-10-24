@@ -36,7 +36,8 @@ def check_serving_matches_training(bundle: ModelBundle, platform: str, m, expect
     """
     posts = m.test_posts.head(n).to_dict("records")
     features = [build_features(platform, {**json.loads(p.get("extra") or "{}"), **p}) for p in posts]
-    served = bundle.predict(bundle.frame(features, [p["caption"] for p in posts]))
+    embeddings = None if m.test_thumbnail_embeddings is None else m.test_thumbnail_embeddings[:len(posts)]
+    served = bundle.predict(bundle.frame(features, [p["caption"] for p in posts], embeddings))
     expected = expected[: len(posts)]
     if bundle.target == "score":
         expected = np.clip(expected, 0, 100)

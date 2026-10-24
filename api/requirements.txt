@@ -11,3 +11,4 @@ shap
 scikit-learn
 google-genai
 catboost
+pillow

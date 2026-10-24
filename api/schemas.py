@@ -112,6 +112,7 @@ class PredictRequest(BaseModel):
     format: str | None = None
     planned_time: datetime | None = None
     thumbnail_url: str | None = None
+    use_thumbnail_model: bool = False
     # Optional context about the draft / account (improves the score when known)
     followers: int | None = None
     following: int | None = None
@@ -135,6 +136,7 @@ class AccountComparison(BaseModel):
     percent: float  # (ratio - 1) * 100
     reliability: str  # low | moderate | high - how well this ranked an account's own posts in testing
     expected_views: float | None = None  # ratio * creator_typical_views, when given (TikTok/YouTube)
+    thumbnail_used: bool = False
 
 
 class PlatformScore(BaseModel):
@@ -142,6 +144,7 @@ class PlatformScore(BaseModel):
     score: float  # 0-100 virality percentile within the platform
     top_factors: list[Factor]
     vs_account: AccountComparison | None = None
+    thumbnail_used: bool = False
 
 
 class PredictResponse(BaseModel):
@@ -149,6 +152,7 @@ class PredictResponse(BaseModel):
     suggestions: list[str]
     prediction_id: str | None = None
     storage_warning: str | None = None
+    thumbnail_warning: str | None = None
 
 
 class ContentScore(BaseModel):
@@ -174,6 +178,7 @@ class CombinedScore(BaseModel):
     content_score: float | None  # None when Gemini wasn't used
     top_factors: list[Factor]
     vs_account: AccountComparison | None = None
+    thumbnail_used: bool = False
 
 
 class ScoreResponse(BaseModel):
@@ -185,6 +190,7 @@ class ScoreResponse(BaseModel):
     warning: str | None = None
     prediction_id: str | None = None
     storage_warning: str | None = None
+    thumbnail_warning: str | None = None
 
 
 class PredictionRecord(BaseModel):

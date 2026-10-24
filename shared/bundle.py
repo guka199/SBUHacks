@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from shared.text_features import TextEncoder
+from shared.features import thumbnail_feature_frame
 
 
 @dataclass
@@ -24,13 +25,19 @@ class ModelBundle:
     text_encoder: TextEncoder | None = None
     metrics: dict = field(default_factory=dict)
     target: str = "score"  # "score": 0-100 percentile | "relative": log(post / account's typical post)
+    thumbnail_encoder: dict | None = None
 
-    def frame(self, features: list[dict], captions: list[str]) -> pd.DataFrame:
+    def frame(self, features: list[dict], captions: list[str], thumbnail_embeddings: list | None = None) -> pd.DataFrame:
         """Model input for posts given as feature dicts (from shared.features.build_features) + captions."""
         X = pd.DataFrame(features)
         if self.text_encoder is not None:
             text = self.text_encoder.transform(list(captions)).reset_index(drop=True)
             X = pd.concat([X.reset_index(drop=True), text], axis=1)
+        if getattr(self, "thumbnail_encoder", None):
+            embeddings = thumbnail_embeddings if thumbnail_embeddings is not None else [None] * len(features)
+            if len(embeddings) != len(features):
+                raise ValueError("Provide one thumbnail embedding per post")
+            X = pd.concat([X.reset_index(drop=True), thumbnail_feature_frame(embeddings)], axis=1)
         return X.reindex(columns=self.feature_columns).astype("float32")
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
@@ -50,7 +57,12 @@ class ModelBundle:
             values = np.asarray(self._explainer.shap_values(X.iloc[:1]))[0]
         except Exception:
             return []
-        return list(zip(self.feature_columns, map(float, values)))
+        factors = list(zip(self.feature_columns, map(float, values)))
+        if getattr(self, "thumbnail_encoder", None):
+            visual = sum(value for name, value in factors if name.startswith("thumbnail_"))
+            factors = [(name, value) for name, value in factors if not name.startswith("thumbnail_")]
+            factors.append(("thumbnail_content", visual))
+        return factors
 
     def __getstate__(self):
         state = self.__dict__.copy()

@@ -1,6 +1,7 @@
 """Gemini content review: judges the actual draft (image/video + caption) and writes suggestions.
 
-Our trained model only sees caption statistics, timing and account context. Gemini looks at the
+The standard trained model sees caption statistics, timing and account context; opt-in YouTube
+models also use CLIP thumbnail features. Gemini looks at the
 content itself and also receives the model's findings, so it can write ONE merged suggestion list.
 
 Config (.env): GEMINI_API_KEY (required); GEMINI_MODEL and GEMINI_THINKING (optional, defaults below).
@@ -46,8 +47,8 @@ Planned posting time: {planned}
 Account context: {context}
 Attached media: {media}
 
-Our statistical model (trained on ~1.2M real posts) sees only caption statistics, posting time and account size -
-NOT the content. Its scores (0-100 percentile vs. typical posts on each platform):
+Our statistical model was trained on historical post outcomes. Its inputs: {model_inputs}.
+Its scores (0-100 percentile vs. posts in its platform training dataset):
 {model_scores}
 Factors the model says hurt the score most:
 {factors}
@@ -104,6 +105,9 @@ def analyze(
     model_factors: list[str],
     media: bytes | None = None,
     mime_type: str | None = None,
+    thumbnail: bytes | None = None,
+    thumbnail_mime_type: str | None = None,
+    model_uses_thumbnail: bool = False,
 ) -> GeminiAnalysis:
     """Ask Gemini to review the draft. Raises on any failure (the caller falls back to model-only)."""
     from google import genai
@@ -114,22 +118,33 @@ def analyze(
         caption=repr(caption),
         planned=planned_time or "not specified",
         context=", ".join(f"{k}={v}" for k, v in context.items() if v is not None) or "not specified",
-        media=f"yes ({mime_type})" if media else "none - judge the caption only",
+        media=(f"yes ({mime_type})" + (" plus a selected YouTube thumbnail" if thumbnail and thumbnail != media else ""))
+              if media else "yes (selected YouTube thumbnail)" if thumbnail else "none - judge the caption only",
         model_scores="\n".join(f"- {p}: {s:.0f}" for p, s in model_scores.items()),
         factors="\n".join(f"- {f}" for f in model_factors) or "- none stood out",
+        model_inputs="caption statistics/topics, timing, account context, and YouTube thumbnail features" if model_uses_thumbnail
+                     else "caption statistics/topics, timing and account context; no visual inputs",
     )
 
     items: list[dict] = [{"type": "text", "text": prompt}]
-    uploaded = None
-    if media:
-        kind = "video" if mime_type.startswith("video/") else "image"
-        if len(media) <= INLINE_LIMIT_BYTES:
-            items.append({"type": kind, "data": base64.b64encode(media).decode("utf-8"), "mime_type": mime_type})
-        else:
-            uploaded = _upload(client, media, mime_type)
-            items.append({"type": kind, "uri": uploaded.uri, "mime_type": uploaded.mime_type})
-
+    uploaded = []
     try:
+        attachments = [(media, mime_type, "Draft media")]
+        if thumbnail and thumbnail != media:
+            attachments.append((thumbnail, thumbnail_mime_type or "image/jpeg", "Selected YouTube thumbnail"))
+        inline_bytes = 0
+        for content, content_type, label in attachments:
+            if not content:
+                continue
+            items.append({"type": "text", "text": label})
+            kind = "video" if content_type.startswith("video/") else "image"
+            if inline_bytes + len(content) <= INLINE_LIMIT_BYTES:
+                items.append({"type": kind, "data": base64.b64encode(content).decode("utf-8"), "mime_type": content_type})
+                inline_bytes += len(content)
+            else:
+                remote = _upload(client, content, content_type)
+                uploaded.append(remote)
+                items.append({"type": kind, "uri": remote.uri, "mime_type": remote.mime_type})
         thinking = os.getenv("GEMINI_THINKING", DEFAULT_THINKING).strip()
         interaction = client.interactions.create(
             model=os.getenv("GEMINI_MODEL") or DEFAULT_MODEL,
@@ -144,8 +159,8 @@ def analyze(
         )
         return GeminiAnalysis.model_validate_json(interaction.output_text)
     finally:
-        if uploaded is not None:
+        for remote in uploaded:
             try:
-                client.files.delete(name=uploaded.name)
+                client.files.delete(name=remote.name)
             except Exception:
                 pass
