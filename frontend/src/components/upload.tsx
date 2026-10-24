@@ -17,6 +17,7 @@ import { makeDemoResult } from "@/lib/demo";
 import { readVideo, timecode, validateVideo } from "@/lib/video";
 import { useSession } from "./session";
 import { PlatformIcon } from "./ui";
+import { useAuth } from "@/lib/auth";
 
 const stages = [
   "Preparing your video",
@@ -28,6 +29,9 @@ const stages = [
 export function Upload() {
   const session = useSession();
   const router = useRouter();
+  const { user, loading } = useAuth();
+  const [caption, setCaption] = useState("");
+  const [uploaded, setUploaded] = useState(false);
   const [selected, setSelected] = useState<PlatformId[]>(
     platforms.map((p) => p.id),
   );
@@ -104,11 +108,20 @@ export function Upload() {
   }
   async function analyze() {
     if (!session.file || !session.metadata || !selected.length || busy) return;
+    if (!demo && (!user || !caption.trim())) {
+      setError(
+        !user
+          ? "Sign in before analyzing your video."
+          : "Add your caption or title.",
+      );
+      return;
+    }
     const active = new AbortController();
     controller.current = active;
     setBusy(true);
     setError("");
     setProgress(0);
+    setUploaded(false);
     session.setResult(null);
     try {
       if (demo) {
@@ -123,8 +136,18 @@ export function Upload() {
         const job = await analysisApi.create(
           session.file,
           selected,
-          setProgress,
+          (percent) => {
+            setProgress(percent);
+            if (percent === 100) {
+              setUploaded(true);
+              setStage(
+                "Reviewing your video and comparing platforms… This can take a few minutes.",
+              );
+            }
+          },
           active.signal,
+          session.metadata,
+          caption,
         );
         const result = await waitForAnalysis(job, active.signal, (value) => {
           setStage(value.stage);
@@ -135,9 +158,10 @@ export function Upload() {
             "The live service returned demo data. Check the backend mode.",
           );
         session.setResult(result);
+        router.push(`/analysis/${result.id}`);
       }
       setProgress(100);
-      router.push("/analysis");
+      if (demo) router.push("/analysis");
     } catch (e) {
       if (!active.signal.aborted)
         setError(
@@ -242,7 +266,7 @@ export function Upload() {
                 )}{" "}
                 Browse files
               </button>
-              <span className="file-limits">MP4, WebM, MOV · Up to 250 MB</span>
+              <span className="file-limits">MP4, WebM, MOV · Up to 200 MB</span>
             </div>
           )}
           <div className="sample-row">
@@ -262,6 +286,24 @@ export function Upload() {
           )}
         </section>
         <aside className="upload-settings">
+          <label className="draft-caption">
+            <span>Caption or title</span>
+            <textarea
+              value={caption}
+              maxLength={10000}
+              rows={4}
+              disabled={busy}
+              placeholder="What will viewers read with your video?"
+              onChange={(event) => setCaption(event.target.value)}
+            />
+          </label>
+          {!demo && !loading && !user && (
+            <p className="field-note">
+              <Link href="/login">Sign in</Link> or{" "}
+              <Link href="/signup">create an account</Link> to analyze and save
+              your video.
+            </p>
+          )}
           <h2>Where’s it going?</h2>
           <p>Choose the platforms you’d like to explore.</p>
           <fieldset className="platform-checks">
@@ -292,6 +334,14 @@ export function Upload() {
               </label>
             ))}
           </fieldset>
+          {!demo &&
+            selected.includes("youtube") &&
+            selected.includes("shorts") && (
+              <p className="field-note">
+                YouTube and Shorts share a reach model. Gemini reviews the two
+                formats separately.
+              </p>
+            )}
           <div className="mode-note">
             <span className="status-dot" />
             <div>
@@ -308,12 +358,14 @@ export function Upload() {
               <span>{demo ? "Demo walkthrough" : "Analysis in progress"}</span>
               <h3>{stage}</h3>
               <progress
-                value={progress}
+                value={!demo && uploaded ? undefined : progress}
                 max={100}
                 aria-label={demo ? "Demo progress" : "Analysis progress"}
               />
               <div>
-                <span>{progress}%</span>
+                <span>
+                  {!demo && uploaded ? "Video uploaded" : `${progress}%`}
+                </span>
                 <button
                   className="text-link"
                   onClick={() => controller.current?.abort()}
@@ -325,7 +377,12 @@ export function Upload() {
           ) : (
             <button
               className="button button-accent full-width"
-              disabled={!session.file || !selected.length || checking}
+              disabled={
+                !session.file ||
+                !selected.length ||
+                checking ||
+                (!demo && (loading || !user || !caption.trim()))
+              }
               onClick={analyze}
             >
               {demo ? "Explore sample analysis" : "Analyze my video"}
@@ -338,8 +395,9 @@ export function Upload() {
             </p>
           )}
           <p className="privacy-note">
-            No account needed. Your file is never stored in browser storage.
-            Leaving or refreshing the app clears the session.
+            {demo
+              ? "Demo files stay in this browser and clear when you leave."
+              : "Your report and video are saved privately to your account. Gemini reviews the uploaded video."}
           </p>
         </aside>
       </div>

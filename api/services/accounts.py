@@ -50,7 +50,7 @@ def set_password_hash(user_id: str, password_hash: str) -> None:
 
 def delete_user(user_id: str) -> None:
     """Delete the user and everything they stored: linked accounts, posts, drafts and uploaded media."""
-    for table in ("ACCOUNTS", "POSTS", "DRAFTS"):
+    for table in ("ACCOUNTS", "POSTS", "DRAFTS", "ANALYSES"):
         db.execute(f"DELETE FROM {table} WHERE user_id = %s", (user_id,))
     if db.backend() == "snowflake":  # analytics tables from data.setup - may not exist on a fresh database
         for table in ("PREDICTIONS", "RAW_POSTS", "POST_FEATURES", "CONTRIBUTIONS"):

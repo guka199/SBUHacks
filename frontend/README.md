@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:3000. Demo mode needs no account, API key or environment file. Use **Try your video → Try our sample video**, or open `/demo` for an interactive example.
+Open http://localhost:3000. Start FastAPI on port 8000, create an account, optionally link social accounts, and upload your video with its caption. Reports and generated publishing copy are saved to your account. See [integration setup](../docs/frontend-backend.md). `/demo` and **Try our sample video** remain explicit examples requiring no account or provider keys.
 
 ```sh
 npm run check   # ESLint, TypeScript and 10 tests
@@ -19,7 +19,7 @@ npm run build
 npm start
 ```
 
-Copy `.env.example` to ignored `.env.local` only to change configuration. For live mode set `NEXT_PUBLIC_DEMO_MODE=false` and `NEXT_PUBLIC_API_BASE_URL`. Public variables must never contain secrets. The team's `/score` backend needs an adapter to the documented `/api/analyses` contract; changing the URL alone does not connect them. `NEXT_PUBLIC_ENABLE_3D=false` selects the lightweight experience.
+Copy `.env.example` to ignored `.env.local` only to change configuration. Live mode is the default. The browser calls `/backend`; server-only `API_URL` selects the FastAPI origin. Set `NEXT_PUBLIC_DEMO_MODE=true` for offline demo behavior. Public variables must never contain secrets. `NEXT_PUBLIC_ENABLE_3D=false` selects the lightweight experience.
 
 ## Included
 
@@ -31,11 +31,11 @@ Copy `.env.example` to ignored `.env.local` only to change configuration. For li
 - Four-platform readiness scores, video timestamps/player, tone-aware optimizer, copy and JSON export.
 - Responsive controls, mobile/no-WebGL capture with live HTML, readable phone walkthrough and reduced-motion alternative.
 
-Demo analytics, scores, suggestions and processing are explicitly illustrative. Demo files stay local. Real AI/backend integration remains team work.
+Demo analytics, scores, suggestions and processing remain explicitly illustrative. Live reports use the trained models and available Gemini review; missing metrics and provider failures are disclosed. Sign-in, connected accounts, settings, saved reports, video playback and Gemini copy generation use the real API.
 
 ## Routes and handoff
 
-`/` story · `/studio` entry · `/analyze` or `/upload` · `/demo` · `/analysis` · `/analysis/[id]` · `/analysis/[id]/optimize` · `/workspace-preview` · `/credits`.
+`/` story · `/studio` entry · `/analyze` or `/upload` · `/demo` · `/analysis` · `/analysis/[id]` · `/analysis/[id]/optimize` · `/signup` · `/login` · `/accounts` · `/settings` · `/reports` · `/workspace-preview` · `/credits`.
 
 [FRONTEND_HANDOFF.txt](../FRONTEND_HANDOFF.txt) covers architecture, complete API JSON examples and integration. [ASSET_NOTICES.md](ASSET_NOTICES.md) records artists/licenses. [DESIGN.md](DESIGN.md) and `design-system/viralpilot` describe tokens/motion. [QA_REPORT.md](QA_REPORT.md) and `screenshots/` contain browser evidence and limits.
 

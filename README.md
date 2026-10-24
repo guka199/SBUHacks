@@ -18,7 +18,7 @@ npm run dev
 # production: npm run build && npm start
 ```
 
-Open http://localhost:3000. This frontend works in explicitly labeled demo mode without credentials. Its live /api/analyses contract still needs an adapter to the team's /score API; copying backend secrets into browser variables does not integrate it. Use frontend/.env.example for frontend configuration, and keep the existing root .env.example for backend setup.
+Open http://localhost:3000. The frontend now connects to FastAPI through the same-origin `/backend` proxy: sign in, link accounts, upload a draft, review scores, generate publishing copy, and reopen saved reports. Start the API on port 8000; see [Frontend/backend setup](docs/frontend-backend.md) for live/local storage and configuration. `/demo` remains a labeled sample. Provider secrets belong only in the root `.env`.
 
 [FRONTEND_HANDOFF.txt](FRONTEND_HANDOFF.txt) is the canonical ten-section team guide. [Frontend README](frontend/README.md), [asset sources/licenses](frontend/ASSET_NOTICES.md) and [browser QA](frontend/QA_REPORT.md) cover the implementation. Set frontend/ as the project root when running or deploying this interface. The original integrated web/ app remains available through its existing commands below.
 

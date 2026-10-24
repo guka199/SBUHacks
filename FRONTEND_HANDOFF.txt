@@ -1,8 +1,15 @@
+CURRENT BACKEND INTEGRATION (October 24, 2026)
+The live /api/analyses adapter, cookie authentication, accounts/settings,
+saved reports/video playback and Gemini rewrites are now implemented.
+docs/frontend-backend.md supersedes the original API/demo/unfinished-status
+sections below. Live mode is now the default; maximum video size is 200 MB.
+The original design handoff is retained below for architecture/history.
+
 MAIN BRANCH INTEGRATION
 Location: frontend/ in the existing SBUHacks monorepo.
 All source/assets/routes/scripts paths in this guide are relative to frontend/.
 Run npm commands from frontend/. Existing web/, api/, data/, ml/, models/,
-shared/ and tests/ are preserved. The backend adapter is still required.
+shared/ and tests/ are preserved. The backend adapter is implemented.
 This root file is the canonical handoff. The frontend copy points here.
 
 VIRALPILOT FRONTEND HANDOFF

@@ -6,9 +6,11 @@ import { Menu, X, ArrowUpRight } from "lucide-react";
 import { Mark } from "./ui";
 import { API_MODE } from "@/lib/api";
 import { AnimatedLink } from "./ui/animated-link";
+import { useAuth } from "@/lib/auth";
 
 export function Navigation() {
   const pathname = usePathname();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   if (pathname === "/workspace-preview") return null;
@@ -28,9 +30,17 @@ export function Navigation() {
         </Link>
         <div className="desktop-nav">
           <AnimatedLink href="/#story">How it works</AnimatedLink>
-          <AnimatedLink href="/studio">The studio</AnimatedLink>
+          <AnimatedLink href="/reports">My reports</AnimatedLink>
+          <AnimatedLink href="/accounts">Accounts</AnimatedLink>
         </div>
         <div className="nav-actions">
+          <Link
+            className="text-link account-nav"
+            href={user ? "/settings" : "/login"}
+            onClick={close}
+          >
+            {user ? user.display_name : "Sign in"}
+          </Link>
           <span className="mode-indicator">
             <span />
             {pathname === "/demo" || API_MODE === "demo"
@@ -65,6 +75,15 @@ export function Navigation() {
           </Link>
           <Link href="/upload" onClick={close}>
             Analyze your video
+          </Link>
+          <Link href="/reports" onClick={close}>
+            My reports
+          </Link>
+          <Link href="/accounts" onClick={close}>
+            Connected accounts
+          </Link>
+          <Link href={user ? "/settings" : "/login"} onClick={close}>
+            {user ? "Settings" : "Sign in"}
           </Link>
         </div>
       )}

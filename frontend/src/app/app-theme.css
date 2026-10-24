@@ -849,3 +849,29 @@ meter::-webkit-meter-optimum-value {
 .asset-credits .button {
   margin-top: 24px;
 }
+/* Live account and report flows use the studio's existing visual tokens. */
+.account-page { padding-top: 130px; padding-bottom: 80px; max-width: 1200px; margin-inline: auto; }
+.account-page h1 { font-family: var(--font-display); font-size: clamp(28px, 4vw, 48px); line-height: 1.15; }
+.account-page form, .account-page section { min-width: 0; }
+.account-page input, .account-page select, .account-input, .draft-caption textarea {
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 8px; padding: 12px; font: inherit; width: 100%;
+}
+.account-page button { cursor: pointer; }
+.account-page button:disabled { cursor: wait; opacity: .5; }
+.account-page a { text-underline-offset: 4px; }
+.draft-caption { display: grid; gap: 10px; margin-bottom: 24px; font-weight: 600; }
+.draft-caption textarea { resize: vertical; font-weight: 400; min-height: 110px; }
+.saved-reports { display: grid; gap: 12px; margin-top: 32px; }
+.saved-report { border: 1px solid var(--line); border-radius: 12px; padding: 22px; display: flex; justify-content: space-between; gap: 16px; }
+.saved-report:hover { background: var(--surface); }
+.saved-report span, .score-source { font-size: 13px; opacity: .7; }
+.whole-video-review { padding: 18px 0; }
+.whole-video-review h3 { margin-top: 20px; font-weight: 700; }
+.whole-video-review li { padding-block: 6px; }
+.account-nav { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) {
+  .account-page { padding-top: 100px; }
+  .saved-report { flex-direction: column; }
+  .account-nav { display: none; }
+}
