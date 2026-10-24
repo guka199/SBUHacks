@@ -29,7 +29,8 @@ cp .env web/.env.local          # Next.js reads env from web/
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r ml/requirements.txt     # includes api requirements
-python -m data.prepare python -m ml.train --csv data/samples/demo_posts.csv   # optional: a toy model (no Snowflake needed)python -m ml.train --csv data/samples/demo_posts.csv   # optional: a toy model (no Snowflake needed) python -m ml.train   # needs data in data/raw/ (see AGENTS.md)
+python -m data.prepare                 # needs downloads in data/raw/ (see AGENTS.md)
+python -m ml.train                     # trains one model per platform into models/
 uvicorn api.main:app --reload          # http://localhost:8000/docs
 ```
 
