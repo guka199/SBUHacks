@@ -16,6 +16,24 @@ import pandas as pd
 
 PLATFORMS = ["tiktok", "youtube", "instagram", "linkedin"]
 
+# Opt-in visual contract. Existing bundles keep their original feature lists.
+THUMBNAIL_ENCODER = {"model": "ViT-B-32", "pretrained": "laion2b_s34b_b79k", "dimensions": 512, "version": 1}
+THUMBNAIL_COLUMNS = [f"thumbnail_{i}" for i in range(THUMBNAIL_ENCODER["dimensions"])]
+
+
+def thumbnail_features(embedding=None) -> dict:
+    """The exact same normalized image-vector inputs in training and serving."""
+    if embedding is None:
+        return dict.fromkeys(THUMBNAIL_COLUMNS, float("nan"))
+    values = list(embedding)
+    if len(values) != len(THUMBNAIL_COLUMNS) or not all(math.isfinite(float(v)) for v in values):
+        raise ValueError("Thumbnail embedding must contain 512 finite values")
+    return dict(zip(THUMBNAIL_COLUMNS, map(float, values)))
+
+
+def thumbnail_feature_frame(embeddings) -> pd.DataFrame:
+    return pd.DataFrame([thumbnail_features(e) for e in embeddings], columns=THUMBNAIL_COLUMNS).astype("float32")
+
 CAPTION_COLUMNS = [
     "caption_length",
     "word_count",

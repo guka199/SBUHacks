@@ -13,7 +13,7 @@ import warnings
 import numpy as np
 
 
-def _fit_and_predict(name, options, X_train, y_train, X_valid, y_valid, X_test, train_idx, conn) -> None:
+def _fit_and_predict(name, options, X_train, y_train, X_valid, y_valid, X_test, train_idx, conn, bundle_config=None) -> None:
     """Runs in the child process; sends back predictions + timings (never raises)."""
     try:
         warnings.simplefilter("ignore")
@@ -29,22 +29,34 @@ def _fit_and_predict(name, options, X_train, y_train, X_valid, y_valid, X_test, 
             model.predict(X_test.iloc[:1])
         ms_per_post = (time.perf_counter() - start) / 5 * 1000
         pred_train = np.asarray(model.predict(X_train.iloc[train_idx]), dtype=float)
+        pred_valid = np.asarray(model.predict(X_valid), dtype=float)
+        if bundle_config:
+            from pathlib import Path
+            from shared.bundle import ModelBundle
+            config = dict(bundle_config)
+            path = Path(config.pop("path"))
+            path.parent.mkdir(parents=True, exist_ok=True)
+            ModelBundle(model_name=name, model=model, **config).save(path)
 
         conn.send({"ok": True, "fit_seconds": fit_seconds, "pred": pred, "pred_train": pred_train,
-                   "ms_per_post": ms_per_post})
+                   "ms_per_post": ms_per_post, "pred_valid": pred_valid})
     except BaseException:
         conn.send({"ok": False, "error": traceback.format_exc()})
     finally:
         conn.close()
 
 
-def run_isolated(name: str, options: dict, m, train_idx: np.ndarray, timeout_s: float) -> dict:
+def run_isolated(name: str, options: dict, m, train_idx: np.ndarray, timeout_s: float, bundle_path=None) -> dict:
     """{'ok': True, 'pred', 'pred_train', 'fit_seconds', 'ms_per_post'} or {'ok': False, 'error'}."""
     ctx = mp.get_context("spawn")
     receive, send = ctx.Pipe(duplex=False)
+    bundle_config = None if bundle_path is None else {
+        "path": str(bundle_path), "platform": "youtube", "feature_columns": m.feature_columns,
+        "text_encoder": m.text_encoder, "target": m.target, "thumbnail_encoder": m.thumbnail_encoder,
+    }
     proc = ctx.Process(
         target=_fit_and_predict,
-        args=(name, options, m.X_train, m.y_train, m.X_valid, m.y_valid, m.X_test, train_idx, send),
+        args=(name, options, m.X_train, m.y_train, m.X_valid, m.y_valid, m.X_test, train_idx, send, bundle_config),
     )
     proc.start()
     send.close()  # only the child writes

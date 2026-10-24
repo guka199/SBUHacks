@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 
-from shared.features import build_feature_frame
+from shared.features import THUMBNAIL_ENCODER, build_feature_frame, thumbnail_feature_frame
 from shared.text_features import TextEncoder
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,6 +48,9 @@ class Matrices:
     test_posts: pd.DataFrame  # raw test rows (for train/serve consistency checks)
     feature_columns: list[str]
     text_encoder: TextEncoder | None
+    thumbnail_encoder: dict | None = None
+    test_thumbnail_embeddings: list | None = None
+    target: str = "score"
 
 
 def load_platform(platform: str) -> pd.DataFrame:
@@ -115,4 +118,21 @@ def build_matrices(platform: str, split: Split, use_text: bool = True, target: s
         test_posts=split.test.reset_index(drop=True),
         feature_columns=list(X[0].columns),
         text_encoder=encoder,
+        target="relative" if target == RELATIVE_TARGET else "score",
     )
+
+
+def with_thumbnails(m: Matrices, split: Split, embeddings: dict) -> Matrices:
+    """Append visual columns after the SAME caption encoder and creator split are built."""
+    from dataclasses import replace
+
+    target = RELATIVE_TARGET if m.target == "relative" else TARGET
+    frames = [d[d[target].notna()].reset_index(drop=True) for d in (split.train, split.valid, split.test)]
+    vectors = [[embeddings.get(url) for url in d.thumbnail_url] for d in frames]
+    if any(v is None for part in vectors for v in part):
+        raise ValueError("Ablation cohort must have a cached thumbnail for every post")
+    matrices = [pd.concat([x.reset_index(drop=True), thumbnail_feature_frame(v)], axis=1)
+                for x, v in zip((m.X_train, m.X_valid, m.X_test), vectors)]
+    return replace(m, X_train=matrices[0], X_valid=matrices[1], X_test=matrices[2],
+                   feature_columns=list(matrices[0].columns), thumbnail_encoder=dict(THUMBNAIL_ENCODER),
+                   test_thumbnail_embeddings=vectors[2])

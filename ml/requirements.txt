@@ -6,5 +6,5 @@ catboost
 torch
 jupyter
 matplotlib
-open_clip_torch
+open_clip_torch==3.3.0
 pillow

@@ -177,7 +177,7 @@ macOS: XGBoost needs `brew install libomp`. Use Python 3.11–3.12 if torch/open
 
 Done: scaffold, data download + cleaning, YouTube API collector, 13-model benchmark, CatBoost score + vs-average models
 for all platforms, `/predict` + `/score` with Gemini (live, gemini-3.5-flash-lite), Score page (media upload,
-combined/model/content scores, vs-your-average). **Models are frozen - next is building the app.**
+combined/model/content scores, vs-your-average). **Existing served models remain frozen; thumbnail candidates are opt-in experiments.**
 
 Backend/data implementation: `python -m data.setup` creates/migrates the configured Snowflake namespace;
 password or PAT (`SNOWFLAKE_TOKEN`) auth; validated YouTube/CSV imports MERGE by `(user_id,platform,external_id)`
@@ -207,7 +207,19 @@ Next (in order):
 - [ ] Copy `.env` to `web/.env.local` (Next.js reads env from web/)
 - [ ] Test `/score` with a real video upload
 - [ ] Demo: sample account with good data, rehearse 3-minute flow, backup video
-- Later (models): CLIP thumbnail features for YouTube; re-run full `ml.benchmark` (report reflects old TikTok/YouTube data)
+- YouTube thumbnail experiment: `docs/thumbnail-model.md`. Shared 512-D frozen CLIP features, isolated worker,
+  resumable pilot/cache loaders, and matched `ml.benchmark --thumbnail-ablation` for reach and relative targets.
+  Pilot: 8,645 posts/96 creators; test reach Spearman 0.7391→0.7437 and within-account 0.1790→0.2229.
+  Paired CIs include zero; relative validation declined. Neither candidate met the evidence rule; existing
+  served bundles were preserved. Local ignored candidates require server opt-in AND request
+  `use_thumbnail_model=true` (unchecked by default in web). `/score` supports a separate `thumbnail` image;
+  Gemini reviews it alongside an optional video. Response `thumbnail_used` flags and `thumbnail_warning`
+  disclose use/fallback. No arbitrary URL fetching or caller-provided embedding vectors. Raw/images/weights/
+  embeddings/candidates are ignored; detailed pilot results are in `models/benchmark/thumbnails/`.
+  Checks: 46 backend/thumbnail tests, frontend TypeScript/lint, actual isolated CLIP+candidate uploads,
+  fallback, and a live HTTP Gemini+thumbnail score passed. The local API currently exposes only the
+  reach candidate (`YOUTUBE_THUMBNAIL_TARGETS=score`); normal requests keep using the existing model.
+- Later (models): broader prospective visual data; re-run full `ml.benchmark` (main report reflects old TikTok/YouTube data)
 
 **Demo flow:** connect YouTube + upload a TikTok CSV → dashboard compares → score a draft → apply a
 suggestion, score rises → play ElevenLabs briefing → share data, receive Solana tokens.

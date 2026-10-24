@@ -23,6 +23,7 @@ from api.schemas import CombinedScore, ContentAnalysis, ContentScore, PredictReq
 from api.services import gemini
 from api.services.predictions import persist
 from shared.features import PLATFORMS
+from shared.thumbnails import MAX_IMAGE_BYTES, ThumbnailError, validate_image
 
 router = APIRouter(tags=["predict"])
 log = logging.getLogger(__name__)
@@ -43,6 +44,8 @@ async def score_post(
     context: str = Form("{}"),
     file: UploadFile | None = File(None),
     user_id: UserId | None = Form(None),
+    thumbnail: UploadFile | None = File(None),
+    use_thumbnail_model: bool = Form(False),
 ) -> ScoreResponse:
     chosen = [p.strip().lower() for p in platforms.split(",") if p.strip()]
     unknown = [p for p in chosen if p not in PLATFORMS]
@@ -62,9 +65,24 @@ async def score_post(
         if len(media) > MAX_UPLOAD_BYTES:
             raise HTTPException(413, "file is larger than 200 MB")
 
-    # 1) Our trained model
-    req = PredictRequest(caption=caption, platforms=chosen, planned_time=planned_time, **ctx)
-    model_result = score_with_model(req)
+    thumbnail_bytes = None
+    if thumbnail is not None and thumbnail.filename:
+        if not (thumbnail.content_type or "").startswith("image/"):
+            raise HTTPException(415, "The YouTube thumbnail must be a still image")
+        thumbnail_bytes = await thumbnail.read(MAX_IMAGE_BYTES + 1)
+        try:
+            validate_image(thumbnail_bytes)
+        except ThumbnailError as exc:
+            raise HTTPException(422, str(exc)) from None
+    elif media and mime_type.startswith("image/") and "youtube" in chosen:
+        # An existing image attachment can also be the selected YouTube thumbnail.
+        if len(media) <= MAX_IMAGE_BYTES:
+            thumbnail_bytes = media
+
+    # 1) Our trained model. CLIP extraction is isolated and this blocking work stays off the event loop.
+    req = PredictRequest(caption=caption, platforms=chosen, planned_time=planned_time,
+                         use_thumbnail_model=use_thumbnail_model, **ctx)
+    model_result = await run_in_threadpool(score_with_model, req, thumbnail_bytes=thumbnail_bytes)
     model_scores = {s.platform: s.score for s in model_result.scores}
     hurting = sorted({f.feature for s in model_result.scores for f in s.top_factors if f.impact < 0 and f.feature in FEATURE_HINTS})
 
@@ -77,6 +95,9 @@ async def score_post(
             analysis = await run_in_threadpool(
                 gemini.analyze, chosen, caption, planned_time.isoformat() if planned_time else None, ctx,
                 model_scores, [FEATURE_HINTS[f] for f in hurting], media, mime_type,
+                thumbnail=thumbnail_bytes,
+                thumbnail_mime_type=thumbnail.content_type if thumbnail is not None else mime_type,
+                model_uses_thumbnail=any(s.thumbnail_used for s in model_result.scores),
             )
         except Exception as e:
             log.exception("Gemini review failed")
@@ -99,6 +120,7 @@ async def score_post(
             platform=s.platform, score=round(combined, 1), model_score=s.score,
             content_score=None if content is None else content.score, top_factors=s.top_factors,
             vs_account=s.vs_account,
+            thumbnail_used=s.thumbnail_used,
         ))
 
     result = ScoreResponse(
@@ -114,6 +136,8 @@ async def score_post(
         model_weight=weight,
         gemini_used=analysis is not None,
         warning=warning,
+        thumbnail_warning=model_result.thumbnail_warning,
     )
     return await run_in_threadpool(persist, user_id, caption, result,
-                                  {**ctx, "planned_time": planned_time, "platforms": chosen})
+                                  {**ctx, "planned_time": planned_time, "platforms": chosen,
+                                   "thumbnail_used": {s.platform: s.thumbnail_used for s in result.scores}})

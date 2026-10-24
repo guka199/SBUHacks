@@ -1,0 +1,27 @@
+{
+  "actual_clip_and_model": [
+    {
+      "image_index": 0,
+      "score": 22.1,
+      "thumbnail_used": true
+    },
+    {
+      "image_index": 100,
+      "score": 21.2,
+      "thumbnail_used": true
+    }
+  ],
+  "missing_image_fallback": true,
+  "torch_imported_in_api": false,
+  "gemini_disabled_for_this_check": true,
+  "live_http_check": {
+    "status": 200,
+    "gemini_used": true,
+    "thumbnail_used": true,
+    "model_score": 22.5,
+    "content_score": 25.0,
+    "warning": null,
+    "thumbnail_warning": null
+  },
+  "website_controls_present": true
+}

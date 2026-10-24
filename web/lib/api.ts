@@ -82,6 +82,7 @@ export interface PredictRequest {
   format?: string;
   planned_time?: string; // ISO datetime
   thumbnail_url?: string;
+  use_thumbnail_model?: boolean;
   // Optional context about the draft / account
   followers?: number;
   following?: number;
@@ -100,6 +101,7 @@ export interface AccountComparison {
   percent: number; // (ratio - 1) * 100
   reliability: "low" | "moderate" | "high";
   expected_views: number | null;
+  thumbnail_used: boolean;
 }
 
 export interface PlatformScore {
@@ -107,6 +109,7 @@ export interface PlatformScore {
   score: number; // 0-100 virality percentile within the platform
   top_factors: { feature: string; impact: number }[];
   vs_account: AccountComparison | null;
+  thumbnail_used: boolean;
 }
 
 export interface PredictResponse {
@@ -114,6 +117,7 @@ export interface PredictResponse {
   suggestions: string[];
   prediction_id: string | null;
   storage_warning: string | null;
+  thumbnail_warning: string | null;
 }
 
 export interface CombinedScore {
@@ -123,6 +127,7 @@ export interface CombinedScore {
   content_score: number | null; // null when Gemini wasn't used
   top_factors: { feature: string; impact: number }[];
   vs_account: AccountComparison | null;
+  thumbnail_used: boolean;
 }
 
 export interface ContentAnalysis {
@@ -144,6 +149,7 @@ export interface ScoreResponse {
   warning: string | null;
   prediction_id: string | null;
   storage_warning: string | null;
+  thumbnail_warning: string | null;
 }
 
 export interface ScoreInput {
@@ -153,6 +159,8 @@ export interface ScoreInput {
   plannedTime?: string; // ISO datetime
   context?: Record<string, string | number | boolean>; // e.g. { followers: 5000 }
   file?: File | null; // image or video
+  thumbnail?: File | null; // Optional selected YouTube thumbnail, separate from the video
+  useThumbnailModel?: boolean; // Explicit experimental opt-in; standard scoring is the default
 }
 
 export interface AudioResponse {
@@ -212,14 +220,16 @@ export const api = {
   },
 
   // Our model + Gemini content review (multipart, so the draft's image/video can be attached)
-  score: ({ userId = "demo", caption, platforms, plannedTime, context, file }: ScoreInput) => {
+  score: ({ userId = "demo", caption, platforms, plannedTime, context, file, thumbnail, useThumbnailModel = false }: ScoreInput) => {
     const form = new FormData();
     form.append("caption", caption);
     form.append("user_id", userId);
+    form.append("use_thumbnail_model", String(useThumbnailModel));
     form.append("platforms", platforms.join(","));
     if (plannedTime) form.append("planned_time", plannedTime);
     form.append("context", JSON.stringify(context ?? {}));
     if (file) form.append("file", file);
+    if (thumbnail) form.append("thumbnail", thumbnail);
     return request<ScoreResponse>("/score", { method: "POST", body: form });
   },
 

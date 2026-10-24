@@ -30,3 +30,4 @@ data/**/*.zip
 models/benchmark/smoke/
 models/benchmark/*.log
 models/benchmark/partial/
+models/candidates/

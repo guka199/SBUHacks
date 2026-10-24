@@ -216,7 +216,17 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--no-text", action="store_true", help="skip caption topic features")
     parser.add_argument("--smoke", action="store_true", help="tiny, fast run of everything to catch errors")
+    parser.add_argument("--thumbnail-ablation", action="store_true", help="Matched YouTube metadata vs metadata+CLIP experiment")
+    parser.add_argument("--thumbnail-data", type=Path)
+    parser.add_argument("--thumbnail-cache", type=Path)
+    parser.add_argument("--thumbnail-output", type=Path, default=MODELS_DIR / "benchmark/thumbnails")
+    parser.add_argument("--thumbnail-targets", nargs="+", choices=["score", "relative"], default=["score", "relative"])
     args = parser.parse_args()
+
+    if args.thumbnail_ablation:
+        from ml.thumbnail_ablation import run
+        run(args)
+        return
 
     out_dir = MODELS_DIR / "benchmark"
     partial = set(args.platforms) != set(PLATFORMS) or set(args.models) != set(MODELS)

@@ -20,6 +20,8 @@ export default function ScorePage() {
   const [caption, setCaption] = useState("");
   const [platforms, setPlatforms] = useState<Platform[]>(["tiktok", "instagram", "youtube"]);
   const [file, setFile] = useState<File | null>(null);
+  const [thumbnail, setThumbnail] = useState<File | null>(null);
+  const [useThumbnailModel, setUseThumbnailModel] = useState(false);
   const [followers, setFollowers] = useState("");
   const [typicalViews, setTypicalViews] = useState("");
   const [result, setResult] = useState<ScoreResponse | null>(null);
@@ -39,6 +41,8 @@ export default function ScorePage() {
           caption,
           platforms,
           file,
+          thumbnail,
+          useThumbnailModel: platforms.includes("youtube") && useThumbnailModel,
           context: {
             ...(followers ? { followers: Number(followers) } : {}),
             ...(typicalViews ? { creator_typical_views: Number(typicalViews) } : {}),
@@ -91,6 +95,21 @@ export default function ScorePage() {
         </label>
       </div>
 
+      {platforms.includes("youtube") && (
+        <div className="flex flex-col gap-2 text-sm">
+          <label className="flex flex-wrap items-center gap-2">
+            <span className="opacity-70">YouTube thumbnail (optional)</span>
+            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setThumbnail(e.target.files?.[0] ?? null)} />
+            <span className="text-xs opacity-60">Upload the thumbnail you plan to publish, up to 5 MB.</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={useThumbnailModel} onChange={(e) => setUseThumbnailModel(e.target.checked)} />
+            <span>Try experimental YouTube thumbnail prediction</span>
+          </label>
+          <p className="text-xs opacity-60">Early results are inconclusive. Leave unchecked to use the existing prediction model.</p>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2 text-sm">
         {PLATFORMS.map((p) => (
           <button
@@ -116,6 +135,7 @@ export default function ScorePage() {
         <div className="flex flex-col gap-6">
           {result.warning && <p className="text-sm opacity-70">{result.warning}</p>}
           {result.storage_warning && <p className="text-sm opacity-70">{result.storage_warning}</p>}
+          {result.thumbnail_warning && <p className="text-sm opacity-70">{result.thumbnail_warning}</p>}
 
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="flex flex-col gap-4">
@@ -127,6 +147,7 @@ export default function ScorePage() {
                     <Bar value={s.score} />
                     <span className="w-10 text-right font-semibold tabular-nums">{s.score.toFixed(0)}</span>
                   </div>
+                  {s.thumbnail_used && <p className="pl-24 text-xs opacity-60">Includes thumbnail features · experimental model</p>}
                   {s.content_score !== null && (
                     <div className="flex gap-4 pl-24 text-xs opacity-60">
                       <span>Our model {s.model_score.toFixed(0)}</span>

@@ -61,6 +61,12 @@ adds sentiment, semantic search and an on-demand briefing. Scores with a user ID
 the scoring page currently uses `demo`. Live services require credentials in `.env` and schema setup.
 Training continues to read local `data/processed/` (see AGENTS.md "Training data and labels").
 
+## YouTube thumbnail model experiment
+
+See [thumbnail model setup and measured results](docs/thumbnail-model.md). The pipeline encodes real
+thumbnails with frozen CLIP and compares matched CatBoost models. Pilot gains were inconclusive;
+existing models remain the default. Experimental thumbnail scoring requires explicit server and user opt-in.
+
 ## Solana rewards (devnet)
 
 Create a payout wallet and a reward token once with the Solana CLI and `spl-token`, fund the wallet with devnet SOL, then put its secret key and the mint address in `.env`. Never use mainnet keys here.
