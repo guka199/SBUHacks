@@ -179,11 +179,30 @@ Done: scaffold, data download + cleaning, YouTube API collector, 13-model benchm
 for all platforms, `/predict` + `/score` with Gemini (live, gemini-3.5-flash-lite), Score page (media upload,
 combined/model/content scores, vs-your-average). **Models are frozen - next is building the app.**
 
+Backend/data implementation: `python -m data.setup` creates/migrates the configured Snowflake namespace;
+password or PAT (`SNOWFLAKE_TOKEN`) auth; validated YouTube/CSV imports MERGE by `(user_id,platform,external_id)`
+and preserve raw payloads in the same transaction. `data.seed_demo` loads 10 labeled recent sample posts.
+Dashboard response now includes `by_format`, `weekly`, `recent_posts`, `accounts`, `total_posts`, `last_import_at`.
+Cortex routes: `POST /data/enrich`, `POST /data/{user_id}/similar`, `POST /dashboard/{user_id}/insights`.
+Uses current `AI_SENTIMENT`, `AI_EMBED`, `AI_COMPLETE`; enrichment is bounded and optional after ingestion.
+Scores with a user ID persist to `PREDICTIONS`; web scoring defaults to `demo`; response fields `prediction_id` and
+`storage_warning` report saves without blocking scoring. History: `GET /dashboard/{user_id}/predictions`.
+`GET /data/status` exposes configuration readiness (variable names only), optional `?check_connection=true`.
+Live validation completed 2026-10-24 using the `POSTPILOT_APP` role: all seven tables created, 10 demo posts
+loaded and enriched; repeating the seed updated 10/inserted zero and kept the dashboard at 10 posts.
+Dashboard HTTP/UI, Cortex sentiment/embeddings/semantic search/insights, a one-video public YouTube import,
+and a 10-row multipart CSV import under separate validation users,
+and a real Gemini score saved to history for two platforms all succeeded. An empty user's dashboard returned zero.
+Fixed live connector INSERT batching and JSON-encoded Cortex briefing text; 29 backend regression tests pass.
+Manual administrator provisioning: `data/sql/000_app_access.sql`. Setup/API handoff: `docs/backend-data.md`.
+Regression checks: `python -m unittest tests.test_backend_data -v`. User IDs select demo data; verified authentication
+must be connected by the login/wallet implementation before public deployment.
+
 Next (in order):
 - [ ] **Solana**: Phantom connect on `/rewards` (window.phantom.solana, no extra deps) + a script that creates the devnet
       payout wallet and reward token and writes `REWARD_WALLET_SECRET_KEY` / `REWARD_MINT_ADDRESS` to `.env`
-- [ ] **Snowflake**: needs trial credentials in `.env`; run `data/sql/001_create_tables.sql`; store posts, predictions, contributions
-- [ ] **Dashboard**: connect a YouTube channel (`/ingest/youtube`, key is set) + CSV upload -> Snowflake -> charts (Recharts)
+- [x] **Snowflake live setup**: POSTPILOT_APP PAT, schema, repeat demo import, dashboard, history and Cortex verified
+- [ ] **Dashboard UI**: wire YouTube/CSV controls and chart the backend's `platforms`, `by_format`, `weekly` data
 - [ ] **ElevenLabs**: needs `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_ID`; weekly briefing + hook tester
 - [ ] Copy `.env` to `web/.env.local` (Next.js reads env from web/)
 - [ ] Test `/score` with a real video upload

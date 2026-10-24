@@ -19,8 +19,9 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from starlette.concurrency import run_in_threadpool
 
 from api.routers.predict import CONTEXT_FIELDS, FEATURE_HINTS, score_with_model
-from api.schemas import CombinedScore, ContentAnalysis, ContentScore, PredictRequest, ScoreResponse
+from api.schemas import CombinedScore, ContentAnalysis, ContentScore, PredictRequest, ScoreResponse, UserId
 from api.services import gemini
+from api.services.predictions import persist
 from shared.features import PLATFORMS
 
 router = APIRouter(tags=["predict"])
@@ -41,6 +42,7 @@ async def score_post(
     planned_time: datetime | None = Form(None),
     context: str = Form("{}"),
     file: UploadFile | None = File(None),
+    user_id: UserId | None = Form(None),
 ) -> ScoreResponse:
     chosen = [p.strip().lower() for p in platforms.split(",") if p.strip()]
     unknown = [p for p in chosen if p not in PLATFORMS]
@@ -99,7 +101,7 @@ async def score_post(
             vs_account=s.vs_account,
         ))
 
-    return ScoreResponse(
+    result = ScoreResponse(
         scores=scores,
         suggestions=(analysis.suggestions[:3] if analysis and analysis.suggestions else model_result.suggestions),
         content=None if analysis is None else ContentAnalysis(
@@ -113,3 +115,5 @@ async def score_post(
         gemini_used=analysis is not None,
         warning=warning,
     )
+    return await run_in_threadpool(persist, user_id, caption, result,
+                                  {**ctx, "planned_time": planned_time, "platforms": chosen})

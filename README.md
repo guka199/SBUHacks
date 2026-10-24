@@ -45,10 +45,21 @@ cd web && npm install && npm run dev   # http://localhost:3000
 
 ## Snowflake
 
-1. Run `data/sql/001_create_tables.sql` in a Snowflake worksheet.
-2. Load data: `python -m data.loaders.load_csv data/samples/demo_posts.csv` (Kaggle datasets go in `data/raw/`, which is git-ignored).
-3. Run `data/sql/002_enrich_with_cortex.sql` to add sentiment, embeddings and the `TRAINING_DATA` view.
-4. Training reads local `data/processed/` (see AGENTS.md "Training data and labels").
+See [Backend/data setup and API contract](docs/backend-data.md) for Snowflake/PAT credentials, YouTube keys,
+repeatable migrations, CSV import formats, dashboard queries and Cortex access.
+
+```bash
+python -m data.setup                 # create tables and apply additive migrations
+python -m data.setup --check         # verify connection and all seven tables
+python -m data.seed_demo             # 10 sample posts for user "demo", with recent dates
+python -m unittest tests.test_backend_data -v
+```
+
+`POST /ingest/youtube` and `POST /ingest/csv` update existing posts rather than appending duplicates.
+The dashboard API provides platform/format/week aggregates, recent posts and accounts. Snowflake Cortex
+adds sentiment, semantic search and an on-demand briefing. Scores with a user ID are saved to prediction history;
+the scoring page currently uses `demo`. Live services require credentials in `.env` and schema setup.
+Training continues to read local `data/processed/` (see AGENTS.md "Training data and labels").
 
 ## Solana rewards (devnet)
 
