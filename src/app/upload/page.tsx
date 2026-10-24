@@ -1,2 +1,4 @@
 import { Upload } from "@/components/upload";
-export default function Page() { return <Upload />; }
+export default function Page() {
+  return <Upload />;
+}

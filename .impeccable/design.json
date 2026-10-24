@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "source": "DESIGN.md",
+  "tokens": {
+    "source": [
+      "src/app/app-theme.css",
+      "src/app/cinematic.css"
+    ]
+  },
+  "motion": {
+    "source": "src/components/home/choreography.ts",
+    "reversible": true,
+    "reducedMotion": "Unpinned still hero and normal studio"
+  },
+  "focus": {
+    "outline": "2px solid #3D6745",
+    "offset": "5px"
+  },
+  "glass": {
+    "blur": "14–18px",
+    "distortion": "Decorative caustic only"
+  },
+  "verification": "QA_REPORT.md",
+  "profile": "design-system/viralpilot/DNA.json"
+}

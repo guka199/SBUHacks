@@ -1,0 +1,35 @@
+Hardware attribution and license notice
+
+Sony MDR-7506 headphones by AndreiVNK
+Original: https://sketchfab.com/3d-models/sony-mdr-7506-headphones-05735b74d3524f00b648231138122a28
+Downloaded from the SceneView model catalogue mirror.
+https://sceneview.github.io/credits.html
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+https://creativecommons.org/licenses/by/4.0/legalcode.en
+Modified: scale, placement, Meshopt geometry compression and WebP textures.
+No endorsement by the author or Sony is implied.
+
+Rivet desk, Amazon Berkeley Objects B07B7DL32P, by Amazon.com
+Original: https://amazon-berkeley-objects.s3.amazonaws.com/3dmodels/original/P/B07B7DL32P.glb
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+https://creativecommons.org/licenses/by/4.0/
+https://creativecommons.org/licenses/by/4.0/legalcode.en
+Modified: scale, placement, Meshopt compression and WebP textures.
+No endorsement by Amazon is implied.
+
+27 inch monitor and wireless mouse by Innerscene
+Original model pages and download hashes: sources.json
+License: CC0 1.0 Universal public domain dedication
+https://creativecommons.org/publicdomain/zero/1.0/
+Modified: scale, placement, compression and monitor stand material tuning.
+
+Keyboard case and sculpted keycaps by liweihang
+https://github.com/Hanggesimida/keyboard-designer
+MIT license, full copyright and permission notice: KEYBOARD_LICENSE.txt
+Modified: 68-key layout assembly, material colors, original printed legend atlas,
+shared geometry instances and compression. Pinned source URLs: sources.json.
+
+The copyrights and licenses above apply to these assets independently of the
+application source. Retain this notice, KEYBOARD_LICENSE.txt and attribution
+when redistributing these models or captures containing them.

@@ -1,0 +1,5 @@
+Poly Haven assets — CC0 1.0 Universal (public domain).
+Source license: https://polyhaven.com/license
+CC0 deed: https://creativecommons.org/publicdomain/zero/1.0/
+Per-asset authors and URLs: sources.json
+Models repackaged from glTF+1K JPEG PBR maps to self-contained GLB. No geometry or material data removed.

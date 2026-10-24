@@ -1,0 +1,140 @@
+{
+  "provider": "Poly Haven",
+  "license": "CC0-1.0",
+  "licenseUrl": "https://polyhaven.com/license",
+  "apiTermsUrl": "https://github.com/Poly-Haven/Public-API/blob/master/ToS.md",
+  "assets": [
+    {
+      "id": "potted_plant_01",
+      "name": "Potted Plant 01",
+      "author": "Rico Cilliers",
+      "source": "https://polyhaven.com/a/potted_plant_01",
+      "path": "/assets/polyhaven/plant-01.glb",
+      "bytes": 6322092,
+      "download": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/potted_plant_01/potted_plant_01_1k.gltf",
+      "sourceMd5": "199e9e3d68f5447142db4066d60ae3f0",
+      "min": [
+        -0.33836793899536133,
+        -0.013706624373488907,
+        -0.36367878317832947
+      ],
+      "max": [
+        0.24901919066905975,
+        1.336457371711731,
+        0.2698860168457031
+      ],
+      "size": [
+        0.5873871296644211,
+        1.3501639960852199,
+        0.6335648000240326
+      ],
+      "triangles": 176226,
+      "upAxis": "Y (glTF)",
+      "units": "meters"
+    },
+    {
+      "id": "potted_plant_02",
+      "name": "Potted Plant 02",
+      "author": "Rico Cilliers",
+      "source": "https://polyhaven.com/a/potted_plant_02",
+      "path": "/assets/polyhaven/plant-02.glb",
+      "bytes": 2632208,
+      "download": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/potted_plant_02/potted_plant_02_1k.gltf",
+      "sourceMd5": "9999d7e6c51018a85551840e1bdae656",
+      "min": [
+        -0.3966600392013788,
+        0.00005296462768455967,
+        -0.42031260282965377
+      ],
+      "max": [
+        0.3044969942420721,
+        0.8412317037582397,
+        0.23707397282123566
+      ],
+      "size": [
+        0.7011570334434509,
+        0.8411787391305552,
+        0.6573865756508894
+      ],
+      "triangles": 69806,
+      "upAxis": "Y (glTF)",
+      "units": "meters"
+    },
+    {
+      "id": "oak_veneer_01",
+      "name": "Oak Veneer 01",
+      "author": "Jenelle van Heerden",
+      "source": "https://polyhaven.com/a/oak_veneer_01",
+      "path": "/assets/polyhaven/oak-color.jpg",
+      "map": "Diffuse",
+      "resolution": "1k",
+      "bytes": 641756,
+      "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/oak_veneer_01/oak_veneer_01_diff_1k.jpg",
+      "sourceMd5": "39a99df4e328d62d74f3122722a64a95"
+    },
+    {
+      "id": "oak_veneer_01",
+      "name": "Oak Veneer 01",
+      "author": "Jenelle van Heerden",
+      "source": "https://polyhaven.com/a/oak_veneer_01",
+      "path": "/assets/polyhaven/oak-normal.jpg",
+      "map": "nor_gl",
+      "resolution": "1k",
+      "bytes": 484844,
+      "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/oak_veneer_01/oak_veneer_01_nor_gl_1k.jpg",
+      "sourceMd5": "d05406f5fdaf51f0d7b115b35d9af1b7"
+    },
+    {
+      "id": "oak_veneer_01",
+      "name": "Oak Veneer 01",
+      "author": "Jenelle van Heerden",
+      "source": "https://polyhaven.com/a/oak_veneer_01",
+      "path": "/assets/polyhaven/oak-roughness.jpg",
+      "map": "Rough",
+      "resolution": "1k",
+      "bytes": 865194,
+      "download": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/oak_veneer_01/oak_veneer_01_rough_1k.jpg",
+      "sourceMd5": "a19b44176a078b9ae93314133848c9aa"
+    },
+    {
+      "id": "photo_studio_loft_hall",
+      "name": "Photo Studio Loft Hall",
+      "author": "Sergej Majboroda",
+      "source": "https://polyhaven.com/a/photo_studio_loft_hall",
+      "path": "/assets/polyhaven/sunlit-loft.hdr",
+      "map": "hdri",
+      "resolution": "1k",
+      "bytes": 1640243,
+      "download": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/photo_studio_loft_hall_1k.hdr",
+      "sourceMd5": "bc32a903ad3ac00bfcea0ec815ef4cea"
+    },
+    {
+      "id": "desk_lamp_arm_01",
+      "name": "Desk Lamp Arm 01",
+      "author": "Yann Kervran, Kuutti Siitonen",
+      "source": "https://polyhaven.com/a/desk_lamp_arm_01",
+      "path": "/assets/polyhaven/desk-lamp.glb",
+      "bytes": 2874264,
+      "download": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/desk_lamp_arm_01/desk_lamp_arm_01_1k.gltf",
+      "sourceMd5": "29b204485d30e66ee3f183ef45bf4bb3",
+      "min": [
+        -0.11847317218780518,
+        -0.08799377083778381,
+        -0.29663750529289246
+      ],
+      "max": [
+        0.08325615525245667,
+        0.8046169281005859,
+        0.3172350823879242
+      ],
+      "size": [
+        0.20172932744026184,
+        0.8926106989383698,
+        0.6138725876808167
+      ],
+      "triangles": 24102,
+      "upAxis": "Y (glTF)",
+      "units": "meters"
+    }
+  ]
+}

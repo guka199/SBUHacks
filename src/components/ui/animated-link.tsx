@@ -3,6 +3,16 @@
 // Free personal/commercial use with attribution; see THIRD_PARTY_NOTICES.md.
 // Local changes: focus-visible parity, reduced-motion support, no utility helper.
 import Link from "next/link";
-export function AnimatedLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return <Link href={href} className="animated-link">{children}</Link>;
+export function AnimatedLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link href={href} className="animated-link">
+      {children}
+    </Link>
+  );
 }

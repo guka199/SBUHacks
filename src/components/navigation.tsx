@@ -11,9 +11,63 @@ export function Navigation() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
-  return <header className="site-header"><a className="skip-link" href="#main">Skip to content</a><nav className="nav-inner" aria-label="Main navigation">
-    <Link className="brand" href="/" onClick={close}><Mark /><span>viralpilot<span className="brand-dot">®</span></span></Link>
-    <div className="desktop-nav"><AnimatedLink href="/#how-it-works">How it works</AnimatedLink><AnimatedLink href="/demo">The studio</AnimatedLink></div>
-    <div className="nav-actions"><span className="mode-indicator"><span />{pathname === "/demo" || API_MODE === "demo" ? "Demo mode" : "Live mode"}</span><Link className="button button-small button-light" href="/upload" onClick={close}>Start creating <ArrowUpRight size={17} /></Link><button className="menu-button icon-button" aria-expanded={open} aria-controls="mobile-nav" aria-label={open ? "Close navigation" : "Open navigation"} onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button></div>
-  </nav>{open && <div id="mobile-nav" className="mobile-nav"><Link href="/#how-it-works" onClick={close}>How it works</Link><Link href="/demo" onClick={close}>Explore the studio</Link><Link href="/upload" onClick={close}>Analyze your video</Link></div>}</header>;
+  if (pathname === "/workspace-preview") return null;
+  return (
+    <header
+      className={`site-header ${pathname === "/" ? "cinematic-header" : ""}`}
+    >
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
+      <nav className="nav-inner" aria-label="Main navigation">
+        <Link className="brand" href="/" onClick={close}>
+          <Mark />
+          <span>
+            viralpilot<span className="brand-dot">®</span>
+          </span>
+        </Link>
+        <div className="desktop-nav">
+          <AnimatedLink href="/#story">How it works</AnimatedLink>
+          <AnimatedLink href="/studio">The studio</AnimatedLink>
+        </div>
+        <div className="nav-actions">
+          <span className="mode-indicator">
+            <span />
+            {pathname === "/demo" || API_MODE === "demo"
+              ? "Demo mode"
+              : "Live mode"}
+          </span>
+          <Link
+            className="button button-small button-light"
+            href="/analyze"
+            onClick={close}
+          >
+            Start creating <ArrowUpRight size={17} />
+          </Link>
+          <button
+            className="menu-button icon-button"
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            aria-label={open ? "Close navigation" : "Open navigation"}
+            onClick={() => setOpen(!open)}
+          >
+            {open ? <X /> : <Menu />}
+          </button>
+        </div>
+      </nav>
+      {open && (
+        <div id="mobile-nav" className="mobile-nav">
+          <Link href="/#story" onClick={close}>
+            How it works
+          </Link>
+          <Link href="/studio" onClick={close}>
+            Explore the studio
+          </Link>
+          <Link href="/upload" onClick={close}>
+            Analyze your video
+          </Link>
+        </div>
+      )}
+    </header>
+  );
 }

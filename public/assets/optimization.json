@@ -1,0 +1,62 @@
+[
+  {
+    "file": "public/models/desk.glb",
+    "before": 329684,
+    "after": 100132,
+    "savedPercent": 70
+  },
+  {
+    "file": "public/assets/hardware/monitor-27.glb",
+    "before": 83544,
+    "after": 26720,
+    "savedPercent": 68
+  },
+  {
+    "file": "public/assets/hardware/rivet-desk.glb",
+    "before": 2167736,
+    "after": 1390364,
+    "savedPercent": 36
+  },
+  {
+    "file": "public/assets/hardware/keyboard.glb",
+    "before": 5640796,
+    "after": 1173116,
+    "savedPercent": 79
+  },
+  {
+    "file": "public/assets/hardware/headphones.glb",
+    "before": 1153892,
+    "after": 608276,
+    "savedPercent": 47
+  },
+  {
+    "file": "public/assets/hardware/mouse.glb",
+    "before": 2571264,
+    "after": 369748,
+    "savedPercent": 86
+  },
+  {
+    "file": "public/models/room.glb",
+    "before": 366416,
+    "after": 84232,
+    "savedPercent": 77
+  },
+  {
+    "file": "public/assets/polyhaven/plant-01.glb",
+    "before": 6322092,
+    "after": 2108484,
+    "savedPercent": 67
+  },
+  {
+    "file": "public/assets/polyhaven/plant-02.glb",
+    "before": 2632208,
+    "after": 1168440,
+    "savedPercent": 56
+  },
+  {
+    "file": "public/assets/polyhaven/desk-lamp.glb",
+    "before": 2874264,
+    "after": 1183580,
+    "savedPercent": 59
+  }
+]

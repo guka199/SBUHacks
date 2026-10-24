@@ -14,3 +14,5 @@ coverage/
 .impeccable/review/
 design-references/
 test-results/
+.agents/
+work/
