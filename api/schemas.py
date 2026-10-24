@@ -143,3 +143,95 @@ class ContributeRequest(BaseModel):
 class ContributeResponse(BaseModel):
     contribution_id: str
     tokens_owed: int
+
+
+# ----------------------------------------------------------------------------- users & linked accounts
+
+AccountType = Literal["creator", "business"]
+
+
+class SignupRequest(BaseModel):
+    email: str
+    password: str
+    display_name: str
+    account_type: AccountType = "creator"
+    niche: str | None = None  # e.g. "study tips", "local bakery"
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class ProfileUpdate(BaseModel):
+    display_name: str | None = None
+    account_type: AccountType | None = None
+    niche: str | None = None  # "" clears it
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class DeleteAccountRequest(BaseModel):
+    password: str  # re-entered to confirm
+
+
+class UserOut(BaseModel):
+    id: str
+    email: str
+    display_name: str
+    account_type: str | None = None
+    niche: str | None = None
+
+
+class Audience(BaseModel):
+    age_range: str | None = None  # e.g. "18-24"
+    percent_female: float | None = None  # 0-100
+    top_countries: list[str] | None = None
+    interests: str | None = None
+    language: str | None = None
+
+
+class ManualAccountIn(BaseModel):
+    """Stats a user types in from their platform's analytics (TikTok, Instagram, LinkedIn, or YouTube manually)."""
+    handle: str
+    profile_url: str | None = None
+    followers: int | None = None
+    following: int | None = None
+    total_posts: int | None = None
+    avg_views: float | None = None
+    avg_likes: float | None = None
+    avg_comments: float | None = None
+    avg_shares: float | None = None
+    posts_per_week: float | None = None
+    audience: Audience | None = None
+
+
+class YouTubeConnectIn(BaseModel):
+    channel: str  # channel URL, @handle or channel id
+    audience: Audience | None = None
+
+
+class AccountOut(BaseModel):
+    platform: Platform
+    connection: str  # api | manual
+    handle: str | None = None
+    external_id: str | None = None  # e.g. YouTube channel id
+    display_name: str | None = None
+    profile_url: str | None = None
+    followers: int | None = None
+    following: int | None = None
+    total_posts: int | None = None
+    avg_views: float | None = None
+    typical_views: float | None = None
+    avg_likes: float | None = None
+    avg_comments: float | None = None
+    avg_shares: float | None = None
+    engagement_rate: float | None = None
+    posts_per_week: float | None = None
+    audience: dict = {}
+    extra: dict = {}
+    updated_at: str | None = None
+

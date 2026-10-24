@@ -15,12 +15,13 @@ import logging
 import os
 from datetime import datetime
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from starlette.concurrency import run_in_threadpool
 
 from api.routers.predict import CONTEXT_FIELDS, FEATURE_HINTS, score_with_model
 from api.schemas import CombinedScore, ContentAnalysis, ContentScore, PredictRequest, ScoreResponse
-from api.services import gemini
+from api.services import accounts, drafts, gemini
+from api.services.auth import current_user_id
 from shared.features import PLATFORMS
 
 router = APIRouter(tags=["predict"])
@@ -36,11 +37,13 @@ def model_weight() -> float:
 
 @router.post("/score", response_model=ScoreResponse)
 async def score_post(
+    background: BackgroundTasks,
     caption: str = Form(...),
     platforms: str = Form("youtube,tiktok,instagram"),
     planned_time: datetime | None = Form(None),
     context: str = Form("{}"),
     file: UploadFile | None = File(None),
+    user_id: str | None = Depends(current_user_id),
 ) -> ScoreResponse:
     chosen = [p.strip().lower() for p in platforms.split(",") if p.strip()]
     unknown = [p for p in chosen if p not in PLATFORMS]
@@ -62,7 +65,9 @@ async def score_post(
 
     # 1) Our trained model
     req = PredictRequest(caption=caption, platforms=chosen, planned_time=planned_time, **ctx)
-    model_result = score_with_model(req)
+    model_result = score_with_model(req, user_id)
+    if profile := accounts.audience_summary(user_id):
+        ctx = {**ctx, "creator profile": profile}  # lets Gemini tailor the review to this audience
     model_scores = {s.platform: s.score for s in model_result.scores}
     hurting = sorted({f.feature for s in model_result.scores for f in s.top_factors if f.impact < 0 and f.feature in FEATURE_HINTS})
 
@@ -99,7 +104,7 @@ async def score_post(
             vs_account=s.vs_account,
         ))
 
-    return ScoreResponse(
+    result = ScoreResponse(
         scores=scores,
         suggestions=(analysis.suggestions[:3] if analysis and analysis.suggestions else model_result.suggestions),
         content=None if analysis is None else ContentAnalysis(
@@ -113,3 +118,9 @@ async def score_post(
         gemini_used=analysis is not None,
         warning=warning,
     )
+    if user_id:  # keep signed-in users' drafts (caption, media, scores) - saved after responding
+        background.add_task(
+            drafts.save_draft, user_id, caption, chosen, planned_time.isoformat() if planned_time else None,
+            media, file.filename if media else None, mime_type, result.model_dump(),
+        )
+    return result

@@ -10,14 +10,12 @@ from snowflake.connector.pandas_tools import write_pandas
 
 @contextmanager
 def get_connection():
+    from api.services.db import snowflake_params
+
     conn = snowflake.connector.connect(
-        account=os.environ["SNOWFLAKE_ACCOUNT"],
-        user=os.environ["SNOWFLAKE_USER"],
-        password=os.environ["SNOWFLAKE_PASSWORD"],
-        warehouse=os.getenv("SNOWFLAKE_WAREHOUSE"),
+        **snowflake_params(),
         database=os.getenv("SNOWFLAKE_DATABASE", "POSTPILOT"),
         schema=os.getenv("SNOWFLAKE_SCHEMA", "PUBLIC"),
-        role=os.getenv("SNOWFLAKE_ROLE") or None,
     )
     try:
         yield conn
