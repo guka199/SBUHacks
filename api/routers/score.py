@@ -19,9 +19,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from starlette.concurrency import run_in_threadpool
 
 from api.routers.predict import CONTEXT_FIELDS, FEATURE_HINTS, score_with_model
-from api.schemas import CombinedScore, ContentAnalysis, ContentScore, PredictRequest, ScoreResponse
+from api.schemas import CombinedScore, ContentAnalysis, ContentScore, PredictRequest, ScoreResponse, UserId
 from api.services import accounts, drafts, gemini
 from api.services.auth import current_user_id
+from api.services.predictions import persist
 from shared.features import PLATFORMS
 
 router = APIRouter(tags=["predict"])
@@ -43,8 +44,10 @@ async def score_post(
     planned_time: datetime | None = Form(None),
     context: str = Form("{}"),
     file: UploadFile | None = File(None),
-    user_id: str | None = Depends(current_user_id),
+    user_id: UserId | None = Form(None),  # explicit user (e.g. the demo user) when nobody is signed in
+    session_user_id: str | None = Depends(current_user_id),
 ) -> ScoreResponse:
+    user_id = session_user_id or user_id
     chosen = [p.strip().lower() for p in platforms.split(",") if p.strip()]
     unknown = [p for p in chosen if p not in PLATFORMS]
     if not chosen or unknown:
@@ -118,7 +121,9 @@ async def score_post(
         gemini_used=analysis is not None,
         warning=warning,
     )
-    if user_id:  # keep signed-in users' drafts (caption, media, scores) - saved after responding
+    result = await run_in_threadpool(persist, user_id, caption, result,
+                                     {**ctx, "planned_time": planned_time, "platforms": chosen})
+    if session_user_id:  # signed-in users also keep the draft itself (caption, media file) - saved after responding
         background.add_task(
             drafts.save_draft, user_id, caption, chosen, planned_time.isoformat() if planned_time else None,
             media, file.filename if media else None, mime_type, result.model_dump(),

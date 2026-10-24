@@ -1,9 +1,12 @@
 """Users and their linked social accounts (stored with api/services/db.py: Snowflake or local SQLite)."""
 
 import json
+import logging
 import uuid
 
 from api.services import db
+
+log = logging.getLogger(__name__)
 
 ACCOUNT_FIELDS = [
     "connection", "handle", "external_id", "display_name", "profile_url", "followers", "following", "total_posts",
@@ -49,6 +52,13 @@ def delete_user(user_id: str) -> None:
     """Delete the user and everything they stored: linked accounts, posts, drafts and uploaded media."""
     for table in ("ACCOUNTS", "POSTS", "DRAFTS"):
         db.execute(f"DELETE FROM {table} WHERE user_id = %s", (user_id,))
+    if db.backend() == "snowflake":  # analytics tables from data.setup - may not exist on a fresh database
+        for table in ("PREDICTIONS", "RAW_POSTS", "POST_FEATURES", "CONTRIBUTIONS"):
+            try:
+                db.execute(f"DELETE FROM {table} WHERE user_id = %s", (user_id,))
+            except Exception as e:
+                if "does not exist" not in str(e):
+                    raise
     db.remove_folder(user_id)
     db.execute("DELETE FROM USERS WHERE id = %s", (user_id,))
 
@@ -122,12 +132,16 @@ def engagement_rate(followers, avg_views, avg_likes, avg_comments, avg_shares) -
 # ----------------------------------------------------------------------------- model / Gemini context
 
 def model_context(user_id: str | None) -> dict[str, dict]:
-    """Per-platform inputs for the model, taken from the user's linked accounts."""
+    """Per-platform inputs for the model, taken from the user's linked accounts. {} if storage is unavailable."""
     if not user_id:
         return {}
-    user = get_user(user_id) or {}
+    try:
+        user, linked = get_user(user_id) or {}, list_accounts(user_id)
+    except Exception:  # scoring must keep working when storage is down
+        log.warning("could not load linked accounts for scoring", exc_info=True)
+        return {}
     context = {}
-    for a in list_accounts(user_id):
+    for a in linked:
         ctx = {"followers": a.get("followers"), "creator_typical_views": a.get("typical_views")}
         if a["platform"] == "instagram":
             ctx |= {"following": a.get("following"), "num_posts": a.get("total_posts"),
@@ -140,9 +154,13 @@ def audience_summary(user_id: str | None) -> str | None:
     """One line about the creator and their audiences, for Gemini's prompt."""
     if not user_id:
         return None
-    user = get_user(user_id) or {}
+    try:
+        user, linked = get_user(user_id) or {}, list_accounts(user_id)
+    except Exception:
+        log.warning("could not load audience profile", exc_info=True)
+        return None
     parts = [f"{user.get('account_type') or 'creator'} account" + (f" in {user['niche']}" if user.get("niche") else "")]
-    for a in list_accounts(user_id):
+    for a in linked:
         aud = a.get("audience") or {}
         details = ", ".join(f"{k.replace('_', ' ')}: {v}" for k, v in aud.items() if v not in (None, "", []))
         stats = f"{a['followers']:,} followers" if a.get("followers") else "followers unknown"

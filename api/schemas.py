@@ -1,11 +1,12 @@
 """Request/response shapes shared with the frontend (mirror these in web/lib/api.ts)."""
 
-from datetime import datetime
-from typing import Literal
+from datetime import date, datetime
+from typing import Annotated, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, StringConstraints
 
 Platform = Literal["youtube", "tiktok", "instagram", "linkedin"]
+UserId = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
 
 
 class Post(BaseModel):
@@ -22,13 +23,19 @@ class Post(BaseModel):
 
 
 class IngestYouTubeRequest(BaseModel):
-    user_id: str
-    channel_id: str
-    max_videos: int = 50
+    user_id: UserId
+    channel_id: str = Field(min_length=1, max_length=512)
+    max_videos: int = Field(default=50, ge=1, le=200)
 
 
 class IngestResponse(BaseModel):
     posts_loaded: int
+    inserted: int = 0
+    updated: int = 0
+    duplicates_skipped: int = 0
+    batch_id: str | None = None
+    enriched_posts: int = 0
+    warnings: list[str] = Field(default_factory=list)
 
 
 class PlatformStats(BaseModel):
@@ -38,13 +45,68 @@ class PlatformStats(BaseModel):
     total_views: int
 
 
+class FormatStats(PlatformStats):
+    format: str
+
+
+class WeeklyStats(PlatformStats):
+    week: date
+
+
+class RecentPost(Post):
+    external_id: str | None  # Imports from the original scaffold may not have IDs.
+    sentiment: str | None = None
+
+
+class ConnectedAccount(BaseModel):
+    platform: Platform
+    handle: str | None = None
+    followers: int | None = None
+
+
 class DashboardResponse(BaseModel):
-    user_id: str
+    user_id: UserId
     platforms: list[PlatformStats]
+    by_format: list[FormatStats] = Field(default_factory=list)
+    weekly: list[WeeklyStats] = Field(default_factory=list)
+    recent_posts: list[RecentPost] = Field(default_factory=list)
+    accounts: list[ConnectedAccount] = Field(default_factory=list)
+    total_posts: int = 0
+    last_import_at: datetime | None = None
+
+
+class EnrichRequest(BaseModel):
+    user_id: UserId
+    limit: int = Field(default=25, ge=1, le=100)
+
+
+class EnrichResponse(BaseModel):
+    enriched_posts: int
+
+
+class InsightsResponse(BaseModel):
+    user_id: UserId
+    summary: str
+    provider: Literal["snowflake-cortex"] = "snowflake-cortex"
+    model: str
+
+
+class SimilarPostsRequest(BaseModel):
+    caption: str = Field(min_length=1, max_length=6000)
+    platform: Platform | None = None
+    limit: int = Field(default=5, ge=1, le=20)
+
+
+class SimilarPost(RecentPost):
+    similarity: float
+
+
+class SimilarPostsResponse(BaseModel):
+    posts: list[SimilarPost]
 
 
 class PredictRequest(BaseModel):
-    user_id: str | None = None
+    user_id: UserId | None = None
     caption: str
     platforms: list[Platform] = ["youtube", "tiktok", "instagram"]
     format: str | None = None
@@ -85,6 +147,8 @@ class PlatformScore(BaseModel):
 class PredictResponse(BaseModel):
     scores: list[PlatformScore]
     suggestions: list[str]
+    prediction_id: str | None = None
+    storage_warning: str | None = None
 
 
 class ContentScore(BaseModel):
@@ -119,6 +183,24 @@ class ScoreResponse(BaseModel):
     model_weight: float
     gemini_used: bool
     warning: str | None = None
+    prediction_id: str | None = None
+    storage_warning: str | None = None
+
+
+class PredictionRecord(BaseModel):
+    id: str
+    request_id: str | None = None
+    platform: Platform
+    caption: str
+    score: float
+    model_score: float | None = None
+    content_score: float | None = None
+    provider: str | None = None
+    created_at: datetime
+
+
+class PredictionHistory(BaseModel):
+    predictions: list[PredictionRecord]
 
 
 class BriefingRequest(BaseModel):
@@ -135,9 +217,9 @@ class AudioResponse(BaseModel):
 
 
 class ContributeRequest(BaseModel):
-    user_id: str
-    wallet_address: str
-    posts_shared: int
+    user_id: UserId
+    wallet_address: str = Field(min_length=32, max_length=44)
+    posts_shared: int = Field(gt=0)
 
 
 class ContributeResponse(BaseModel):

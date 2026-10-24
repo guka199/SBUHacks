@@ -122,6 +122,9 @@ def _connect():
         LOCAL_DB.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(LOCAL_DB, check_same_thread=False)
         conn.row_factory = sqlite3.Row
+        for ddl in SCHEMA:  # local file: make sure the tables exist even without API startup (scripts, tests)
+            conn.execute(ddl)
+        conn.commit()
         return conn
 
     import snowflake.connector

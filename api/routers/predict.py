@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from api.schemas import AccountComparison, Factor, PlatformScore, PredictRequest, PredictResponse
 from api.services import accounts, model
 from api.services.auth import current_user_id
+from api.services.predictions import persist
 from shared.features import build_features
 
 router = APIRouter(tags=["predict"])
@@ -37,7 +38,9 @@ CONTEXT_FIELDS = ["format", "followers", "following", "num_posts", "duration_sec
 @router.post("/predict", response_model=PredictResponse)
 def predict(req: PredictRequest, user_id: str | None = Depends(current_user_id)) -> PredictResponse:
     """Our trained model only (fast, no Gemini). /score adds Gemini's content review on top."""
-    return score_with_model(req, user_id)
+    uid = user_id or req.user_id  # signed-in user, else an explicit user_id (e.g. the demo user)
+    result = score_with_model(req, uid)
+    return persist(uid, req.caption, result, req.model_dump(exclude={"caption", "user_id"}))
 
 
 def score_with_model(req: PredictRequest, user_id: str | None = None) -> PredictResponse:

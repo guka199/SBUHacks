@@ -133,6 +133,7 @@ export default function ScorePage() {
       {result && (
         <div className="flex flex-col gap-6">
           {result.warning && <p className="text-sm opacity-70">{result.warning}</p>}
+          {result.storage_warning && <p className="text-sm opacity-70">{result.storage_warning}</p>}
 
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="flex flex-col gap-4">
