@@ -8,7 +8,7 @@ Read this before making changes. It is the single source of truth for every team
 **PostPilot** — SBUHacks 2026 hackathon project (24h). One place for content creators and business pages to:
 
 1. **Compare engagement across platforms** (YouTube, TikTok, Instagram, LinkedIn) in one dashboard.
-2. **Score a draft before publishing** with a **combined score**: our own XGBoost model + Gemini (see Scoring).
+2. **Score a draft before publishing** with a **combined score**: our own trained model + Gemini (see Scoring).
 3. **Get 2–3 specific suggestions** (SHAP factors + Gemini's content review) and see the score change when applied.
 
 Inspired by CreatorML (YC W23, shut down 2024): it was YouTube-only and big-channel-only. We are
@@ -27,10 +27,10 @@ One monorepo. Do not split it.
 | --- | --- | --- |
 | `web/` | TypeScript, Next.js 16 App Router, Tailwind v4 | Website. Pages: `/`, `/dashboard`, `/score`, `/rewards`. `app/api/reward/route.ts` sends Solana tokens server-side. |
 | `api/` | Python, FastAPI | Backend. Routers: `ingest`, `dashboard`, `predict`, `voice`, `contribute`. Services: `snowflake`, `youtube`, `elevenlabs`, `model`. |
-| `ml/` | Python, XGBoost, SHAP | Training only (`train.py`, `evaluate.py`, `notebooks/`). Never imported by `api/`. |
-| `shared/` | Python | `features.py` — feature building used by BOTH `ml/` and `api/`. |
+| `ml/` | Python: scikit-learn, XGBoost, LightGBM, CatBoost, PyTorch | Training (see "Model selection"). `data.py` splits + features, `models.py` registry of 13 candidate models behind one `fit`/`predict` interface, `torch_models.py` deep nets, `metrics.py`, `benchmark.py` compares all models, `train.py` trains the chosen one, `preflight.py` checks, `isolation.py` runs each benchmark model in its own process. |
+| `shared/` | Python | Used by BOTH `ml/` and `api/`: `features.py` (per-platform features), `text_features.py` (caption topics: TF-IDF → SVD), `bundle.py` (`ModelBundle` = model + exact feature columns + caption encoder). |
 | `data/` | SQL, Python | `sql/` table + Cortex scripts, `loaders/` into Snowflake, `samples/` demo CSV. |
-| `models/` | — | Trained models `engagement_<platform>.json`, written by `ml/train.py`, read by `api/services/model.py`. |
+| `models/` | — | `<platform>.joblib` bundles + `metrics_<platform>.json` (from `ml/train.py`, loaded by `api/services/model.py`); `benchmark/report.md` + `results.csv` (from `ml/benchmark.py`). |
 
 ## Scoring: our model + Gemini (decided)
 
@@ -38,11 +38,15 @@ A draft gets two scores, combined into one (start with **60% model + 40% Gemini*
 
 | Part | Looks at | Why |
 | --- | --- | --- |
-| **Our XGBoost model** (one per platform, `models/engagement_<platform>.json`) | caption stats, timing, account context (followers, duration, category, ...) | Learned from ~1.2M real posts and their outcomes |
+| **Our model** (one per platform, `models/<platform>.joblib`; type chosen by `ml.benchmark`) | caption stats, timing, account context (followers, duration, category, ...) | Learned from ~1.2M real posts and their outcomes |
 | **Gemini API** (at request time, not trained) | the actual image / video / caption content: hook, visual quality, clarity, trend fit | Our datasets have no usable images or videos, so content judgment comes from Gemini |
 
 Gemini also receives the model's top SHAP factors and writes ONE merged suggestion list.
-Gemini is not built yet (`GEMINI_API_KEY` in `.env`); it is independent of the model and can be built in parallel.
+Built: `POST /score` (multipart: caption, platforms, optional image/video, context JSON) in `api/routers/score.py`,
+Gemini call in `api/services/gemini.py` (google-genai Interactions API, structured JSON output, files >18 MB via
+the Files API). Blend weight `SCORE_MODEL_WEIGHT` (default 0.6), model `GEMINI_MODEL` (default `gemini-3.5-flash-lite`: ~3 s per review; `gemini-3.8-flash` took 2–5 min in testing).
+Without `GEMINI_API_KEY`, or if Gemini fails, `/score` returns model-only scores plus a `warning` (never an error).
+`/predict` stays model-only. The `/score` web page uploads media and shows combined + model + content scores.
 
 ## Training data and labels
 
@@ -61,20 +65,39 @@ platform-only fields.
 Do not use the Kaggle `yakhyojon/tiktok` dataset (likely synthetic). TikTok cover URLs have expired;
 YouTube thumbnail URLs still work (usable for CLIP).
 
-**Current results** (test set = creators never seen in training; full numbers in `models/metrics_<platform>.json`):
+## Model selection (decided: CatBoost)
 
-| Platform | Spearman | Top-25% precision (random 0.25) |
-| --- | --- | --- |
-| Instagram | 0.67 | 0.58 — mostly account size (small accounts have higher engagement rate) |
-| LinkedIn | 0.29 | 0.89 — not trustworthy (67 creators) |
-| YouTube | 0.05 | 0.26 — ~no signal |
-| TikTok | 0.03 | 0.27 — ~no signal, even with 420K training rows |
+`python -m ml.benchmark` compared 13 model types on the same creator-grouped splits (100K train / 50K test posts per
+platform; test creators never seen in training). Full tables: `models/benchmark/report.md`.
 
-Takeaway: caption stats and timing don't predict whether a video beats its creator's average — the content does.
-That is why Gemini judges content. Next model experiments: caption embeddings, then CLIP on YouTube thumbnails.
+| Model | Mean rank (TikTok, YouTube, Instagram) | Mean Spearman | Tied with best |
+| --- | --- | --- | --- |
+| **CatBoost** | **1.3** | **0.269** | **3/3** |
+| XGBoost | 3.3 | 0.266 | 2/3 |
+| LightGBM | 4.0 | 0.263 | 1/3 |
+| FT-Transformer (deep) | 4.3 | 0.258 | 2/3 — but ~110 s to train, no SHAP |
+| Random forest / extra trees | 7.0–7.7 | 0.254 | 1/3 |
+| Neural nets (MLP, ResNet) | 7.3–9.0 | 0.247–0.255 | 0–1/3 |
+| KNN | 12.3 | 0.174 | 0/3 |
 
-**Pipeline:** `data/raw` → `data.prepare` → `ml.train` → `models/` → `/predict` (features via
-`shared/features.py`, XGBoost score, SHAP factors) → [Gemini content score + merged suggestions] → web.
+CatBoost: best everywhere, least overfitting of the boosters, fast (<1 ms/post), SHAP works (suggestions).
+Gradient-boosted trees beat deep learning on this tabular data, as is typical. LinkedIn is reported, not ranked.
+
+**Served models** (CatBoost on ALL data, `python -m ml.evaluate`):
+
+| Platform | Spearman [95% CI] | AUC (viral = top 25%) | Lift@25 |
+| --- | --- | --- | --- |
+| Instagram | 0.675 [0.669, 0.679] | 0.831 | 2.32 — mostly account size |
+| LinkedIn | 0.455 [0.166, 0.653] | 0.705 | 1.25 — very uncertain (67 creators) |
+| YouTube | 0.108 [0.080, 0.138] | 0.547 | 1.24 — weak |
+| TikTok | 0.038 [0.032, 0.042] | 0.525 | 1.09 — ~no signal |
+
+Takeaway: caption stats and timing barely predict whether a video beats its creator's average; the content does.
+That is why Gemini judges the content. More model capacity does not help (the benchmark shows it) - only new
+information would (e.g. CLIP features from YouTube thumbnails).
+
+**Pipeline:** `data/raw` → `data.prepare` → `ml.benchmark` (pick a model type) → `ml.train` → `models/<platform>.joblib`
+→ `/predict` (features via `shared/features.py`, model score, SHAP factors) → [Gemini content score + merged suggestions] → web.
 Snowflake holds the app's data (user posts, predictions, contributions); training currently reads local parquet.
 
 ## Commands (run from repo root unless noted)
@@ -84,8 +107,11 @@ source .venv/bin/activate
 pip install -r ml/requirements.txt               # ml deps include api deps
 uvicorn api.main:app --reload                    # API on :8000, docs at /docs
 python -m data.prepare [tiktok youtube instagram linkedin]  # data/raw -> data/processed + labels (~20 s)
-python -m ml.train [platforms] [--sample 60000]  # train per platform (~40 s for all rows)
-python -m ml.evaluate                            # print saved test metrics
+python -m ml.preflight                           # check data, libraries, GPU before training (~3 s)
+python -m ml.benchmark --smoke                   # every model x platform on tiny data: catches errors (~2 min)
+python -m ml.benchmark                           # full comparison -> models/benchmark/report.md (~40 min)
+python -m ml.train [platforms] [--model NAME]    # train the chosen model type on all data -> models/<platform>.joblib
+python -m ml.evaluate                            # metrics of the models the API serves
 python -m data.loaders.load_csv <file.csv> [--platform tiktok --map "theirs=ours,..."]
 cd web && npm run dev                            # website on :3000
 cd web && npx tsc --noEmit && npm run lint       # check web before committing
@@ -111,6 +137,10 @@ macOS: XGBoost needs `brew install libomp`. Use Python 3.11–3.12 if torch/open
 - Don't commit datasets (put downloads in `data/raw/`, git-ignored). Model files < ~50 MB are fine.
 - Next.js 16 has breaking changes vs. older versions: read `web/AGENTS.md` and `web/node_modules/next/dist/docs/`
   before writing Next.js code.
+- **macOS: PyTorch cannot share a process with XGBoost/LightGBM** (two OpenMP runtimes: deadlock or segfault,
+  tested both orders). `ml.benchmark` runs every model in its own process; the API serves ONE model type.
+- New model? Add it to the registry in `ml/models.py`, then `python -m ml.benchmark --smoke` before any long run.
+- Compare models only through `ml.benchmark` (same creator-grouped split, same metrics, test set untouched).
 - Prefer working end-to-end over polished parts: a weak model wired into the app beats a great unconnected one.
 - One branch per feature, small PRs, `main` always runs.
 
@@ -126,14 +156,14 @@ macOS: XGBoost needs `brew install libomp`. Use Python 3.11–3.12 if torch/open
 ## Status and TODO
 
 Done: scaffold, all API routes, Snowflake schema, CSV/YouTube ingestion, basic pages, Solana reward route,
-data download + cleaning (`data/prepare.py`), per-platform XGBoost models trained and served by `/predict`.
+data download + cleaning (`data/prepare.py`), 13-model benchmark framework (`ml/`), per-platform models trained and served by `/predict`.
 
 Open:
 - [ ] Phantom wallet connect (`@solana/wallet-adapter-react`) — replace text input on `/rewards`; wallet = login/user_id
 - [ ] Dashboard charts (Recharts) by platform, format and week
 - [ ] Thumbnail/clip upload on `/score` + CLIP thumbnail embeddings
 - [ ] Write Solana tx signature back to `CONTRIBUTIONS.tx_signature`
-- [ ] **Gemini content scoring**: send draft image/video + caption + SHAP factors → content score + suggestions; combine with model score
+- [ ] Gemini: test `/score` live with a real VIDEO (caption-only and image tested live: ~3-6 s)
 - [ ] Caption embeddings as model features (sentence-transformers or Cortex `EMBED_TEXT_768`)
 - [ ] CLIP features from YouTube thumbnails
 - [ ] Load processed data into Snowflake (sampled, ~200K rows/platform)

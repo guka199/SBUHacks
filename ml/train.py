@@ -1,113 +1,104 @@
-"""Train one virality model per platform and save it to models/.
+"""Train the chosen model type on ALL the data for each platform and save it for the API.
 
-Input:  data/processed/<platform>.parquet  (run `python -m data.prepare` first)
-Target: virality_score, 0-100 (percentile within the platform; see data/prepare.py)
-Output: models/engagement_<platform>.json  +  models/metrics_<platform>.json
+Pick the model type with `python -m ml.benchmark` first; it's DEFAULT_MODEL in ml/models.py.
+
+Output per platform:
+    models/<platform>.joblib        ModelBundle: model + exact feature columns + caption encoder
+    models/metrics_<platform>.json  test-set metrics, confidence interval, true score by predicted decile
 
 Usage (from repo root):
-    python -m ml.train                      # all platforms
-    python -m ml.train tiktok instagram     # just these
-    python -m ml.train --sample 100000      # cap rows per platform for a quick run
+    python -m ml.train                          # DEFAULT_MODEL, all platforms
+    python -m ml.train tiktok --model lightgbm  # one platform, another model type
+    python -m ml.train --max-train 200000       # cap training rows (faster)
 """
 
 import argparse
 import json
-from pathlib import Path
+import time
+import warnings
 
 import numpy as np
-import pandas as pd
-import xgboost as xgb
-from scipy.stats import spearmanr
-from sklearn.model_selection import GroupShuffleSplit
 
-from shared.features import FEATURE_COLUMNS, PLATFORMS, build_feature_frame
-
-ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT / "data" / "processed"
-MODELS_DIR = ROOT / "models"
+from ml import preflight
+from ml.data import MODELS_DIR, build_matrices, cap_split, load_platform, split_by_creator
+from ml.metrics import bootstrap_ci, evaluate, spearman
+from ml.models import DEFAULT_MODEL, MODELS
+from shared.bundle import ModelBundle
+from shared.features import PLATFORMS, build_features
 
 
-def load_platform(platform: str, sample: int | None = None) -> pd.DataFrame:
-    df = pd.read_parquet(DATA_DIR / f"{platform}.parquet")
-    if sample and len(df) > sample:
-        df = df.sample(sample, random_state=42)
-    return df.reset_index(drop=True)
+def check_serving_matches_training(bundle: ModelBundle, platform: str, m, expected: np.ndarray, n: int = 25) -> None:
+    """Score a few test posts the way the API does (one dict at a time) and compare with training's batch path.
+
+    Catches train/serve skew: a feature built differently in the API than in training.
+    """
+    posts = m.test_posts.head(n).to_dict("records")
+    features = [build_features(platform, {**json.loads(p.get("extra") or "{}"), **p}) for p in posts]
+    served = bundle.predict(bundle.frame(features, [p["caption"] for p in posts]))
+    if not np.allclose(served, np.clip(expected[: len(posts)], 0, 100), atol=1e-2):
+        raise AssertionError(f"[{platform}] API-path predictions differ from training - check shared/features.py")
 
 
-def split_by_creator(df: pd.DataFrame, test_size: float = 0.2, seed: int = 42):
-    """Train/test split where no creator appears on both sides (otherwise the model memorizes creators)."""
-    splitter = GroupShuffleSplit(n_splits=1, test_size=test_size, random_state=seed)
-    train_idx, test_idx = next(splitter.split(df, groups=df["creator_id"]))
-    return df.iloc[train_idx], df.iloc[test_idx]
+def train_platform(platform: str, model_name: str, args) -> dict:
+    t0 = time.time()
+    split = cap_split(split_by_creator(load_platform(platform), seed=args.seed), max_train=args.max_train, seed=args.seed)
+    m = build_matrices(platform, split, use_text=not args.no_text)
 
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        model = MODELS[model_name].make({"time_budget_s": args.time_budget}).fit(m.X_train, m.y_train, m.X_valid, m.y_valid)
+        pred = np.asarray(model.predict(m.X_test), dtype=float)
+        train_idx = np.random.default_rng(args.seed).choice(len(m.X_train), min(20_000, len(m.X_train)), replace=False)
+        train_spearman = spearman(m.y_train[train_idx], model.predict(m.X_train.iloc[train_idx]))
 
-def evaluate(model: xgb.XGBRegressor, X: pd.DataFrame, y: np.ndarray, baseline: float) -> dict:
-    pred = model.predict(X)
-    top = y >= 75  # "viral" = top quarter of the platform
-    return {
-        "mae": float(np.mean(np.abs(pred - y))),
-        "baseline_mae": float(np.mean(np.abs(baseline - y))),
-        "spearman": float(spearmanr(pred, y).statistic),
-        # Of the posts the model ranks in its top 25%, how many really were top 25%?
-        "precision_at_top_quarter": float(top[pred >= np.percentile(pred, 75)].mean()),
-    }
-
-
-def train_platform(platform: str, sample: int | None) -> dict:
-    df = load_platform(platform, sample)
-    train, test = split_by_creator(df)
-    train, valid = split_by_creator(train, test_size=0.1, seed=7)
-
-    X_train, X_valid, X_test = (build_feature_frame(platform, d) for d in (train, valid, test))
-    y_train, y_valid, y_test = (d["virality_score"].to_numpy(float) for d in (train, valid, test))
-
-    model = xgb.XGBRegressor(
-        n_estimators=2000,
-        learning_rate=0.05,
-        max_depth=6,
-        min_child_weight=20,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        tree_method="hist",
-        early_stopping_rounds=50,
-        eval_metric="mae",
-    )
-    model.fit(X_train, y_train, eval_set=[(X_valid, y_valid)], verbose=False)
-
-    metrics = {
+    metrics = evaluate(m.y_test, pred, baseline=float(m.y_train.mean()))
+    metrics["spearman_low"], metrics["spearman_high"] = bootstrap_ci(m.y_test, pred, m.test_groups, n_boot=200)
+    metrics["train_spearman"] = train_spearman
+    metrics["overfit_gap"] = train_spearman - metrics["spearman"]
+    summary = {
         "platform": platform,
-        "rows": {"train": len(train), "valid": len(valid), "test": len(test)},
-        "best_iteration": int(model.best_iteration),
-        **evaluate(model, X_test, y_test, baseline=float(y_train.mean())),
-        "top_features": (
-            pd.Series(model.feature_importances_, index=FEATURE_COLUMNS[platform])
-            .sort_values(ascending=False).head(8).round(4).to_dict()
-        ),
+        "model": model_name,
+        "text_features": m.text_encoder is not None,
+        "rows": split.sizes(),
+        "features": len(m.feature_columns),
+        "seconds": round(time.time() - t0, 1),
+        **metrics,
     }
 
+    bundle = ModelBundle(platform, model_name, model, m.feature_columns, m.text_encoder, summary)
+    check_serving_matches_training(bundle, platform, m, pred)
     MODELS_DIR.mkdir(exist_ok=True)
-    model.save_model(MODELS_DIR / f"engagement_{platform}.json")
-    (MODELS_DIR / f"metrics_{platform}.json").write_text(json.dumps(metrics, indent=2))
-    return metrics
+    bundle.save(MODELS_DIR / f"{platform}.joblib")
+    (MODELS_DIR / f"metrics_{platform}.json").write_text(json.dumps(summary, indent=2))
+    for old in (MODELS_DIR / f"engagement_{platform}.json", MODELS_DIR / f"text_{platform}.joblib"):
+        old.unlink(missing_ok=True)  # files from the previous XGBoost-only format
+    return summary
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("platforms", nargs="*", default=PLATFORMS)
-    parser.add_argument("--sample", type=int, help="Max rows per platform")
+    parser.add_argument("--model", default=DEFAULT_MODEL, choices=list(MODELS))
+    parser.add_argument("--max-train", type=int, help="cap training rows per platform")
+    parser.add_argument("--time-budget", type=float, default=600, help="max training seconds for neural nets")
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--no-text", action="store_true", help="skip caption topic features")
     args = parser.parse_args()
 
-    for platform in args.platforms:
-        if not (DATA_DIR / f"{platform}.parquet").exists():
-            print(f"[{platform}] no processed data - run python -m data.prepare {platform}")
-            continue
-        m = train_platform(platform, args.sample)
+    print("Preflight checks")
+    platforms, ready = preflight.run(args.platforms, [args.model])
+    if args.model not in ready:
+        raise SystemExit(f"{args.model} can't run here - see the preflight message above")
+
+    print(f"\nTraining {args.model} on {', '.join(platforms)}")
+    for platform in platforms:
+        s = train_platform(platform, args.model, args)
         print(
-            f"[{platform}] MAE {m['mae']:.1f} (baseline {m['baseline_mae']:.1f}) | "
-            f"Spearman {m['spearman']:.3f} | top-25% precision {m['precision_at_top_quarter']:.2f} "
-            f"(random = 0.25) | {m['rows']['train']:,} train rows"
+            f"  {platform:<10} Spearman {s['spearman']:.3f} [{s['spearman_low']:.3f}, {s['spearman_high']:.3f}]  "
+            f"AUC {s['auc']:.3f}  Lift@25 {s['lift_top25']:.2f}  overfit {s['overfit_gap']:.3f}  "
+            f"({s['rows']['train']:,} train rows, {s['seconds']}s) -> models/{platform}.joblib"
         )
-        print(f"    top features: {', '.join(list(m['top_features'])[:5])}")
+    print("\nDetails: python -m ml.evaluate")
 
 
 if __name__ == "__main__":

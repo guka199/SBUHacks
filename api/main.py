@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
 
-from api.routers import contribute, dashboard, ingest, predict, voice  # noqa: E402
+from api.routers import contribute, dashboard, ingest, predict, score, voice  # noqa: E402
 
 app = FastAPI(title="PostPilot API")
 
@@ -24,6 +24,7 @@ app.add_middleware(
 app.include_router(ingest.router)
 app.include_router(dashboard.router)
 app.include_router(predict.router)
+app.include_router(score.router)
 app.include_router(voice.router)
 app.include_router(contribute.router)
 

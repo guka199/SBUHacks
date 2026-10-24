@@ -25,3 +25,7 @@ data/**/*.zip
 .DS_Store
 .vscode/
 .idea/
+
+# Benchmark scratch output (results.csv and report.md ARE committed)
+models/benchmark/smoke/
+models/benchmark/*.log

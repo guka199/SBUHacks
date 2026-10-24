@@ -78,6 +78,39 @@ class PredictResponse(BaseModel):
     suggestions: list[str]
 
 
+class ContentScore(BaseModel):
+    platform: Platform
+    score: float  # Gemini's content score, same 0-100 scale
+    reason: str
+
+
+class ContentAnalysis(BaseModel):
+    summary: str
+    hook: int
+    visual_quality: int
+    clarity: int
+    trend_fit: int
+    platform_scores: list[ContentScore]
+    strengths: list[str]
+
+
+class CombinedScore(BaseModel):
+    platform: Platform
+    score: float  # combined: model_weight * model_score + (1 - model_weight) * content_score
+    model_score: float
+    content_score: float | None  # None when Gemini wasn't used
+    top_factors: list[Factor]
+
+
+class ScoreResponse(BaseModel):
+    scores: list[CombinedScore]
+    suggestions: list[str]
+    content: ContentAnalysis | None
+    model_weight: float
+    gemini_used: bool
+    warning: str | None = None
+
+
 class BriefingRequest(BaseModel):
     user_id: str
 

@@ -1,7 +1,10 @@
 -r ../api/requirements.txt
 scikit-learn
+scipy
+lightgbm
+catboost
+torch
 jupyter
 matplotlib
 open_clip_torch
-torch
 pillow

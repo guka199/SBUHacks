@@ -35,12 +35,17 @@ CONTEXT_FIELDS = ["format", "followers", "following", "num_posts", "duration_sec
 
 @router.post("/predict", response_model=PredictResponse)
 def predict(req: PredictRequest) -> PredictResponse:
+    """Our trained model only (fast, no Gemini). /score adds Gemini's content review on top."""
+    return score_with_model(req)
+
+
+def score_with_model(req: PredictRequest) -> PredictResponse:
     post = {"caption": req.caption, "posted_at": req.planned_time, **req.model_dump(include=set(CONTEXT_FIELDS))}
 
     scores: list[PlatformScore] = []
     negatives: list[tuple[str, float]] = []
     for platform in req.platforms:
-        value, factors = model.score(platform, build_features(platform, post))
+        value, factors = model.score(platform, build_features(platform, post), req.caption)
         scores.append(
             PlatformScore(
                 platform=platform,
@@ -54,6 +59,8 @@ def predict(req: PredictRequest) -> PredictResponse:
     worst: dict[str, float] = {}
     for f, i in negatives:
         worst[f] = worst.get(f, 0) + i
-    suggestions = [FEATURE_HINTS[f] for f, _ in sorted(worst.items(), key=lambda x: x[1])[:3] if f in FEATURE_HINTS]
+    # Only features a user can act on (topic dims like text_7 and account size have no hint)
+    actionable = [(f, i) for f, i in worst.items() if f in FEATURE_HINTS]
+    suggestions = [FEATURE_HINTS[f] for f, _ in sorted(actionable, key=lambda x: x[1])[:3]]
 
     return PredictResponse(scores=scores, suggestions=suggestions)

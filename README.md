@@ -30,7 +30,8 @@ cp .env web/.env.local          # Next.js reads env from web/
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r ml/requirements.txt     # includes api requirements
 python -m data.prepare                 # needs downloads in data/raw/ (see AGENTS.md)
-python -m ml.train                     # trains one model per platform into models/
+python -m ml.benchmark --smoke         # quick check that every model runs (~2 min)
+python -m ml.train                     # trains the chosen model type per platform into models/
 uvicorn api.main:app --reload          # http://localhost:8000/docs
 ```
 

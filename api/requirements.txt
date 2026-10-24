@@ -8,3 +8,6 @@ pandas
 snowflake-connector-python[pandas]
 xgboost
 shap
+scikit-learn
+google-genai
+catboost

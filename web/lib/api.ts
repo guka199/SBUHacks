@@ -46,6 +46,41 @@ export interface PredictResponse {
   suggestions: string[];
 }
 
+export interface CombinedScore {
+  platform: Platform;
+  score: number; // combined: model_weight * model_score + (1 - model_weight) * content_score
+  model_score: number;
+  content_score: number | null; // null when Gemini wasn't used
+  top_factors: { feature: string; impact: number }[];
+}
+
+export interface ContentAnalysis {
+  summary: string;
+  hook: number;
+  visual_quality: number;
+  clarity: number;
+  trend_fit: number;
+  platform_scores: { platform: Platform; score: number; reason: string }[];
+  strengths: string[];
+}
+
+export interface ScoreResponse {
+  scores: CombinedScore[];
+  suggestions: string[];
+  content: ContentAnalysis | null;
+  model_weight: number;
+  gemini_used: boolean;
+  warning: string | null;
+}
+
+export interface ScoreInput {
+  caption: string;
+  platforms: Platform[];
+  plannedTime?: string; // ISO datetime
+  context?: Record<string, string | number | boolean>; // e.g. { followers: 5000 }
+  file?: File | null; // image or video
+}
+
 export interface AudioResponse {
   audio_urls: string[];
 }
@@ -82,6 +117,17 @@ export const api = {
     form.append("platform", platform);
     form.append("file", file);
     return request<{ posts_loaded: number }>("/ingest/csv", { method: "POST", body: form });
+  },
+
+  // Our model + Gemini content review (multipart, so the draft's image/video can be attached)
+  score: ({ caption, platforms, plannedTime, context, file }: ScoreInput) => {
+    const form = new FormData();
+    form.append("caption", caption);
+    form.append("platforms", platforms.join(","));
+    if (plannedTime) form.append("planned_time", plannedTime);
+    form.append("context", JSON.stringify(context ?? {}));
+    if (file) form.append("file", file);
+    return request<ScoreResponse>("/score", { method: "POST", body: form });
   },
 
   briefing: (userId: string) =>

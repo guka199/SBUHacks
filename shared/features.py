@@ -36,10 +36,16 @@ YOUTUBE_CATEGORIES = [
     "News & Politics", "Science & Technology", "Howto & Style", "Education", "Autos & Vehicles",
 ]
 
+
+def _slug(text: str) -> str:
+    """'People & Blogs' -> 'people_blogs' (feature names must be plain for LightGBM/XGBoost)."""
+    return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
+
+
 # Context features per platform (must exist both in training data and in the API request)
 PLATFORM_COLUMNS = {
     "tiktok": ["duration_sec", "original_sound", "verified", "has_location"],
-    "youtube": ["description_length"] + [f"category_{c}" for c in YOUTUBE_CATEGORIES],
+    "youtube": ["description_length"] + [f"category_{_slug(c)}" for c in YOUTUBE_CATEGORIES],
     "instagram": ["log_followers", "log_following", "log_num_posts", "is_video", "is_business_account"],
     "linkedin": ["log_followers", "has_media"],
 }
@@ -95,7 +101,7 @@ def context_features(platform: str, post: dict) -> dict:
         category = get("category")
         return {
             "description_length": get("description_length"),
-            **{f"category_{c}": int(category == c) for c in YOUTUBE_CATEGORIES},
+            **{f"category_{_slug(c)}": int(category == c) for c in YOUTUBE_CATEGORIES},
         }
     if platform == "instagram":
         return {
