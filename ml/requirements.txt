@@ -1,0 +1,7 @@
+-r ../api/requirements.txt
+scikit-learn
+jupyter
+matplotlib
+open_clip_torch
+torch
+pillow

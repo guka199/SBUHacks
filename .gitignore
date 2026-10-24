@@ -1,0 +1,26 @@
+# Secrets
+.env
+.env.local
+*.pem
+reward-wallet*.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Node / Next.js (web/ also has its own .gitignore)
+node_modules/
+.next/
+
+# Data: loaders download datasets, don't commit them
+data/raw/
+*.parquet
+data/**/*.zip
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
