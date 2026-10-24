@@ -60,6 +60,33 @@ export function ScrollExperience() {
     [paused, setPaused] = useState(false);
   const preference = useRef({ paused: false, visible: true, hidden: false });
   useEffect(() => {
+    if (mode !== "webgl" && mode !== "flat") return;
+    const scope = root.current,
+      element = stage.current;
+    const application = scope?.querySelector<HTMLElement>(
+      ".monitor-application",
+    );
+    if (!scope || !element || !application) return;
+    // The pin retains its viewport height. Reserve the rest of the report in
+    // document flow, so the page can scroll through it after the pin releases.
+    const measure = () => {
+      const extra = Math.max(
+        0,
+        application.offsetHeight - element.clientHeight,
+      );
+      scope.style.setProperty("--report-overflow", `${extra}px`);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(application);
+    observer.observe(element);
+    measure();
+    return () => {
+      observer.disconnect();
+      scope.style.removeProperty("--report-overflow");
+      delete element.dataset.applicationEntered;
+    };
+  }, [mode]);
+  useEffect(() => {
     if (mode !== "reduced" || !stage.current || !poster.current) return;
     const element = stage.current,
       image = poster.current;
@@ -161,6 +188,7 @@ export function ScrollExperience() {
       let openingFloor = measureOpeningFloor(scope);
       const update = () => {
         scope.dataset.progress = s.progress.toFixed(4);
+        element.dataset.applicationEntered = String(s.progress >= 1 - 1e-6);
         s.invalidate?.();
         const next = storyStages.reduce(
           (n, item, i) => (s.progress >= item.at - 0.015 ? i : n),

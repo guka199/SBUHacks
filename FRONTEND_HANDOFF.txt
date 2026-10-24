@@ -425,3 +425,14 @@ Browser rendering note: perspective-transformed backdrop filters left oversized
 ghost captures in Chromium. Moving notifications/controls now use stable
 translucent fills; glass keeps its deformation/caustic/highlights and a locally
 blurred reflection copy. This preserves the sequence without compositor slabs.
+
+SCROLLBAR FOLLOW-UP (October 24, 2026)
+The embedded .monitor-application used overflow:auto inside the document's
+scrollbar. It now has natural height and overflow:clip during the preview;
+at full entry, the stage/monitor clipping opens and the document scrolls the
+whole report. ResizeObserver reserves report overflow as document-flow space,
+including tab/viewport size changes. The original pin height/end, GSAP timeline,
+camera poses and projection math are unchanged. Back-to-story remains in the
+report's normal flow (sticky inside the transformed pin was inappropriate).
+The root uses standard thin #171717/transparent scrollbars plus an 8px rounded
+WebKit fallback. No body scroll lock or wheel interception is used.

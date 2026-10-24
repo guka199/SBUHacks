@@ -62,3 +62,22 @@ Final browser inspection reported no console warnings/errors for the tested UI/s
 - No physical-device FPS benchmark, Safari/Firefox certification or recorded-video performance claim. Further target-GPU profiling is recommended before public deployment.
 
 The stale green-version browser captures were removed and replaced with this delivery's red/yellow evidence. Asset attributions remain in ASSET_NOTICES.md, /credits and the manifests.
+
+## Single-scroll-container regression fix
+
+The embedded report's overflow:auto caused a second vertical scrollbar at entry.
+It now contributes its full height to the document, with ResizeObserver-managed
+space after the unchanged viewport pin. Preview clipping uses overflow:clip;
+full entry opens clipping without creating a new scroll owner. Return control
+uses normal report flow. Timeline/camera/projection files were not changed.
+
+Production desktop inspection: document.scrollingElement=HTML, no nested
+vertically scrollable auto/scroll containers at opening, entry or report tail.
+Page-down moved root scrollY5400 ->6100 with application.scrollTop=0; wheel
+input moved it6100 ->6660.67 while application.scrollTop stayed0. Report/footer
+bounds meet within subpixel rounding; video/feedback and footer stay accessible.
+The root's computed style is scrollbar-width:thin and #171717/transparent.
+ESLint/TypeScript,10 tests and production build pass. Evidence:
+scrollbars-desktop-entry.jpg and scrollbars-desktop-bottom.jpg.
+Standard scrollbar properties cover current Firefox/Chromium; WebKit pseudo-
+elements supply an8px rounded fallback. Safari/Firefox were not device-tested.

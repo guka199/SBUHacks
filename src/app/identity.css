@@ -862,13 +862,14 @@ select {
   font-weight: 700;
 }
 .monitor-application {
-  overflow: auto;
-  overscroll-behavior-y: auto;
+  bottom: auto;
+  min-height: 100%;
+  overflow: clip;
   background: var(--light-yellow);
   z-index: 22;
 }
 .embedded-return {
-  position: sticky;
+  position: relative;
   top: 0;
   z-index: 4;
   background: var(--black);
@@ -1739,4 +1740,37 @@ select {
       linear-gradient(to right, transparent, #000 5%, #000 93%, transparent);
     mask-composite: intersect;
   }
+}
+/* The document is the sole vertical scroller, including the entered report. */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #171717 transparent;
+}
+html::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html::-webkit-scrollbar-track {
+  background: transparent;
+}
+html::-webkit-scrollbar-thumb {
+  background: #171717;
+  border-radius: 999px;
+}
+html::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.experience-story:is(.mode-webgl, .mode-flat) {
+  padding-bottom: var(--report-overflow, 0px);
+}
+.experience-stage,
+.monitor-overlay,
+.monitor-experience {
+  overflow: clip;
+}
+.experience-stage[data-application-entered="true"],
+.experience-stage[data-application-entered="true"] .monitor-overlay,
+.experience-stage[data-application-entered="true"] .monitor-experience,
+.experience-stage[data-application-entered="true"] .monitor-application {
+  overflow: visible;
 }
