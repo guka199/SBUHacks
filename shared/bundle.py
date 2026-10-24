@@ -23,6 +23,7 @@ class ModelBundle:
     feature_columns: list[str]
     text_encoder: TextEncoder | None = None
     metrics: dict = field(default_factory=dict)
+    target: str = "score"  # "score": 0-100 percentile | "relative": log(post / account's typical post)
 
     def frame(self, features: list[dict], captions: list[str]) -> pd.DataFrame:
         """Model input for posts given as feature dicts (from shared.features.build_features) + captions."""
@@ -33,7 +34,8 @@ class ModelBundle:
         return X.reindex(columns=self.feature_columns).astype("float32")
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
-        return np.clip(np.asarray(self.model.predict(X), dtype=float), 0, 100)
+        pred = np.asarray(self.model.predict(X), dtype=float)
+        return np.clip(pred, 0, 100) if getattr(self, "target", "score") == "score" else pred
 
     def explain(self, X: pd.DataFrame) -> list[tuple[str, float]]:
         """SHAP impact of each feature on the first row. Empty if the model type has no fast explainer."""

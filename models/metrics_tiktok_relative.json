@@ -1,0 +1,26 @@
+{
+  "platform": "tiktok",
+  "model": "catboost",
+  "target": "relative",
+  "text_features": true,
+  "rows": {
+    "train": 421094,
+    "valid": 49192,
+    "test": 114711
+  },
+  "features": 50,
+  "seconds": 43.1,
+  "within_creator_spearman": 0.03916189883457308,
+  "within_creators": 7078,
+  "spearman": 0.03713837543369926,
+  "auc_beats_average": 0.5220017939587721,
+  "direction_accuracy": 0.5143185919397443,
+  "share_above_average": 0.4647941348257796,
+  "mae_log": 0.8681678568378952,
+  "baseline_mae_log": 0.8658070956787273,
+  "r2": 0.0015176313375899753,
+  "spearman_low": 0.03129016823176982,
+  "spearman_high": 0.0421705740082217,
+  "train_spearman": 0.11821816594023872,
+  "overfit_gap": 0.08107979050653946
+}

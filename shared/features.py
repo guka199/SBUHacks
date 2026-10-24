@@ -44,8 +44,11 @@ def _slug(text: str) -> str:
 
 # Context features per platform (must exist both in training data and in the API request)
 PLATFORM_COLUMNS = {
-    "tiktok": ["duration_sec", "original_sound", "verified", "has_location"],
-    "youtube": ["description_length"] + [f"category_{_slug(c)}" for c in YOUTUBE_CATEGORIES],
+    "tiktok": ["log_creator_typical_views", "duration_sec", "original_sound", "verified", "has_location"],
+    "youtube": [
+        "log_followers", "log_creator_typical_views", "log_days_since_published", "duration_sec", "is_short",
+        "description_length",
+    ] + [f"category_{_slug(c)}" for c in YOUTUBE_CATEGORIES],
     "instagram": ["log_followers", "log_following", "log_num_posts", "is_video", "is_business_account"],
     "linkedin": ["log_followers", "has_media"],
 }
@@ -54,6 +57,8 @@ PLATFORM_COLUMNS = {
 FEATURE_COLUMNS = {
     p: CAPTION_COLUMNS + ([] if p == "linkedin" else TIME_COLUMNS) + PLATFORM_COLUMNS[p] for p in PLATFORMS
 }
+
+DRAFT_AGE_DAYS = 90
 
 _EMOJI = re.compile("[\U0001F300-\U0001FAFF☀-➿]")
 _CTA = re.compile(r"\b(comment|follow|share|save|tag|link in bio|subscribe|like if|let me know|dm)\b", re.I)
@@ -92,6 +97,7 @@ def context_features(platform: str, post: dict) -> dict:
     get = post.get
     if platform == "tiktok":
         return {
+            "log_creator_typical_views": _log(get("creator_typical_views")),  # NaN if the user didn't say
             "duration_sec": get("duration_sec"),
             "original_sound": int(bool(get("original_sound"))),
             "verified": int(bool(get("verified"))),
@@ -99,7 +105,14 @@ def context_features(platform: str, post: dict) -> dict:
         }
     if platform == "youtube":
         category = get("category")
+        duration = get("duration_sec")
         return {
+            "log_followers": _log(get("followers")),  # subscribers
+            "log_creator_typical_views": _log(get("creator_typical_views")),
+            # Training videos are 30-730 days old; a draft is scored as "views after ~3 months"
+            "log_days_since_published": _log(get("days_since_published") or DRAFT_AGE_DAYS),
+            "duration_sec": duration,
+            "is_short": float("nan") if duration is None or pd.isna(duration) else int(duration <= 180),
             "description_length": get("description_length"),
             **{f"category_{_slug(c)}": int(category == c) for c in YOUTUBE_CATEGORIES},
         }

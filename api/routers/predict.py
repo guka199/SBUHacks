@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from api.schemas import Factor, PlatformScore, PredictRequest, PredictResponse
+from api.schemas import AccountComparison, Factor, PlatformScore, PredictRequest, PredictResponse
 from api.services import model
 from shared.features import build_features
 
@@ -30,7 +30,7 @@ FEATURE_HINTS = {
 
 # Fields that may describe the draft or the account, passed through to the feature builder
 CONTEXT_FIELDS = ["format", "followers", "following", "num_posts", "duration_sec", "original_sound",
-                  "verified", "is_business_account", "category", "description_length"]
+                  "verified", "is_business_account", "category", "description_length", "creator_typical_views"]
 
 
 @router.post("/predict", response_model=PredictResponse)
@@ -45,12 +45,22 @@ def score_with_model(req: PredictRequest) -> PredictResponse:
     scores: list[PlatformScore] = []
     negatives: list[tuple[str, float]] = []
     for platform in req.platforms:
-        value, factors = model.score(platform, build_features(platform, post), req.caption)
+        features = build_features(platform, post)
+        value, factors = model.score(platform, features, req.caption)
+        comparison = None
+        if (rel := model.vs_account(platform, features, req.caption)) is not None:
+            ratio, reliability = rel
+            typical = req.creator_typical_views if platform in ("tiktok", "youtube") else None
+            comparison = AccountComparison(
+                ratio=round(ratio, 3), percent=round((ratio - 1) * 100, 1), reliability=reliability,
+                expected_views=round(ratio * typical) if typical else None,
+            )
         scores.append(
             PlatformScore(
                 platform=platform,
                 score=round(value, 1),
                 top_factors=[Factor(feature=f, impact=i) for f, i in factors[:3]],
+                vs_account=comparison,
             )
         )
         negatives += [(f, i) for f, i in factors if i < 0]

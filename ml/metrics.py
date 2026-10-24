@@ -101,6 +101,32 @@ def evaluate(y, pred, baseline: float) -> dict:
     }
 
 
+def within_creator_spearman(y, pred, groups, min_posts: int = 5) -> tuple[float, int]:
+    """Average Spearman computed separately inside each creator's posts: can it rank ONE account's posts?"""
+    df = pd.DataFrame({"y": np.asarray(y, float), "p": np.asarray(pred, float), "g": np.asarray(groups)})
+    scores = [spearman(g["y"], g["p"]) for _, g in df.groupby("g") if len(g) >= min_posts]
+    return (float(np.mean(scores)) if scores else float("nan")), len(scores)
+
+
+def evaluate_relative(y, pred, groups) -> dict:
+    """Metrics for the vs-your-average model. y, pred = log(post result / creator's typical result)."""
+    y, pred = np.asarray(y, float), np.asarray(pred, float)
+    above = y > 0
+    within, n_creators = within_creator_spearman(y, pred, groups)
+    mae = float(np.mean(np.abs(pred - y)))
+    return {
+        "within_creator_spearman": within,
+        "within_creators": n_creators,
+        "spearman": spearman(y, pred),
+        "auc_beats_average": float(roc_auc_score(above, pred)) if 0 < above.mean() < 1 and np.ptp(pred) > 0 else 0.5,
+        "direction_accuracy": float(np.mean((pred > 0) == above)),
+        "share_above_average": float(above.mean()),
+        "mae_log": mae,
+        "baseline_mae_log": float(np.mean(np.abs(y - np.median(y)))),
+        "r2": float(r2_score(y, pred)),
+    }
+
+
 def _creator_resamples(groups, n_boot: int, seed: int):
     """Yield row indices of bootstrap samples drawn by CREATOR (a creator's posts are correlated)."""
     codes, uniques = pd.factorize(pd.Series(groups))

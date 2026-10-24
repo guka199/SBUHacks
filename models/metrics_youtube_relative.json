@@ -1,0 +1,26 @@
+{
+  "platform": "youtube",
+  "model": "catboost",
+  "target": "relative",
+  "text_features": true,
+  "rows": {
+    "train": 50340,
+    "valid": 5464,
+    "test": 14193
+  },
+  "features": 63,
+  "seconds": 3.7,
+  "within_creator_spearman": 0.2664097308433983,
+  "within_creators": 189,
+  "spearman": 0.2721894938659999,
+  "auc_beats_average": 0.6319370958259848,
+  "direction_accuracy": 0.5967025998731769,
+  "share_above_average": 0.4673430564362714,
+  "mae_log": 0.8925887802817495,
+  "baseline_mae_log": 0.9305187372076738,
+  "r2": 0.09524890990739177,
+  "spearman_low": 0.22298150831010496,
+  "spearman_high": 0.32004996188662505,
+  "train_spearman": 0.40657745105845033,
+  "overfit_gap": 0.13438795719245045
+}

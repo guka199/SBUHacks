@@ -134,11 +134,12 @@ def overall_ranking(results: pd.DataFrame, rank_platforms: list[str]) -> pd.Data
     return summary.sort_values(["mean_rank", "mean_spearman"], ascending=[True, False])
 
 
-def recommendation(summary: pd.DataFrame, n_platforms: int) -> list[str]:
+def recommendation(summary: pd.DataFrame, rank_platforms: list[str]) -> list[str]:
+    n_platforms = len(rank_platforms)
     if summary.empty:
         return ["No model ran successfully on every ranked platform - see benchmark.log."]
     top = summary.index[0]
-    lines = [f"**Recommended model type: `{top}`** - best average rank across {', '.join(RANK_PLATFORMS)}."]
+    lines = [f"**Recommended model type: `{top}`** - best average rank across {', '.join(rank_platforms)}."]
     tied = summary[summary["tied_best"] == n_platforms].index.tolist()
     if tied:
         lines.append(f"Statistically tied with the best on every ranked platform: {', '.join(f'`{t}`' for t in tied)}.")
@@ -161,7 +162,7 @@ def write_report(results: pd.DataFrame, args, out_dir: Path, rank_platforms: lis
         "",
     ]
     summary = overall_ranking(results, rank_platforms)
-    lines += recommendation(summary, len(rank_platforms)) + [""]
+    lines += recommendation(summary, rank_platforms) + [""]
 
     if not summary.empty:
         lines += [
@@ -218,6 +219,9 @@ def main() -> None:
     args = parser.parse_args()
 
     out_dir = MODELS_DIR / "benchmark"
+    partial = set(args.platforms) != set(PLATFORMS) or set(args.models) != set(MODELS)
+    if partial and not args.smoke:
+        out_dir = out_dir / "partial"  # never overwrite the full comparison with a subset run
     if args.smoke:
         args.max_train, args.max_valid, args.max_test, args.n_boot, args.time_budget = 3_000, 1_000, 2_000, 20, 10
         args.model_timeout = min(args.model_timeout, 300)
@@ -249,7 +253,7 @@ def main() -> None:
     print(f"\n=== OVERALL (ranked on {', '.join(rank_platforms)}) - {(time.time() - started) / 60:.1f} min")
     if not summary.empty:
         print(summary[["family", "mean_rank", "mean_spearman", "mean_auc", "mean_lift", "tied_best", "fit_seconds"]].round(3).to_string())
-    for line in recommendation(summary, len(rank_platforms)):
+    for line in recommendation(summary, rank_platforms):
         print(line.replace("**", "").replace("`", ""))
     print(f"\n{len(failures)} failures" + (" - see benchmark.log" if len(failures) else ""))
     print(f"Report: {(out_dir / 'report.md').relative_to(MODELS_DIR.parent)}")

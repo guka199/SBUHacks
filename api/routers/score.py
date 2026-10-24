@@ -96,6 +96,7 @@ async def score_post(
         scores.append(CombinedScore(
             platform=s.platform, score=round(combined, 1), model_score=s.score,
             content_score=None if content is None else content.score, top_factors=s.top_factors,
+            vs_account=s.vs_account,
         ))
 
     return ScoreResponse(

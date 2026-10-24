@@ -60,6 +60,7 @@ class PredictRequest(BaseModel):
     is_business_account: bool | None = None
     category: str | None = None  # YouTube category, e.g. "Gaming"
     description_length: int | None = None
+    creator_typical_views: int | None = None  # TikTok: views a typical post of this account gets
 
 
 class Factor(BaseModel):
@@ -67,10 +68,18 @@ class Factor(BaseModel):
     impact: float  # SHAP value; negative = hurts the score
 
 
+class AccountComparison(BaseModel):
+    ratio: float  # expected result / the account's typical post (1.4 = 40% better than usual)
+    percent: float  # (ratio - 1) * 100
+    reliability: str  # low | moderate | high - how well this ranked an account's own posts in testing
+    expected_views: float | None = None  # ratio * creator_typical_views, when given (TikTok/YouTube)
+
+
 class PlatformScore(BaseModel):
     platform: Platform
     score: float  # 0-100 virality percentile within the platform
     top_factors: list[Factor]
+    vs_account: AccountComparison | None = None
 
 
 class PredictResponse(BaseModel):
@@ -100,6 +109,7 @@ class CombinedScore(BaseModel):
     model_score: float
     content_score: float | None  # None when Gemini wasn't used
     top_factors: list[Factor]
+    vs_account: AccountComparison | None = None
 
 
 class ScoreResponse(BaseModel):

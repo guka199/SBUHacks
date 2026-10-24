@@ -17,7 +17,13 @@ from shared.text_features import TextEncoder
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data" / "processed"
 MODELS_DIR = ROOT / "models"
-TARGET = "virality_score"
+TARGET = "virality_score"  # 0-100 percentile within the platform
+RELATIVE_TARGET = "account_relative"  # log(post result / creator's typical result)
+TARGETS = {"score": TARGET, "relative": RELATIVE_TARGET}
+
+# Never inputs for the relative target: typical views is computed from the creator's OTHER posts, so within one
+# creator it is a deterministic function of this post's own views -> it would leak the answer.
+LEAKY_FOR_RELATIVE = ["log_creator_typical_views"]
 
 
 @dataclass
@@ -81,10 +87,18 @@ def cap_split(split: Split, max_train=None, max_valid=None, max_test=None, seed:
     )
 
 
-def build_matrices(platform: str, split: Split, use_text: bool = True) -> Matrices:
-    """Feature matrices for every part. The caption encoder is fit on TRAIN captions only."""
+def build_matrices(platform: str, split: Split, use_text: bool = True, target: str = TARGET) -> Matrices:
+    """Feature matrices for every part. The caption encoder is fit on TRAIN captions only.
+
+    Rows without a value for `target` (e.g. account_relative for one-post creators) are left out.
+    """
+    if target not in split.test.columns:
+        raise KeyError(f"'{target}' missing from the processed data - re-run: python -m data.prepare {platform}")
+    split = Split(*(d[d[target].notna()] for d in (split.train, split.valid, split.test)))
     frames = [split.train, split.valid, split.test]
     X = [build_feature_frame(platform, d) for d in frames]
+    if target == RELATIVE_TARGET:
+        X = [x.drop(columns=[c for c in LEAKY_FOR_RELATIVE if c in x.columns]) for x in X]
 
     encoder = None
     if use_text:
@@ -92,7 +106,7 @@ def build_matrices(platform: str, split: Split, use_text: bool = True) -> Matric
         X = [pd.concat([x, encoder.transform(d["caption"]).reset_index(drop=True)], axis=1) for x, d in zip(X, frames)]
 
     X = [x.replace([np.inf, -np.inf], np.nan).astype("float32") for x in X]
-    y = [d[TARGET].to_numpy(dtype=float) for d in frames]
+    y = [d[target].to_numpy(dtype=float) for d in frames]
     return Matrices(
         X_train=X[0], y_train=y[0],
         X_valid=X[1], y_valid=y[1],

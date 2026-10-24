@@ -1,0 +1,26 @@
+{
+  "platform": "instagram",
+  "model": "catboost",
+  "target": "relative",
+  "text_features": true,
+  "rows": {
+    "train": 395700,
+    "valid": 43687,
+    "test": 109840
+  },
+  "features": 51,
+  "seconds": 10.6,
+  "within_creator_spearman": 0.10675731301669128,
+  "within_creators": 2157,
+  "spearman": 0.09320885376258957,
+  "auc_beats_average": 0.5438934352757415,
+  "direction_accuracy": 0.5327837965143665,
+  "share_above_average": 0.4992934526613283,
+  "mae_log": 0.3736426821846368,
+  "baseline_mae_log": 0.3749031201366945,
+  "r2": 0.008731848654538688,
+  "spearman_low": 0.08242667265508885,
+  "spearman_high": 0.1035930768245426,
+  "train_spearman": 0.2296041994932378,
+  "overfit_gap": 0.1363953457306482
+}

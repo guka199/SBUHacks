@@ -33,12 +33,21 @@ export interface PredictRequest {
   is_business_account?: boolean;
   category?: string;
   description_length?: number;
+  creator_typical_views?: number; // TikTok: views a typical post of this account gets
+}
+
+export interface AccountComparison {
+  ratio: number; // expected result / the account's typical post
+  percent: number; // (ratio - 1) * 100
+  reliability: "low" | "moderate" | "high";
+  expected_views: number | null;
 }
 
 export interface PlatformScore {
   platform: Platform;
   score: number; // 0-100 virality percentile within the platform
   top_factors: { feature: string; impact: number }[];
+  vs_account: AccountComparison | null;
 }
 
 export interface PredictResponse {
@@ -52,6 +61,7 @@ export interface CombinedScore {
   model_score: number;
   content_score: number | null; // null when Gemini wasn't used
   top_factors: { feature: string; impact: number }[];
+  vs_account: AccountComparison | null;
 }
 
 export interface ContentAnalysis {

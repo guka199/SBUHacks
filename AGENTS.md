@@ -56,9 +56,9 @@ platform-only fields.
 
 | Platform | Source | Posts | Label (`relative`) |
 | --- | --- | --- | --- |
-| TikTok | Hugging Face `The-data-company/TikTok-10M`, 1 of 10 parquet parts | 585K | log views vs. the same creator's OTHER posts (creators with ≥3 posts) |
+| TikTok | Hugging Face `The-data-company/TikTok-10M`, 1 of 10 parquet parts | 585K | the post's own log views; INPUT `creator_typical_views` = geometric mean of the creator's OTHER posts (hidden on 20% of rows so blank input works). Creators with ≥3 posts |
 | Instagram | Hugging Face `vargr/main_instagram` | 549K | (likes + comments) / followers (accounts ≥100 followers) |
-| YouTube | Kaggle `rsrishav/youtube-trending-video-dataset`, US files only | 41K | log views vs. the same channel's other videos |
+| YouTube | **YouTube Data API v3** (`python -m data.loaders.youtube_api`): full recent upload histories of 1,199 channels seeded from the Kaggle trending dataset | 70K (of 129K collected; only videos 30–730 days old) | the video's own log views; INPUTS subscribers (`followers`) + `creator_typical_views` (each hidden on 20% of rows), age (drafts scored at 90 days), duration, Short or not, category |
 | LinkedIn | Kaggle `shreyasajal/linkedin-influencers-data` | 32K | (reactions + comments) / followers — only 67 people, unreliable |
 
 `virality_score` = percentile of `relative` within the platform (0–100). This is what the models predict.
@@ -89,8 +89,28 @@ Gradient-boosted trees beat deep learning on this tabular data, as is typical. L
 | --- | --- | --- | --- |
 | Instagram | 0.675 [0.669, 0.679] | 0.831 | 2.32 — mostly account size |
 | LinkedIn | 0.455 [0.166, 0.653] | 0.705 | 1.25 — very uncertain (67 creators) |
-| YouTube | 0.108 [0.080, 0.138] | 0.547 | 1.24 — weak |
-| TikTok | 0.038 [0.032, 0.042] | 0.525 | 1.09 — ~no signal |
+| YouTube | 0.774 [0.736, 0.814] | 0.885 | 2.63 — typical views alone 0.79; model adds duration, description, age (0.82 when both account inputs are given; 0.35 with neither) |
+| TikTok | 0.435 [0.425, 0.444] | 0.711 | 1.83 — almost all from the account's typical views (alone: 0.48 on rows that have it); blank input: 0.21 |
+
+**Second prediction: "vs. your average"** (`python -m ml.train --target relative` -> `models/<platform>_relative.joblib`).
+Label `account_relative` = log(post result / the creator's typical result on OTHER posts). Returned per platform as
+`vs_account` {ratio, percent, reliability, expected_views} by `/predict` and `/score`; shown separately on the Score
+page, NOT blended into the 0-100 score. `log_creator_typical_views` is never an input here (within one creator it is
+a function of the post's own views = leakage; see `LEAKY_FOR_RELATIVE` in `ml/data.py`).
+
+| Platform | Ranks an account's own posts (Spearman) | Above/below-average accuracy (base) | Reliability label |
+| --- | --- | --- | --- |
+| YouTube | 0.27 (189 channels) | 59.7% (53.3%) | moderate |
+| LinkedIn | 0.25 (14 people) | 59.4% (53.2%) | moderate (tiny sample) |
+| Instagram | 0.11 | 53.3% (50.1%) | moderate |
+| TikTok | 0.04 | 51.4% (53.5%) | low - UI says "too uncertain to call" |
+
+Leakage checks done on YouTube: 0 channels shared across splits, no outcome columns as inputs, typical views from PAST
+videos only gives Spearman 0.81 (no time leak). Within-channel ranking of the 0-100 model: 0.23.
+
+TikTok was reframed from "beat your own average" (Spearman 0.04) to "expected reach for this account" by adding the
+creator's typical views as an input (`creator_typical_views` in `/predict` and `/score` context; a field on the Score page).
+Scores are percentiles vs. TikTok-10M, which skews popular (median ~450K views), so small accounts score low.
 
 Takeaway: caption stats and timing barely predict whether a video beats its creator's average; the content does.
 That is why Gemini judges the content. More model capacity does not help (the benchmark shows it) - only new
@@ -155,19 +175,20 @@ macOS: XGBoost needs `brew install libomp`. Use Python 3.11–3.12 if torch/open
 
 ## Status and TODO
 
-Done: scaffold, all API routes, Snowflake schema, CSV/YouTube ingestion, basic pages, Solana reward route,
-data download + cleaning (`data/prepare.py`), 13-model benchmark framework (`ml/`), per-platform models trained and served by `/predict`.
+Done: scaffold, data download + cleaning, YouTube API collector, 13-model benchmark, CatBoost score + vs-average models
+for all platforms, `/predict` + `/score` with Gemini (live, gemini-3.5-flash-lite), Score page (media upload,
+combined/model/content scores, vs-your-average). **Models are frozen - next is building the app.**
 
-Open:
-- [ ] Phantom wallet connect (`@solana/wallet-adapter-react`) — replace text input on `/rewards`; wallet = login/user_id
-- [ ] Dashboard charts (Recharts) by platform, format and week
-- [ ] Thumbnail/clip upload on `/score` + CLIP thumbnail embeddings
-- [ ] Write Solana tx signature back to `CONTRIBUTIONS.tx_signature`
-- [ ] Gemini: test `/score` live with a real VIDEO (caption-only and image tested live: ~3-6 s)
-- [ ] Caption embeddings as model features (sentence-transformers or Cortex `EMBED_TEXT_768`)
-- [ ] CLIP features from YouTube thumbnails
-- [ ] Load processed data into Snowflake (sampled, ~200K rows/platform)
-- [ ] Demo account with good sample data; rehearse 3-minute demo; backup video
+Next (in order):
+- [ ] **Solana**: Phantom connect on `/rewards` (window.phantom.solana, no extra deps) + a script that creates the devnet
+      payout wallet and reward token and writes `REWARD_WALLET_SECRET_KEY` / `REWARD_MINT_ADDRESS` to `.env`
+- [ ] **Snowflake**: needs trial credentials in `.env`; run `data/sql/001_create_tables.sql`; store posts, predictions, contributions
+- [ ] **Dashboard**: connect a YouTube channel (`/ingest/youtube`, key is set) + CSV upload -> Snowflake -> charts (Recharts)
+- [ ] **ElevenLabs**: needs `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_ID`; weekly briefing + hook tester
+- [ ] Copy `.env` to `web/.env.local` (Next.js reads env from web/)
+- [ ] Test `/score` with a real video upload
+- [ ] Demo: sample account with good data, rehearse 3-minute flow, backup video
+- Later (models): CLIP thumbnail features for YouTube; re-run full `ml.benchmark` (report reflects old TikTok/YouTube data)
 
 **Demo flow:** connect YouTube + upload a TikTok CSV → dashboard compares → score a draft → apply a
 suggestion, score rises → play ElevenLabs briefing → share data, receive Solana tokens.

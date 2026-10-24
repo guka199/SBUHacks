@@ -21,6 +21,7 @@ export default function ScorePage() {
   const [platforms, setPlatforms] = useState<Platform[]>(["tiktok", "instagram", "youtube"]);
   const [file, setFile] = useState<File | null>(null);
   const [followers, setFollowers] = useState("");
+  const [typicalViews, setTypicalViews] = useState("");
   const [result, setResult] = useState<ScoreResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +39,10 @@ export default function ScorePage() {
           caption,
           platforms,
           file,
-          context: followers ? { followers: Number(followers) } : {},
+          context: {
+            ...(followers ? { followers: Number(followers) } : {}),
+            ...(typicalViews ? { creator_typical_views: Number(typicalViews) } : {}),
+          },
         }),
       );
     } catch (e) {
@@ -72,6 +76,16 @@ export default function ScorePage() {
             min={0}
             value={followers}
             onChange={(e) => setFollowers(e.target.value)}
+            className="w-28 rounded-md border px-2 py-1"
+          />
+        </label>
+        <label className="flex items-center gap-2" title="Roughly how many views your posts usually get">
+          <span className="opacity-70">Typical views per post</span>
+          <input
+            type="number"
+            min={0}
+            value={typicalViews}
+            onChange={(e) => setTypicalViews(e.target.value)}
             className="w-28 rounded-md border px-2 py-1"
           />
         </label>
@@ -116,6 +130,24 @@ export default function ScorePage() {
                     <div className="flex gap-4 pl-24 text-xs opacity-60">
                       <span>Our model {s.model_score.toFixed(0)}</span>
                       <span>Content (Gemini) {s.content_score.toFixed(0)}</span>
+                    </div>
+                  )}
+                  {s.vs_account && (
+                    <div className="pl-24 text-xs">
+                      {s.vs_account.reliability === "low" ? (
+                        <span className="opacity-50">vs. your average: too uncertain to call on this platform</span>
+                      ) : (
+                        <span className="opacity-70">
+                          vs. your average:{" "}
+                          <span className={s.vs_account.percent >= 0 ? "text-green-600" : "text-red-600"}>
+                            {s.vs_account.percent >= 0 ? "+" : ""}
+                            {s.vs_account.percent.toFixed(0)}%
+                          </span>
+                          {s.vs_account.expected_views !== null &&
+                            ` (~${Math.round(s.vs_account.expected_views).toLocaleString()} views)`}
+                          {` · ${s.vs_account.reliability} confidence`}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
