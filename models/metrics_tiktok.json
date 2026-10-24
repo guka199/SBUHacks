@@ -1,0 +1,23 @@
+{
+  "platform": "tiktok",
+  "rows": {
+    "train": 422576,
+    "valid": 47710,
+    "test": 114711
+  },
+  "best_iteration": 131,
+  "mae": 24.923434656384305,
+  "baseline_mae": 24.945506946479128,
+  "spearman": 0.0321332394586653,
+  "precision_at_top_quarter": 0.2658042470100073,
+  "top_features": {
+    "has_exclamation": 0.08070000261068344,
+    "duration_sec": 0.06889999657869339,
+    "mention_count": 0.06639999896287918,
+    "verified": 0.06080000102519989,
+    "original_sound": 0.060600001364946365,
+    "has_call_to_action": 0.05979999899864197,
+    "uppercase_ratio": 0.059700001031160355,
+    "caption_length": 0.05900000035762787
+  }
+}

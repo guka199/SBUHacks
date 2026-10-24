@@ -20,28 +20,31 @@ FEATURE_HINTS = {
     "hour": "Post at a different time of day; your audience is more active at another hour.",
     "weekday": "Try a different day of the week.",
     "is_weekend": "Try posting on a weekday instead (or vice versa).",
-    "sentiment": "Make the tone more positive and energetic.",
+    "has_exclamation": "Add energy to the hook.",
+    "has_link": "Drop the link from the caption; put it in your bio instead.",
+    "has_call_to_action": "End with a call to action (e.g. 'comment your answer').",
+    "uppercase_ratio": "Adjust capitalization; avoid all-caps captions.",
+    "duration_sec": "Change the video length; your best posts run a different length.",
+    "description_length": "Adjust the description length.",
 }
 
-
-def _to_score(rate: float) -> float:
-    """Map engagement rate to a 0-100 score (10% engagement or more = 100)."""
-    return round(min(rate / 0.10, 1.0) * 100, 1)
+# Fields that may describe the draft or the account, passed through to the feature builder
+CONTEXT_FIELDS = ["format", "followers", "following", "num_posts", "duration_sec", "original_sound",
+                  "verified", "is_business_account", "category", "description_length"]
 
 
 @router.post("/predict", response_model=PredictResponse)
 def predict(req: PredictRequest) -> PredictResponse:
-    features = build_features(req.caption, req.planned_time)
+    post = {"caption": req.caption, "posted_at": req.planned_time, **req.model_dump(include=set(CONTEXT_FIELDS))}
 
     scores: list[PlatformScore] = []
     negatives: list[tuple[str, float]] = []
     for platform in req.platforms:
-        rate, factors = model.score(platform, features)
+        value, factors = model.score(platform, build_features(platform, post))
         scores.append(
             PlatformScore(
                 platform=platform,
-                score=_to_score(rate),
-                predicted_engagement_rate=rate,
+                score=round(value, 1),
                 top_factors=[Factor(feature=f, impact=i) for f, i in factors[:3]],
             )
         )

@@ -27,16 +27,16 @@ def load_model(platform: str):
 
 
 def score(platform: str, features: dict) -> tuple[float, list[tuple[str, float]]]:
-    """Returns (predicted engagement rate, [(feature, shap impact), ...] most negative first)."""
+    """Returns (virality score 0-100, [(feature, shap impact), ...] most negative first)."""
     model = load_model(platform)
     if model is None:
-        fake = {"youtube": 0.042, "tiktok": 0.071, "instagram": 0.035, "linkedin": 0.021}
-        return fake.get(platform, 0.03), [("caption_length", -0.004), ("hour", -0.002), ("hashtag_count", 0.001)]
+        fake = {"youtube": 42.0, "tiktok": 71.0, "instagram": 35.0, "linkedin": 21.0}
+        return fake.get(platform, 50.0), [("caption_length", -4.0), ("hour", -2.0), ("hashtag_count", 1.0)]
 
     import shap
 
-    X = pd.DataFrame([features], columns=FEATURE_COLUMNS)
+    X = pd.DataFrame([features], columns=FEATURE_COLUMNS[platform]).astype(float)
     pred = float(model.predict(X)[0])
     shap_values = shap.TreeExplainer(model).shap_values(X)[0]
-    factors = sorted(zip(FEATURE_COLUMNS, map(float, shap_values)), key=lambda f: f[1])
-    return max(pred, 0.0), factors
+    factors = sorted(zip(FEATURE_COLUMNS[platform], map(float, shap_values)), key=lambda f: f[1])
+    return min(max(pred, 0.0), 100.0), factors

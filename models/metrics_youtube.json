@@ -1,0 +1,23 @@
+{
+  "platform": "youtube",
+  "rows": {
+    "train": 29862,
+    "valid": 3172,
+    "test": 8023
+  },
+  "best_iteration": 50,
+  "mae": 24.72072099081108,
+  "baseline_mae": 24.768202571498176,
+  "spearman": 0.04746201302412818,
+  "precision_at_top_quarter": 0.2622133599202393,
+  "top_features": {
+    "category_Music": 0.05180000141263008,
+    "category_Film & Animation": 0.04479999840259552,
+    "category_Science & Technology": 0.042500000447034836,
+    "weekday": 0.04179999977350235,
+    "description_length": 0.041600000113248825,
+    "category_News & Politics": 0.04149999842047691,
+    "hashtag_count": 0.0414000004529953,
+    "hour": 0.041200000792741776
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "platform": "linkedin",
+  "rows": {
+    "train": 28591,
+    "valid": 989,
+    "test": 2374
+  },
+  "best_iteration": 70,
+  "mae": 21.155797296667057,
+  "baseline_mae": 35.84831606566857,
+  "spearman": 0.2877093391596924,
+  "precision_at_top_quarter": 0.8888888888888888,
+  "top_features": {
+    "log_followers": 0.357699990272522,
+    "emoji_count": 0.10970000177621841,
+    "word_count": 0.07460000365972519,
+    "caption_length": 0.07429999858140945,
+    "has_question": 0.07410000264644623,
+    "has_media": 0.07029999792575836,
+    "hashtag_count": 0.0689999982714653,
+    "has_link": 0.06239999830722809
+  }
+}

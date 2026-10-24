@@ -17,6 +17,7 @@ node_modules/
 
 # Data: loaders download datasets, don't commit them
 data/raw/
+data/processed/
 *.parquet
 data/**/*.zip
 

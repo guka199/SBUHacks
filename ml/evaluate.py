@@ -1,39 +1,27 @@
-"""Check saved models: error on held-out data and which features matter most.
+"""Print the test-set metrics saved by ml/train.py for each platform.
 
 Usage (from repo root):
-    python -m ml.evaluate --csv data/samples/demo_posts.csv
+    python -m ml.evaluate
 """
 
-import argparse
+import json
 
-import pandas as pd
-import xgboost as xgb
-from dotenv import load_dotenv
-from sklearn.metrics import mean_absolute_error
-
-from ml.train import MODELS_DIR, load_data
-from shared.features import FEATURE_COLUMNS, build_feature_frame
+from ml.train import MODELS_DIR
+from shared.features import PLATFORMS
 
 
 def main() -> None:
-    load_dotenv()
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--csv")
-    args = parser.parse_args()
-
-    df = load_data(args.csv)
-    for platform, group in df.groupby("platform"):
-        path = MODELS_DIR / f"engagement_{platform}.json"
+    for platform in PLATFORMS:
+        path = MODELS_DIR / f"metrics_{platform}.json"
         if not path.exists():
-            print(f"[{platform}] no model - run python -m ml.train first")
+            print(f"[{platform}] no model - run python -m ml.train {platform}")
             continue
-        model = xgb.XGBRegressor()
-        model.load_model(path)
-        X = build_feature_frame(group)
-        mae = mean_absolute_error(group["engagement_rate"], model.predict(X))
-        importance = pd.Series(model.feature_importances_, index=FEATURE_COLUMNS).sort_values(ascending=False)
-        print(f"\n[{platform}] MAE {mae:.4f} on {len(group)} rows. Top features:")
-        print(importance.head(5).to_string())
+        m = json.loads(path.read_text())
+        print(f"\n[{platform}] {m['rows']['test']:,} test posts (creators unseen in training)")
+        print(f"  MAE {m['mae']:.1f} vs baseline {m['baseline_mae']:.1f}   (lower is better)")
+        print(f"  Spearman {m['spearman']:.3f}   (0 = no signal, 1 = perfect ranking)")
+        print(f"  Top-25% precision {m['precision_at_top_quarter']:.2f}   (random = 0.25)")
+        print("  Top features: " + ", ".join(f"{k} ({v})" for k, v in m["top_features"].items()))
 
 
 if __name__ == "__main__":

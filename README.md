@@ -29,7 +29,7 @@ cp .env web/.env.local          # Next.js reads env from web/
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r ml/requirements.txt     # includes api requirements
-python -m ml.train --csv data/samples/demo_posts.csv   # optional: a toy model (no Snowflake needed)
+python -m data.prepare python -m ml.train --csv data/samples/demo_posts.csv   # optional: a toy model (no Snowflake needed)python -m ml.train --csv data/samples/demo_posts.csv   # optional: a toy model (no Snowflake needed) python -m ml.train   # needs data in data/raw/ (see AGENTS.md)
 uvicorn api.main:app --reload          # http://localhost:8000/docs
 ```
 
@@ -46,7 +46,7 @@ cd web && npm install && npm run dev   # http://localhost:3000
 1. Run `data/sql/001_create_tables.sql` in a Snowflake worksheet.
 2. Load data: `python -m data.loaders.load_csv data/samples/demo_posts.csv` (Kaggle datasets go in `data/raw/`, which is git-ignored).
 3. Run `data/sql/002_enrich_with_cortex.sql` to add sentiment, embeddings and the `TRAINING_DATA` view.
-4. Train on real data: `python -m ml.train`.
+4. Training reads local `data/processed/` (see AGENTS.md "Training data and labels").
 
 ## Solana rewards (devnet)
 

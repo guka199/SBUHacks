@@ -23,12 +23,21 @@ export interface PredictRequest {
   format?: string;
   planned_time?: string; // ISO datetime
   thumbnail_url?: string;
+  // Optional context about the draft / account
+  followers?: number;
+  following?: number;
+  num_posts?: number;
+  duration_sec?: number;
+  original_sound?: boolean;
+  verified?: boolean;
+  is_business_account?: boolean;
+  category?: string;
+  description_length?: number;
 }
 
 export interface PlatformScore {
   platform: Platform;
-  score: number; // 0-100
-  predicted_engagement_rate: number;
+  score: number; // 0-100 virality percentile within the platform
   top_factors: { feature: string; impact: number }[];
 }
 

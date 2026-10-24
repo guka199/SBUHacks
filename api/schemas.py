@@ -50,6 +50,16 @@ class PredictRequest(BaseModel):
     format: str | None = None
     planned_time: datetime | None = None
     thumbnail_url: str | None = None
+    # Optional context about the draft / account (improves the score when known)
+    followers: int | None = None
+    following: int | None = None
+    num_posts: int | None = None
+    duration_sec: float | None = None
+    original_sound: bool | None = None
+    verified: bool | None = None
+    is_business_account: bool | None = None
+    category: str | None = None  # YouTube category, e.g. "Gaming"
+    description_length: int | None = None
 
 
 class Factor(BaseModel):
@@ -59,8 +69,7 @@ class Factor(BaseModel):
 
 class PlatformScore(BaseModel):
     platform: Platform
-    score: float  # 0-100
-    predicted_engagement_rate: float
+    score: float  # 0-100 virality percentile within the platform
     top_factors: list[Factor]
 
 
