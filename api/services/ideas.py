@@ -1,18 +1,23 @@
 """Generate grounded follow-up ideas and retain their evidence snapshots."""
 
 import json
+import logging
 import uuid
+
+from pydantic import ValidationError
 
 from api.idea_schemas import ChannelContext, ContentIdea, GeneratedIdeas, IdeaPlatform, IdeaStatus
 from api.services import db, gemini
 from api.services.channel_context import normalized
+
+log = logging.getLogger(__name__)
 
 
 class InvalidIdeas(ValueError):
     pass
 
 
-def _generate(context: ChannelContext, count: int, previous_titles: list[str]) -> GeneratedIdeas:
+def _generate(context: ChannelContext, count: int, previous_titles: list[str], *, repair_reason: str | None = None) -> GeneratedIdeas:
     from google import genai
     import os
 
@@ -78,7 +83,19 @@ content link to this creator. The app supplies all external links, dates and sta
                # carry that evidence; duplicating media-review text wastes context tokens.
                "channel_context": context.model_dump(mode="json", exclude={"memory": {"sources"},
                                                                             "trend_research": {"search_suggestions"}})}
+    if repair_reason:
+        # Only fixed application validation messages are used here. Invalid
+        # provider output is not reused as evidence or instructions.
+        payload["retry_instruction"] = f"The last response failed validation: {repair_reason}. Return exactly {count} complete, distinct ideas and correct that issue."
     schema = gemini._inline_refs(GeneratedIdeas.model_json_schema())
+    # The shared response model accepts the 3/4/5 UI choices. Each provider
+    # request must instead constrain the array to the actual requested count.
+    schema["properties"]["ideas"]["minItems"] = count
+    schema["properties"]["ideas"]["maxItems"] = count
+    item_schema = schema["properties"]["ideas"]["items"]
+    item_schema["required"] = list(item_schema["properties"])
+    if context.target_platform:
+        item_schema["properties"]["platform"]["enum"] = [context.target_platform]
     with genai.Client() as client:
         result = client.interactions.create(
             model=os.getenv("GEMINI_MODEL") or gemini.DEFAULT_MODEL,
@@ -156,8 +173,20 @@ def generate_ideas(user_id: str, context: ChannelContext, count: int) -> list[Co
                 previous_titles.append(title[:160])
         except (ValueError, TypeError, AttributeError):
             continue
-    result = _generate(context, count, previous_titles)
-    validate_generated(result, context, count, previous_titles)
+    repair_reason = None
+    for attempt in range(2):
+        try:
+            result = (_generate(context, count, previous_titles) if repair_reason is None else
+                      _generate(context, count, previous_titles, repair_reason=repair_reason))
+            validate_generated(result, context, count, previous_titles)
+            break
+        except (InvalidIdeas, ValidationError) as exc:
+            # Schema errors can contain generated/user text; never log or send
+            # their raw details. InvalidIdeas messages are fixed application text.
+            repair_reason = str(exc) if isinstance(exc, InvalidIdeas) else "Response did not match the required JSON schema"
+            log.warning("Idea batch rejected on attempt %d: %s", attempt + 1, repair_reason)
+            if attempt == 1:
+                raise InvalidIdeas(repair_reason) from None
     sources = {source.id: source for source in context.sources}
     research = context.trend_research
     trend_sources = {source.id: source for source in research.sources} if research else {}

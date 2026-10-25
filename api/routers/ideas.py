@@ -95,7 +95,17 @@ def generate(request: GenerateIdeasRequest, user_id: str = Depends(require_user_
         generated = ideas.generate_ideas(user_id, context, request.count)
     except HTTPException:
         raise
+    except ideas.InvalidIdeas as exc:
+        # These are fixed application validation messages, never provider text
+        # or user content. Keep enough detail to diagnose a rejected batch.
+        log.warning("Content idea validation failed: %s", str(exc))
+        raise HTTPException(502, "The AI returned an incomplete or repeated idea batch. Please try generating again") from None
     except Exception as exc:
+        if getattr(exc, "status_code", None) == 400:
+            detail = str(exc).lower()
+            log.warning("Idea provider rejected request: schema=%s, complexity=%s, array_bounds=%s",
+                        "schema" in detail, "complex" in detail or "states" in detail,
+                        "minitems" in detail or "maxitems" in detail)
         log.warning("Content idea generation failed: %s", type(exc).__name__)
         raise HTTPException(502, "Could not generate and save ideas grounded in your history. Please try again") from None
     return GeneratedIdeasResponse(context=context, ideas=generated)

@@ -67,6 +67,8 @@ New ideas retain `idea_kind`, their server-attached `trend_sources`, dated `tren
 
 The server checks the requested count and platform, distinct normalized titles and outlines, exact references to supplied source IDs, and duplicate titles against the latest 50 prior ideas (including dismissed ideas). Existing source captions cannot be repeated verbatim as titles. Semantic similarity is not a guarantee; the prompt asks for new angles rather than rewording.
 
+The provider schema constrains the array to the exact requested count, requires complete idea fields and constrains a selected platform. Invalid structured output or application validation triggers at most one regeneration with a fixed validation reason; raw rejected output is not reused. Provider authentication/quota/network errors are not retried here. Nothing is saved until the entire batch passes validation. Exhausted validation returns a specific incomplete/repeated-batch message; logs omit raw provider responses and private content.
+
 Gemini supplies source IDs only. Source excerpts, dates, outcome values and links are attached from the owner's stored context, never accepted from the generated output. YouTube links require a valid video-ID shape; report links require a saved UUID. This verifies provenance to the app's stored history, not ownership of a public YouTube channel or the truth of manually imported statistics.
 
 The prompt treats stored text as source data, excludes performance promises and invented audience questions/trends, and asks for rationales about content connections. AI-generated prose can still be wrong; displayed statistics remain separate server-supplied evidence. Do not represent idea quality as an evaluated prediction model.
@@ -110,3 +112,5 @@ Those test/live results describe the initial ideas feature. The subsequent direc
 Fresh-signal/mix/feedback extension: existing generated-idea fixtures were updated for the explicit idea-kind contract. Python syntax compilation, TypeScript, targeted ESLint and the frontend production build passed. No tests were added/run and no live research-provider calls were run as part of this extension. These checks do not verify live research availability or idea quality.
 
 Generation is synchronous. Leaving the page cancels the browser request but accepted server work may finish and appear in history. The last 50 titles are only a recent deduplication window; semantic duplicates and simultaneous generation are not fully prevented.
+
+Generation repair (2026-10-24): reproduced a five-idea request failing because Gemini returned the wrong count. After the schema/retry fix, the same signed-in YouTube request with research enabled returned HTTP 200 and displayed five newly stored ideas, increasing the visible history from eight to thirteen. This confirms that flow, not all platform/count combinations or creative effectiveness. No automated tests were added/run for this repair.
