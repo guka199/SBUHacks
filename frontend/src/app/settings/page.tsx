@@ -6,12 +6,22 @@ import { useState } from "react";
 import { auth } from "@/lib/account-api";
 import { useAuth } from "@/lib/auth";
 
-const input = "w-full rounded-md border px-3 py-2 text-sm";
-const card = "flex flex-col gap-3 rounded-lg border p-4";
+const input = "account-input";
+const card = "settings-section product-form form-stack";
 
 function Status({ ok, error }: { ok: string | null; error: string | null }) {
-  if (error) return <p className="text-sm text-red-600">{error}</p>;
-  if (ok) return <p className="text-sm text-green-600">{ok}</p>;
+  if (error)
+    return (
+      <p className="error-message" role="alert">
+        {error}
+      </p>
+    );
+  if (ok)
+    return (
+      <p className="form-success" role="status">
+        {ok}
+      </p>
+    );
   return null;
 }
 
@@ -50,7 +60,7 @@ function ProfileForm() {
   }
 
   return (
-    <form onSubmit={save} className={card}>
+    <form onSubmit={save} className={card} aria-busy={busy}>
       <h2 className="font-semibold">Profile</h2>
       <label className="flex flex-col gap-1 text-sm">
         <span className="opacity-70">Name or brand</span>
@@ -61,13 +71,14 @@ function ProfileForm() {
           required
         />
       </label>
-      <div className="flex gap-2 text-sm">
+      <div className="form-segmented" role="group" aria-label="Account type">
         {(["creator", "business"] as const).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setAccountType(t)}
-            className={`flex-1 rounded-md border px-3 py-2 ${accountType === t ? "bg-foreground text-background" : ""}`}
+            aria-pressed={accountType === t}
+            className="product-toggle"
           >
             {t === "creator" ? "Content creator" : "Business page"}
           </button>
@@ -84,10 +95,7 @@ function ProfileForm() {
       </label>
       <p className="text-xs opacity-60">Signed in as {user?.email}</p>
       <Status ok={ok} error={error} />
-      <button
-        disabled={busy}
-        className="w-fit rounded-md bg-foreground px-4 py-2 text-sm text-background disabled:opacity-40"
-      >
+      <button disabled={busy} className="product-button product-primary">
         {busy ? "Saving..." : "Save profile"}
       </button>
     </form>
@@ -122,41 +130,47 @@ function PasswordForm() {
   }
 
   return (
-    <form onSubmit={save} className={card}>
+    <form onSubmit={save} className={card} aria-busy={busy}>
       <h2 className="font-semibold">Change password</h2>
-      <input
-        className={input}
-        type="password"
-        placeholder="Current password"
-        autoComplete="current-password"
-        value={current}
-        onChange={(e) => setCurrent(e.target.value)}
-        required
-      />
-      <input
-        className={input}
-        type="password"
-        placeholder="New password (8+ characters)"
-        autoComplete="new-password"
-        minLength={8}
-        value={next}
-        onChange={(e) => setNext(e.target.value)}
-        required
-      />
-      <input
-        className={input}
-        type="password"
-        placeholder="Repeat new password"
-        autoComplete="new-password"
-        value={confirm}
-        onChange={(e) => setConfirm(e.target.value)}
-        required
-      />
+      <label className="form-field">
+        Current password{" "}
+        <input
+          className={input}
+          type="password"
+          placeholder="Current password"
+          autoComplete="current-password"
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+          required
+        />
+      </label>
+      <label className="form-field">
+        New password{" "}
+        <input
+          className={input}
+          type="password"
+          placeholder="New password (8+ characters)"
+          autoComplete="new-password"
+          minLength={8}
+          value={next}
+          onChange={(e) => setNext(e.target.value)}
+          required
+        />
+      </label>
+      <label className="form-field">
+        Confirm new password{" "}
+        <input
+          className={input}
+          type="password"
+          placeholder="Repeat new password"
+          autoComplete="new-password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          required
+        />
+      </label>
       <Status ok={ok} error={error} />
-      <button
-        disabled={busy}
-        className="w-fit rounded-md bg-foreground px-4 py-2 text-sm text-background disabled:opacity-40"
-      >
+      <button disabled={busy} className="product-button product-primary">
         {busy ? "Saving..." : "Change password"}
       </button>
     </form>
@@ -191,52 +205,79 @@ function DeleteAccount() {
   }
 
   return (
-    <form onSubmit={remove} className={`${card} border-red-600/40`}>
-      <h2 className="font-semibold text-red-600">Delete account</h2>
-      <p className="text-sm opacity-70">
-        Permanently deletes your account, connected accounts, scored drafts and
-        uploaded images and videos.
-      </p>
-      <input
-        className={input}
-        type="password"
-        placeholder="Enter your password to confirm"
-        autoComplete="current-password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-      />
-      <Status ok={null} error={error} />
-      <button
-        disabled={busy || !password}
-        className="w-fit rounded-md bg-red-600 px-4 py-2 text-sm text-white disabled:opacity-40"
-      >
-        {busy ? "Deleting..." : "Delete my account"}
-      </button>
+    <form
+      onSubmit={remove}
+      className={`${card} settings-danger`}
+      aria-busy={busy}
+    >
+      <details>
+        <summary>Delete account</summary>
+        <div className="form-stack">
+          <p className="text-sm opacity-70">
+            Permanently deletes your account, connected accounts, scored drafts
+            and uploaded images and videos.
+          </p>
+          <label className="form-field">
+            Confirm with your password{" "}
+            <input
+              className={input}
+              type="password"
+              placeholder="Enter your password to confirm"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </label>
+          <Status ok={null} error={error} />
+          <button
+            disabled={busy || !password}
+            className="product-button product-danger"
+          >
+            {busy ? "Deleting..." : "Delete my account"}
+          </button>
+        </div>
+      </details>
     </form>
   );
 }
 
 export default function SettingsPage() {
   const { user, loading } = useAuth();
-  if (loading) return null;
+  if (loading)
+    return (
+      <p className="product-loading" role="status">
+        Opening your settings…
+      </p>
+    );
   if (!user)
     return (
-      <p className="py-8 opacity-70">
-        <Link href="/login" className="underline">
+      <section className="product-empty">
+        <h1>Your account settings.</h1>
+        <p>Sign in to manage your profile and account security.</p>
+        <Link
+          href="/login?next=/settings"
+          className="product-button product-primary"
+        >
           Sign in
-        </Link>{" "}
-        to manage your settings.
-      </p>
+        </Link>
+      </section>
     );
 
   return (
-    <section className="mx-auto flex max-w-xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Settings</h1>
-      <SignOut />
-      {/* key: re-create the form with fresh values if a different user signs in */}
-      <ProfileForm key={user.id} />
-      <PasswordForm />
+    <section className="settings-page">
+      <header className="product-page-heading">
+        <div>
+          <h1>Make it yours.</h1>
+          <p>Your profile, preferences, and account security.</p>
+        </div>
+        <SignOut />
+      </header>
+      <div className="settings-grid">
+        {/* key: re-create the form with fresh values if a different user signs in */}
+        <ProfileForm key={user.id} />
+        <PasswordForm />
+      </div>
       <DeleteAccount />
     </section>
   );
@@ -246,20 +287,24 @@ function SignOut() {
   const { logout } = useAuth();
   const router = useRouter();
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   return (
     <>
       <button
-        className="text-link"
+        className="product-button product-secondary"
+        disabled={busy}
         onClick={async () => {
+          setBusy(true);
           try {
             await logout();
             router.push("/");
           } catch {
             setError("Could not sign out. Please try again.");
+            setBusy(false);
           }
         }}
       >
-        Sign out
+        {busy ? "Signing out…" : "Sign out"}
       </button>
       {error && <p role="alert">{error}</p>}
     </>

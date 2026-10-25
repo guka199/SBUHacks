@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowUpRight,
   ArrowLeft,
@@ -279,9 +279,7 @@ function ThumbnailReview({ result }: { result: AnalysisResult }) {
       <p className="thumbnail-summary">{review.summary}</p>
       <p className="thumbnail-recommendation">
         <strong>
-          {thumbnailLeaders(review)
-            .map((index) => `Thumbnail ${index + 1}`)
-            .join(" & ")}
+          {leaders.map((index) => `Thumbnail ${index + 1}`).join(" & ")}
         </strong>{" "}
         ·{" "}
         {leaders.length > 1
@@ -351,6 +349,21 @@ function ThumbnailReview({ result }: { result: AnalysisResult }) {
                   );
                 })}
               </dl>
+              {Object.values(item.reasons).some(Boolean) && (
+                <details className="thumbnail-score-notes">
+                  <summary>Why these scores?</summary>
+                  <ul>
+                    {result.platforms.map((platform) =>
+                      item.reasons[platform.id] ? (
+                        <li key={platform.id}>
+                          <strong>{nameOf(platform.id)}:</strong>{" "}
+                          {item.reasons[platform.id]}
+                        </li>
+                      ) : null,
+                    )}
+                  </ul>
+                </details>
+              )}
               {item.strengths.length > 0 && (
                 <>
                   <h4>Works</h4>
@@ -441,7 +454,10 @@ function AnalysisStudio({
       .then(() => (clipEnd.current = o.end))
       .catch(() => undefined);
   }
-  const { moments, overall: overallSuggestions } = collectReview(result);
+  const { moments, overall: overallSuggestions } = useMemo(
+    () => collectReview(result),
+    [result],
+  );
   const activeMoment =
     selectedRange ?? moments.find((o) => o.id === activeObservation);
   const reviewTabs = [
@@ -685,7 +701,6 @@ function AnalysisStudio({
               </section>
               <section className="platform-opportunities">
                 <h3>Your next edit for {nameOf(selected)}.</h3>
-                <p>{active.assessment}</p>
                 <ul>
                   {active.opportunities.map((item) => (
                     <li key={item}>
@@ -1047,6 +1062,7 @@ function Optimizer({
   tone: RewriteRequest["tone"];
   onTone: (tone: RewriteRequest["tone"]) => void;
 }) {
+  const reduceMotion = useReducedMotion();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -1174,10 +1190,10 @@ function Optimizer({
       <AnimatePresence mode="wait">
         <motion.div
           key={selected}
-          initial={{ opacity: 0.5, y: 4 }}
+          initial={reduceMotion ? false : { opacity: 0.5, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0.5 }}
-          transition={{ duration: 0.18 }}
+          transition={{ duration: reduceMotion ? 0 : 0.18 }}
           className="suggestion-grid"
         >
           {copy.map(([key, title]) => (

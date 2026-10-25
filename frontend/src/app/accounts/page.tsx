@@ -58,7 +58,7 @@ const PLATFORMS: {
   },
 ];
 const AGE_RANGES = ["13-17", "18-24", "25-34", "35-44", "45-54", "55+"];
-const input = "w-full rounded-md border px-2 py-1.5 text-sm";
+const input = "account-input";
 
 const fmt = (n: number | null | undefined, digits = 0) =>
   n === null || n === undefined
@@ -69,70 +69,87 @@ const num = (v: string) => (v.trim() === "" ? undefined : Number(v));
 function AudienceFields({
   value,
   onChange,
+  disabled = false,
 }: {
+  disabled?: boolean;
   value: Audience;
   onChange: (a: Audience) => void;
 }) {
   return (
-    <fieldset className="grid grid-cols-2 gap-2">
+    <fieldset className="audience-fields form-grid" disabled={disabled}>
       <legend className="col-span-2 mb-1 text-xs font-medium opacity-70">
         Target audience
       </legend>
-      <select
-        className={input}
-        value={value.age_range ?? ""}
-        onChange={(e) =>
-          onChange({ ...value, age_range: e.target.value || undefined })
-        }
-      >
-        <option value="">Main age range</option>
-        {AGE_RANGES.map((r) => (
-          <option key={r}>{r}</option>
-        ))}
-      </select>
-      <input
-        className={input}
-        type="number"
-        min={0}
-        max={100}
-        placeholder="% female"
-        value={value.percent_female ?? ""}
-        onChange={(e) =>
-          onChange({ ...value, percent_female: num(e.target.value) })
-        }
-      />
-      <input
-        className={input}
-        placeholder="Top countries (US, UK)"
-        value={value.top_countries?.join(", ") ?? ""}
-        onChange={(e) =>
-          onChange({
-            ...value,
-            top_countries: e.target.value
-              ? e.target.value
-                  .split(",")
-                  .map((c) => c.trim())
-                  .filter(Boolean)
-              : undefined,
-          })
-        }
-      />
-      <input
-        className={input}
-        placeholder="Language"
-        value={value.language ?? ""}
-        onChange={(e) =>
-          onChange({ ...value, language: e.target.value || undefined })
-        }
-      />
-      <input
-        className={`${input} col-span-2`}
-        placeholder="Interests (e.g. exams, productivity, coffee)"
-        value={value.interests ?? ""}
-        onChange={(e) =>
-          onChange({ ...value, interests: e.target.value || undefined })
-        }
-      />
+      <label className="form-field">
+        Main age range
+        <select
+          className={input}
+          value={value.age_range ?? ""}
+          onChange={(e) =>
+            onChange({ ...value, age_range: e.target.value || undefined })
+          }
+        >
+          <option value="">Main age range</option>
+          {AGE_RANGES.map((r) => (
+            <option key={r}>{r}</option>
+          ))}
+        </select>
+      </label>
+      <label className="form-field">
+        Female audience (%){" "}
+        <input
+          className={input}
+          type="number"
+          min={0}
+          max={100}
+          placeholder="% female"
+          value={value.percent_female ?? ""}
+          onChange={(e) =>
+            onChange({ ...value, percent_female: num(e.target.value) })
+          }
+        />
+      </label>
+      <label className="form-field">
+        Top countries{" "}
+        <input
+          className={input}
+          placeholder="Top countries (US, UK)"
+          value={value.top_countries?.join(", ") ?? ""}
+          onChange={(e) =>
+            onChange({
+              ...value,
+              top_countries: e.target.value
+                ? e.target.value
+                    .split(",")
+                    .map((c) => c.trim())
+                    .filter(Boolean)
+                : undefined,
+            })
+          }
+        />
+      </label>
+      <label className="form-field">
+        Language{" "}
+        <input
+          className={input}
+          placeholder="Language"
+          value={value.language ?? ""}
+          onChange={(e) =>
+            onChange({ ...value, language: e.target.value || undefined })
+          }
+        />
+      </label>
+      <label className="form-field">
+        Interests{" "}
+        <input
+          className={`${input} col-span-2`}
+          placeholder="Interests (e.g. exams, productivity, coffee)"
+          value={value.interests ?? ""}
+          onChange={(e) =>
+            onChange({ ...value, interests: e.target.value || undefined })
+          }
+        />
+      </label>
     </fieldset>
   );
 }
@@ -157,7 +174,7 @@ function PlatformCard({
   onSaved: (a: Account) => void;
   onUnlinked: () => void;
 }) {
-  const [editing, setEditing] = useState(!account);
+  const [editing, setEditing] = useState(false);
   const [manual, setManual] = useState(!platform.auto);
   const [channel, setChannel] = useState("");
   const [form, setForm] = useState<Record<string, string>>(formFrom(account));
@@ -199,6 +216,8 @@ function PlatformCard({
         className={input}
         type="number"
         min={0}
+        step={key === "followers" ? 1 : "any"}
+        disabled={busy}
         value={form[key] ?? ""}
         onChange={(e) => setForm({ ...form, [key]: e.target.value })}
       />
@@ -206,7 +225,11 @@ function PlatformCard({
   );
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border p-4">
+    <article
+      className="account-card product-form"
+      aria-label={`${platform.name} account`}
+      aria-busy={busy}
+    >
       <div className="flex items-center justify-between">
         <h2 className="font-semibold">{platform.name}</h2>
         {account && (
@@ -218,6 +241,24 @@ function PlatformCard({
         )}
       </div>
 
+      {!account && !editing && (
+        <div className="account-setup">
+          <p>
+            {platform.auto
+              ? "Link your channel to bring its stats into your next analysis."
+              : "Add your public stats and audience to personalize your analysis."}
+          </p>
+          <span className="connection-note">
+            {platform.auto ? "Automatic YouTube lookup" : "Manual stats entry"}
+          </span>
+          <button
+            className="product-button product-secondary"
+            onClick={() => setEditing(true)}
+          >
+            Add {platform.name} account
+          </button>
+        </div>
+      )}
       {account && !editing && (
         <>
           <div className="text-sm">
@@ -234,7 +275,7 @@ function PlatformCard({
               (account.display_name ?? account.handle)
             )}
           </div>
-          <div className="grid grid-cols-3 gap-3 text-sm">
+          <div className="account-stats">
             <Stat
               label={platform.followersLabel}
               value={fmt(account.followers)}
@@ -243,7 +284,7 @@ function PlatformCard({
             <Stat
               label="Engagement"
               value={
-                account.engagement_rate
+                account.engagement_rate != null
                   ? `${(account.engagement_rate * 100).toFixed(2)}%`
                   : "-"
               }
@@ -268,10 +309,11 @@ function PlatformCard({
                 .join(" · ")}
             </p>
           )}
-          <div className="flex gap-2 text-sm">
+          <div className="account-actions">
             <button
               onClick={() => setEditing(true)}
-              className="rounded-md border px-3 py-1"
+              disabled={busy}
+              className="product-button product-secondary"
             >
               Edit
             </button>
@@ -285,7 +327,7 @@ function PlatformCard({
                     ),
                   )
                 }
-                className="rounded-md border px-3 py-1 disabled:opacity-40"
+                className="product-button product-secondary"
               >
                 {busy ? "Refreshing..." : "Refresh stats"}
               </button>
@@ -309,7 +351,7 @@ function PlatformCard({
                 }
               }}
               disabled={busy}
-              className="ml-auto rounded-md px-3 py-1 text-red-600"
+              className="product-button product-quiet"
             >
               Unlink
             </button>
@@ -318,7 +360,16 @@ function PlatformCard({
       )}
 
       {editing && (
-        <>
+        <form
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (busy) return;
+            void (platform.auto && !manual
+              ? run(() => api.connectYouTube(channel, audience))
+              : saveManual());
+          }}
+        >
           <p className="text-xs opacity-60">
             {manual
               ? platform.hint.replace(
@@ -328,14 +379,18 @@ function PlatformCard({
               : platform.hint}
           </p>
           {platform.auto && !manual ? (
-            <div className="flex gap-2">
+            <label className="form-field">
+              YouTube channel URL or handle
               <input
+                aria-label="YouTube channel URL or handle"
+                required
+                disabled={busy}
                 className={input}
                 placeholder="youtube.com/@yourchannel"
                 value={channel}
                 onChange={(e) => setChannel(e.target.value)}
               />
-            </div>
+            </label>
           ) : (
             <div className="grid grid-cols-2 gap-2">
               <label className="col-span-2 flex flex-col gap-1 text-xs">
@@ -343,6 +398,8 @@ function PlatformCard({
                 <input
                   className={input}
                   placeholder="@yourhandle"
+                  required
+                  disabled={busy}
                   value={form.handle ?? ""}
                   onChange={(e) => setForm({ ...form, handle: e.target.value })}
                 />
@@ -355,8 +412,16 @@ function PlatformCard({
               {field("posts_per_week", "Posts per week")}
             </div>
           )}
-          <AudienceFields value={audience} onChange={setAudience} />
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          <details className="audience-disclosure">
+            <summary>
+              Target audience <span>Optional</span>
+            </summary>
+            <AudienceFields
+              value={audience}
+              onChange={setAudience}
+              disabled={busy}
+            />
+          </details>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <button
               disabled={
@@ -365,12 +430,8 @@ function PlatformCard({
                   ? !channel.trim()
                   : !(form.handle ?? "").trim())
               }
-              onClick={() =>
-                platform.auto && !manual
-                  ? run(() => api.connectYouTube(channel, audience))
-                  : saveManual()
-              }
-              className="rounded-md bg-foreground px-3 py-1.5 text-background disabled:opacity-40"
+              type="submit"
+              className="product-button product-primary"
             >
               {busy
                 ? "Saving..."
@@ -378,26 +439,40 @@ function PlatformCard({
                   ? "Connect channel"
                   : "Save"}
             </button>
-            {account && (
+            {
               <button
-                onClick={() => setEditing(false)}
-                className="rounded-md border px-3 py-1.5"
+                type="button"
+                onClick={() => {
+                  setEditing(false);
+                  setForm(formFrom(account));
+                  setAudience(account?.audience ?? {});
+                  setError(null);
+                }}
+                disabled={busy}
+                className="product-button product-secondary"
               >
                 Cancel
               </button>
-            )}
+            }
             {platform.auto && (
               <button
+                type="button"
                 onClick={() => setManual(!manual)}
-                className="ml-auto text-xs underline opacity-70"
+                disabled={busy}
+                className="product-button product-quiet"
               >
                 {manual ? "Link automatically instead" : "Enter stats manually"}
               </button>
             )}
           </div>
-        </>
+        </form>
       )}
-    </div>
+      {error && (
+        <p className="error-message" role="alert">
+          {error}
+        </p>
+      )}
+    </article>
   );
 }
 
@@ -405,20 +480,40 @@ export default function AccountsPage() {
   const { user, loading } = useAuth();
   const [linked, setLinked] = useState<Account[] | null>(null);
   const [loadError, setLoadError] = useState("");
+  const [reload, setReload] = useState(0);
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
     if (user)
       api
         .list()
-        .then(setLinked)
-        .catch((error) =>
-          setLoadError(
-            error instanceof Error ? error.message : "Could not load accounts",
-          ),
+        .then((value) => {
+          if (!cancelled) {
+            setLinked(value);
+            setLoadError("");
+          }
+        })
+        .catch(
+          (error) =>
+            !cancelled &&
+            setLoadError(
+              error instanceof Error
+                ? error.message
+                : "Could not load accounts",
+            ),
         );
-  }, [user]);
+    return () => {
+      cancelled = true;
+    };
+  }, [user, reload]);
 
-  if (loading) return null;
+  if (loading)
+    return (
+      <p className="product-loading" role="status">
+        Opening your accounts…
+      </p>
+    );
   if (!user)
     return (
       <section className="flex flex-col gap-3 py-8">
@@ -437,7 +532,7 @@ export default function AccountsPage() {
     );
 
   return (
-    <section className="flex flex-col gap-6">
+    <section className="accounts-page">
       <div>
         <h1 className="text-2xl font-semibold">Connected accounts</h1>
         <p className="text-sm opacity-70">
@@ -445,29 +540,47 @@ export default function AccountsPage() {
           personal to you.
         </p>
       </div>
-      {loadError ? (
-        <p role="alert" className="error-message">
-          {loadError}
+      {notice && (
+        <p className="form-success" role="status">
+          {notice}
         </p>
+      )}
+      {loadError ? (
+        <div className="error-message" role="alert">
+          {loadError}{" "}
+          <button
+            className="product-button product-secondary"
+            onClick={() => {
+              setLoadError("");
+              setReload((value) => value + 1);
+            }}
+          >
+            Try again
+          </button>
+        </div>
       ) : linked === null ? (
-        <p className="text-sm opacity-60">Loading...</p>
+        <p className="product-loading" role="status">
+          Loading connected accounts…
+        </p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="accounts-grid">
           {PLATFORMS.map((p) => (
             <PlatformCard
               // remount when the saved account changes, so the form starts from fresh values
               key={`${p.id}-${linked.find((a) => a.platform === p.id)?.updated_at ?? "new"}`}
               platform={p}
               account={linked.find((a) => a.platform === p.id)}
-              onSaved={(a) =>
+              onSaved={(a) => {
+                setNotice(`${p.name} account saved.`);
                 setLinked([
                   ...linked.filter((x) => x.platform !== a.platform),
                   a,
-                ])
-              }
-              onUnlinked={() =>
-                setLinked(linked.filter((x) => x.platform !== p.id))
-              }
+                ]);
+              }}
+              onUnlinked={() => {
+                setLinked(linked.filter((x) => x.platform !== p.id));
+                setNotice(`${p.name} account unlinked.`);
+              }}
             />
           ))}
         </div>

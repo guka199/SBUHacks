@@ -6,12 +6,14 @@ import Link from "next/link";
 export function AnimatedLink({
   href,
   children,
+  "aria-current": current,
 }: {
   href: string;
+  "aria-current"?: "page";
   children: React.ReactNode;
 }) {
   return (
-    <Link href={href} className="animated-link">
+    <Link href={href} className="animated-link" aria-current={current}>
       {children}
     </Link>
   );
