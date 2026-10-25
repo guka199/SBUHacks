@@ -1,11 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { analysisApi } from "@/lib/api";
+import { analysisApi, type SavedReport } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { VideoMetadata } from "@/lib/contracts";
-
-type SavedReport = { id: string; video: VideoMetadata; createdAt: string };
 export default function ReportsPage() {
   const { user, loading } = useAuth();
   const [reports, setReports] = useState<SavedReport[] | null>(null);
@@ -26,9 +23,17 @@ export default function ReportsPage() {
     <section className="account-page page-gutter">
       <div className="button-row">
         <h1>Your reports.</h1>
-        <Link className="button button-accent button-small" href="/analyze">
-          New video
-        </Link>
+        <div className="button-row">
+          <Link className="button button-accent button-small" href="/analyze">
+            New video
+          </Link>
+          <Link
+            className="button button-light button-small"
+            href="/upload/post"
+          >
+            New post
+          </Link>
+        </div>
       </div>
       <p>Saved analyses and publishing copy, available when you come back.</p>
       {loading ? (
@@ -47,16 +52,24 @@ export default function ReportsPage() {
       ) : reports === null ? (
         <p role="status">Loading reports…</p>
       ) : !reports.length ? (
-        <p>No reports yet. Upload your first video to get started.</p>
+        <p>No reports yet. Upload your first video or post to get started.</p>
       ) : (
         <div className="saved-reports">
           {reports.map((report) => (
             <Link
               className="saved-report"
-              href={`/analysis/${report.id}`}
+              href={
+                report.kind === "post"
+                  ? `/posts/${report.id}`
+                  : `/analysis/${report.id}`
+              }
               key={report.id}
             >
-              <strong>{report.video.name}</strong>
+              <strong>
+                {report.kind === "post" && report.post
+                  ? `Post · ${report.post.caption || "Untitled"}${report.post.variants > 1 ? ` · ${report.post.variants} variants` : ""}`
+                  : (report.video?.name ?? "Video")}
+              </strong>
               <span>
                 {new Date(
                   report.createdAt.replace(" ", "T") +

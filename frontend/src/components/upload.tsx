@@ -32,6 +32,7 @@ import {
 import { useSession } from "./session";
 import { PlatformIcon } from "./ui";
 import { useAuth } from "@/lib/auth";
+import { UploadSwitch } from "./upload-switch";
 
 const stages = [
   "Preparing your video",
@@ -235,6 +236,7 @@ export function Upload() {
   }
   return (
     <div className="upload-page page-gutter">
+      <UploadSwitch active="video" />
       <Link className="back-link" href="/">
         <ArrowLeft size={16} /> Back to home
       </Link>

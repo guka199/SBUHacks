@@ -91,3 +91,7 @@ Snowflake presigned media needs server-side stage encryption: [official GET_PRES
 ## Posting plan
 
 `POST /api/analyses` also accepts `posting` = JSON `{country?: "GB", plannedTime?: ISO instant with offset, timezone?: IANA zone}` (invalid -> 422). The report's `posting` = `{country, countryName, audienceTimezone, posterTimezone, plannedTime, plannedAudience, plannedPoster, hasAudienceData, summary, audienceFit, platforms[{platform, rating: good|okay|poor|unknown, reason, windows[{days, start, end, startLocal, endLocal}]}], suggestions}`; `null` when there was nothing to plan with or Gemini failed (warning).
+
+## Photo posts
+
+`POST /api/post-analyses` multipart: `platforms` (JSON, subset of instagram/linkedin/tiktok), `captions` (JSON list, one per variant, 1-3), files `variant0`/`variant1`/`variant2` (1-10 images each, in posting order). Returns `PostReport` = `{id, kind: "post", platforms, summary, variants[{index, caption, images[], summary, hook, visualQuality, clarity, platforms[{id, score, modelScore, contentScore, reason}], strengths, suggestions, slides[{index, verdict, feedback}], suggestedOrder, orderReason}], picks[{platform, variant, reason}], modelWeight, geminiUsed, warnings}`. `GET /api/post-analyses/{id}` and `/{id}/images/{variant}/{index}` are owner-scoped. `GET /api/analyses` items now carry `kind` (`video` with `video`, or `post` with `post: {caption, variants, images}`).

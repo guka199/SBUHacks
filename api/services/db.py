@@ -314,6 +314,24 @@ def remove_folder(folder: str) -> None:
         execute(f"REMOVE @{ANALYSIS_STAGE}/{folder}/")
 
 
+def store_files(files: list[tuple[bytes, str]], folder: str, stage: str = STAGE) -> list[str]:
+    """Save several files at once: one PUT round trip to Snowflake (vs. one per file). Returns their paths."""
+    import re
+    import tempfile
+
+    if stage not in (STAGE, ANALYSIS_STAGE):
+        raise ValueError("invalid media stage")
+    if backend() == "sqlite":
+        return [store_file(data, folder, name, stage) for data, name in files]
+    names = [re.sub(r"[^\w.-]+", "_", name)[-120:] or f"upload{i}" for i, (_, name) in enumerate(files)]
+    with tempfile.TemporaryDirectory() as tmp:
+        for (data, _), name in zip(files, names):
+            (Path(tmp) / name).write_bytes(data)
+        execute(f"PUT 'file://{Path(tmp).as_posix()}/*' @{stage}/{folder} AUTO_COMPRESS = FALSE OVERWRITE = TRUE "
+                f"PARALLEL = 8")
+    return [f"@{stage}/{folder}/{name}" for name in names]
+
+
 def store_file(data: bytes, folder: str, filename: str, stage: str = STAGE) -> str:
     """Save an uploaded file: Snowflake stage @MEDIA/<folder>/<filename>, or data/uploads/ locally."""
     import re

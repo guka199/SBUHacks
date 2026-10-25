@@ -1,5 +1,8 @@
 import {
   jobSchema,
+  postReportSchema,
+  type PostPlatformId,
+  type PostReport,
   rewriteSchema,
   type AnalysisJob,
   type PlatformId,
@@ -127,14 +130,8 @@ export const analysisApi = {
       await jsonRequest(`/api/analyses/${encodeURIComponent(id)}`, signal),
     );
   },
-  async list(
-    signal: AbortSignal,
-  ): Promise<{ id: string; video: VideoMetadata; createdAt: string }[]> {
-    return (await jsonRequest("/api/analyses", signal)) as {
-      id: string;
-      video: VideoMetadata;
-      createdAt: string;
-    }[];
+  async list(signal: AbortSignal): Promise<SavedReport[]> {
+    return (await jsonRequest("/api/analyses", signal)) as SavedReport[];
   },
   videoUrl(id: string) {
     return `${API_BASE}/api/analyses/${encodeURIComponent(id)}/video`;
@@ -187,3 +184,93 @@ export async function waitForAnalysis(
   }
   throw new Error("Analysis is taking longer than expected. Try again later.");
 }
+
+export interface SavedReport {
+  id: string;
+  kind: "video" | "post";
+  createdAt: string;
+  video?: VideoMetadata;
+  post?: { caption: string; variants: number; images: number };
+}
+/** Photo posts: each variant is its images in the chosen order plus a caption. */
+export const postApi = {
+  create(
+    variants: { caption: string; files: File[] }[],
+    platforms: PostPlatformId[],
+    onProgress: (percent: number) => void,
+    signal: AbortSignal,
+  ): Promise<PostReport> {
+    return new Promise((resolve, reject) => {
+      if (signal.aborted) {
+        reject(new DOMException("Cancelled", "AbortError"));
+        return;
+      }
+      const xhr = new XMLHttpRequest();
+      const abort = () => xhr.abort();
+      const clean = () => signal.removeEventListener("abort", abort);
+      xhr.open("POST", `${API_BASE}/api/post-analyses`);
+      xhr.withCredentials = true;
+      xhr.timeout = 600000;
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable)
+          onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => {
+        clean();
+        if (xhr.status < 200 || xhr.status >= 300) {
+          let detail = "";
+          try {
+            detail = JSON.parse(xhr.responseText).detail;
+          } catch {
+            /* non-JSON error */
+          }
+          reject(
+            new Error(
+              typeof detail === "string" && detail
+                ? detail
+                : `Upload failed (${xhr.status}). Please try again.`,
+            ),
+          );
+          return;
+        }
+        try {
+          resolve(postReportSchema.parse(JSON.parse(xhr.responseText)));
+        } catch {
+          reject(new Error("The server returned an invalid post report."));
+        }
+      };
+      xhr.onerror = () => {
+        clean();
+        reject(
+          new Error(
+            "Can't reach the analysis service. Check your connection and try again.",
+          ),
+        );
+      };
+      xhr.ontimeout = () => {
+        clean();
+        reject(new Error("Upload timed out. Try fewer or smaller images."));
+      };
+      xhr.onabort = () => {
+        clean();
+        reject(new DOMException("Cancelled", "AbortError"));
+      };
+      signal.addEventListener("abort", abort, { once: true });
+      const form = new FormData();
+      form.append("platforms", JSON.stringify(platforms));
+      form.append("captions", JSON.stringify(variants.map((v) => v.caption)));
+      variants.forEach((variant, i) =>
+        variant.files.forEach((file) => form.append(`variant${i}`, file)),
+      );
+      xhr.send(form);
+    });
+  },
+  async get(id: string, signal: AbortSignal) {
+    return postReportSchema.parse(
+      await jsonRequest(`/api/post-analyses/${encodeURIComponent(id)}`, signal),
+    );
+  },
+  imageUrl(id: string, variant: number, index: number) {
+    return `${API_BASE}/api/post-analyses/${encodeURIComponent(id)}/images/${variant}/${index}`;
+  },
+};

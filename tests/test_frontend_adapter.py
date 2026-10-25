@@ -319,3 +319,88 @@ class PostingTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.json()["result"]["posting"])
         self.assertTrue(any("posting time" in w for w in response.json()["result"]["warnings"]))
+
+
+class PostAnalysisTests(unittest.TestCase):
+    def setUp(self):
+        self.base = AdapterTests("test_live_model_fallback_is_honest_and_saved_to_signed_owner")
+        self.base.setUp()
+        self.addCleanup(self.base.doCleanups)
+        from api.routers import post_analyses
+        from api.schemas import PlatformScore, PredictResponse
+        self.posts = post_analyses
+        self.store = self.base.mock(post_analyses.db, "store_files",
+                                    side_effect=lambda files, folder, stage: [f"data/uploads/{folder}/{n}" for _, n in files])
+        self.execute = self.base.mock(post_analyses.db, "execute")
+        self.base.mock(post_analyses.model, "load_bundle", return_value=object())
+        self.base.mock(post_analyses.accounts, "audience_summary", return_value="creator account")
+
+        def model_score(request, user_id):  # longer caption -> higher model score, so variants differ
+            return PredictResponse(suggestions=["Shorter caption."], scores=[
+                PlatformScore(platform=p, score=min(20 + len(request.caption), 100), top_factors=[])
+                for p in request.platforms])
+        self.model = self.base.mock(post_analyses, "score_with_model", side_effect=model_score)
+
+    def post(self, captions, variants, platforms=("instagram", "linkedin")):
+        files = [(f"variant{v}", (f"v{v}_{i}.png", _image(), "image/png")) for v, n in enumerate(variants) for i in range(n)]
+        return self.base.client.post("/api/post-analyses", data={
+            "platforms": json.dumps(list(platforms)), "captions": json.dumps(captions)}, files=files)
+
+    def review(self):
+        from api.services.gemini import GeminiPlatformScore, GeminiPostComparison, GeminiPostVariant, GeminiSlide
+        def variant(number, instagram, linkedin, order):
+            return GeminiPostVariant(
+                variant=number, summary=f"v{number}", hook=60, visual_quality=55, clarity=50,
+                platform_scores=[GeminiPlatformScore(platform="Instagram", score=instagram, reason=f"ig {number}"),
+                                 GeminiPlatformScore(platform="linkedin", score=linkedin, reason=f"li {number}")],
+                strengths=["Bold cover"], suggestions=["a", "b", "c"], order_reason="why",
+                slides=[GeminiSlide(image=i, verdict="keep", feedback="ok") for i in range(1, len(order) + 1)],
+                suggested_order=order)
+        return GeminiPostComparison(summary="Use 1 on Instagram, 2 on LinkedIn.",
+                                    variants=[variant(1, 90, 10, [2, 1]), variant(2, 10, 90, [1])])
+
+    def test_variants_are_compared_per_platform_and_saved_in_order(self):
+        self.base.mock(self.posts.gemini, "is_configured", return_value=True)
+        compare = self.base.mock(self.posts.gemini, "compare_posts", return_value=self.review())
+        response = self.post(["first caption", "second caption!"], [2, 1])
+        self.assertEqual(response.status_code, 200, response.text)
+        report = response.json()
+        self.assertEqual({p["platform"]: p["variant"] for p in report["picks"]}, {"instagram": 0, "linkedin": 1})
+        first = report["variants"][0]
+        self.assertEqual([i["name"] for i in first["images"]], ["v0_0.png", "v0_1.png"])  # upload order kept
+        self.assertEqual(first["suggestedOrder"], [1, 0])
+        self.assertIsNone(report["variants"][1]["suggestedOrder"])  # already best
+        ig = first["platforms"][0]
+        self.assertEqual((ig["id"], ig["contentScore"], ig["score"]), ("instagram", 90.0, round(0.6 * 33 + 0.4 * 90, 1)))
+        sent = compare.call_args.args[1]
+        self.assertEqual([len(v["images"]) for v in sent], [2, 1])
+        self.assertEqual(self.model.call_args_list[0].args[0].format, "carousel")
+        self.assertEqual(self.model.call_args_list[1].args[0].format, "image")
+        names = [n for _, n in self.store.call_args.args[0]]
+        self.assertEqual(names, [f"{report['id']}_v0_0.png", f"{report['id']}_v0_1.png", f"{report['id']}_v1_0.png"])
+        saved = json.loads(self.execute.call_args.args[1][3])
+        self.assertEqual(saved["kind"], "post")
+
+    def test_gemini_failure_falls_back_to_caption_model(self):
+        self.base.mock(self.posts.gemini, "is_configured", return_value=True)
+        self.base.mock(self.posts.gemini, "compare_posts", side_effect=RuntimeError("boom"))
+        report = self.post(["short", "a much longer caption"], [1, 1]).json()
+        self.assertFalse(report["geminiUsed"])
+        self.assertTrue(report["warnings"])
+        self.assertEqual({p["variant"] for p in report["picks"]}, {1})  # higher model score wins everywhere
+
+    def test_invalid_posts_are_rejected(self):
+        self.assertEqual(self.post(["only caption"], [0]).status_code, 422)  # no images
+        self.assertEqual(self.post(["a", "b", "c", "d"], [1, 1, 1]).status_code, 422)  # 4 variants
+        self.assertEqual(self.post(["a"], [11]).status_code, 422)  # >10 images
+        self.assertEqual(self.post(["a"], [1], platforms=("youtube",)).status_code, 422)
+        self.assertEqual(self.post([" "], [1]).status_code, 422)  # empty caption
+
+    def test_post_rows_stay_out_of_video_endpoints_and_list_shows_them(self):
+        stored = {"kind": "post", "variants": [{"caption": "Hello", "images": [{}, {}]}]}
+        self.base.query.return_value = [{"id": "a" * 32, "user_id": OWNER, "report": json.dumps(stored),
+                                         "created_at": "2026-10-25 10:00:00"}]
+        self.assertEqual(self.base.client.get(f"/api/analyses/{'a' * 32}").status_code, 404)
+        listed = self.base.client.get("/api/analyses").json()
+        self.assertEqual(listed[0]["kind"], "post")
+        self.assertEqual(listed[0]["post"], {"caption": "Hello", "variants": 1, "images": 2})

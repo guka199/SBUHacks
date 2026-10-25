@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import {
   Check,
   Copy,
+  Linkedin,
   Music2,
   Instagram,
   Youtube,
@@ -30,17 +31,19 @@ export function PlatformIcon({
   id,
   size = 20,
 }: {
-  id: PlatformId;
+  id: PlatformId | "linkedin";
   size?: number;
 }) {
   const Icon =
-    id === "tiktok"
-      ? Music2
-      : id === "instagram"
-        ? Instagram
-        : id === "shorts"
-          ? Play
-          : Youtube;
+    id === "linkedin"
+      ? Linkedin
+      : id === "tiktok"
+        ? Music2
+        : id === "instagram"
+          ? Instagram
+          : id === "shorts"
+            ? Play
+            : Youtube;
   return <Icon size={size} aria-hidden="true" strokeWidth={1.7} />;
 }
 export function Reveal({
