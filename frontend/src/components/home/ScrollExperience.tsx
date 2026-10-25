@@ -87,15 +87,24 @@ export function ScrollExperience() {
     };
   }, [mode]);
   useEffect(() => {
-    if (mode !== "reduced" || !stage.current || !poster.current) return;
+    if (
+      mode !== "reduced" ||
+      !root.current ||
+      !stage.current ||
+      !poster.current
+    )
+      return;
     const element = stage.current,
-      image = poster.current;
+      image = poster.current,
+      scope = root.current;
+    let disposed = false;
     const fit = () => {
+      if (disposed || !scope.isConnected) return;
       const frame = flatScreenLayout(
         element.clientWidth,
         element.clientHeight,
         0,
-        measureOpeningFloor(root.current!),
+        measureOpeningFloor(scope),
       ).poster;
       Object.assign(image.style, {
         width: frame.width + "px",
@@ -111,9 +120,12 @@ export function ScrollExperience() {
     observer.observe(element);
     fit();
     document.fonts.ready.then(() => {
-      if (poster.current === image) fit();
+      if (!disposed && poster.current === image) fit();
     });
-    return () => observer.disconnect();
+    return () => {
+      disposed = true;
+      observer.disconnect();
+    };
   }, [mode]);
   useEffect(() => {
     const desktop = matchMedia("(min-width:900px)"),

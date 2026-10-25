@@ -16,6 +16,12 @@ export function Navigation() {
   if (pathname === "/workspace-preview") return null;
   return (
     <header
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          close();
+          document.getElementById("nav-menu-toggle")?.focus();
+        }
+      }}
       className={`site-header ${pathname === "/" ? "cinematic-header" : ""}`}
     >
       <a className="skip-link" href="#main">
@@ -30,10 +36,30 @@ export function Navigation() {
         </Link>
         <div className="desktop-nav">
           <AnimatedLink href="/#story">How it works</AnimatedLink>
-          <AnimatedLink href="/dashboard">Dashboard</AnimatedLink>
-          <AnimatedLink href="/reports">My reports</AnimatedLink>
-          <AnimatedLink href="/ideas">Ideas</AnimatedLink>
-          <AnimatedLink href="/accounts">Accounts</AnimatedLink>
+          <AnimatedLink
+            href="/dashboard"
+            aria-current={pathname === "/dashboard" ? "page" : undefined}
+          >
+            Dashboard
+          </AnimatedLink>
+          <AnimatedLink
+            href="/reports"
+            aria-current={pathname === "/reports" ? "page" : undefined}
+          >
+            My reports
+          </AnimatedLink>
+          <AnimatedLink
+            href="/ideas"
+            aria-current={pathname === "/ideas" ? "page" : undefined}
+          >
+            Ideas
+          </AnimatedLink>
+          <AnimatedLink
+            href="/accounts"
+            aria-current={pathname === "/accounts" ? "page" : undefined}
+          >
+            Accounts
+          </AnimatedLink>
         </div>
         <div className="nav-actions">
           <Link
@@ -57,6 +83,7 @@ export function Navigation() {
             Start creating <ArrowUpRight size={17} />
           </Link>
           <button
+            id="nav-menu-toggle"
             className="menu-button icon-button"
             aria-expanded={open}
             aria-controls="mobile-nav"

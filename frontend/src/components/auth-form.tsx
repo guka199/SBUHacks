@@ -41,7 +41,9 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
       const next =
         new URLSearchParams(window.location.search).get("next") ?? "";
       router.push(
-        /^\/(analysis\/[0-9a-f]{32}|reports|accounts|analyze|ideas)$/.test(next)
+        /^\/(analysis\/[0-9a-f]{32}|reports|accounts|analyze|ideas|settings)$/.test(
+          next,
+        )
           ? next
           : mode === "signup"
             ? "/accounts"
@@ -55,68 +57,95 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
   }
 
   return (
-    <section className="mx-auto flex max-w-sm flex-col gap-6 py-8">
+    <section className="auth-panel product-form">
       <h1 className="text-2xl font-semibold">
         {mode === "signup" ? "Create your account" : "Sign in"}
       </h1>
-      <form onSubmit={submit} className="flex flex-col gap-3">
+      <p className="form-intro">
+        {mode === "signup"
+          ? "Your videos, ideas, and creative decisions. All in one place."
+          : "Pick up where your next good idea left off."}
+      </p>
+      <form onSubmit={submit} className="form-stack" aria-busy={busy}>
         {mode === "signup" && (
+          <label className="form-field">
+            Name or brand
+            <input
+              autoComplete="name"
+              className={input}
+              placeholder="Your name or brand"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </label>
+        )}
+        <label className="form-field">
+          Email
           <input
             className={input}
-            placeholder="Your name or brand"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            type="email"
+            placeholder="Email"
+            autoComplete="email"
+            name="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
-        )}
-        <input
-          className={input}
-          type="email"
-          placeholder="Email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          className={input}
-          type="password"
-          placeholder={
-            mode === "signup" ? "Password (8+ characters)" : "Password"
-          }
-          autoComplete={mode === "signup" ? "new-password" : "current-password"}
-          minLength={mode === "signup" ? 8 : undefined}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        </label>
+        <label className="form-field">
+          Password
+          <input
+            className={input}
+            type="password"
+            placeholder={
+              mode === "signup" ? "Password (8+ characters)" : "Password"
+            }
+            autoComplete={
+              mode === "signup" ? "new-password" : "current-password"
+            }
+            minLength={mode === "signup" ? 8 : undefined}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </label>
         {mode === "signup" && (
           <>
-            <div className="flex gap-2 text-sm">
+            <div
+              className="form-segmented"
+              role="group"
+              aria-label="Account type"
+            >
               {(["creator", "business"] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setAccountType(t)}
-                  className={`flex-1 rounded-md border px-3 py-2 capitalize ${accountType === t ? "bg-foreground text-background" : ""}`}
+                  aria-pressed={accountType === t}
+                  className="product-toggle"
                 >
                   {t === "creator" ? "Content creator" : "Business page"}
                 </button>
               ))}
             </div>
-            <input
-              className={input}
-              placeholder="Niche (optional) - e.g. study tips, local bakery"
-              value={niche}
-              onChange={(e) => setNiche(e.target.value)}
-            />
+            <label className="form-field">
+              Niche <span className="field-optional">Optional</span>
+              <input
+                className={input}
+                placeholder="Niche (optional) - e.g. study tips, local bakery"
+                value={niche}
+                onChange={(e) => setNiche(e.target.value)}
+              />
+            </label>
           </>
         )}
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          disabled={busy}
-          className="rounded-md bg-foreground px-4 py-2 text-background disabled:opacity-40"
-        >
+        {error && (
+          <p className="error-message" role="alert">
+            {error}
+          </p>
+        )}
+        <button disabled={busy} className="product-button product-primary">
           {busy
             ? "Please wait..."
             : mode === "signup"

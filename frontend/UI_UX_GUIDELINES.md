@@ -4,7 +4,7 @@ User-provided project direction, recorded October 24, 2026. Apply to future fron
 
 ## Inspect before implementing
 
-Read `DESIGN.md`, `design-system/viralpilot/MASTER.md`, relevant existing components and their styles before making a frontend change. `src/app/layout.tsx` imports `src/app/identity.css` last: this file is the current identity override. Earlier dark/green or serif tokens in other stylesheets are superseded by it.
+Read `DESIGN.md`, `design-system/viralpilot/MASTER.md`, relevant existing components and their styles before making a frontend change. `src/app/identity.css` defines the current identity override. `src/app/layout.tsx` then imports `product-polish.css` for scoped product forms, navigation breakpoints and accessibility refinements. Earlier dark/green or serif tokens in other stylesheets are superseded by it.
 
 Reuse `src/components/ui.tsx`, shared button classes, native labeled form controls, the existing navigation and the established design tokens. Scope page-specific additions with CSS Modules or the existing component stylesheet. Preserve native CSS Module handling in `next.config.ts`.
 

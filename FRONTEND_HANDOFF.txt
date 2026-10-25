@@ -513,3 +513,30 @@ Validation before delivery: lint, TypeScript, 15 frontend tests and production
 build passed. Browser checks covered desktop 1440px, tablet 820px, phone 390px,
 three thumbnails, long descriptions, pagination, seeking and bounded playback.
 Synthetic UI fixtures/media stayed in ignored isolated QA storage.
+
+
+FRONTEND QUALITY POLISH (October 25, 2026)
+Source branch: feature/frontend-quality-polish. The user approved committing
+and delivering this iteration to main on October 25, 2026.
+Shared product refinements are scoped in frontend/src/app/product-polish.css.
+Account setup opens on demand, optional audience fields use a disclosure, and
+forms support Enter submission, native validation, fractional averages, clear
+loading/errors and cancel. Existing endpoints and payloads are unchanged.
+Settings and auth use visible labels and explicit primary/secondary controls;
+settings separate profile/security on desktop and collapse the delete section.
+Reports include filename search, duration/dimensions and safe UTC/offset dates.
+Navigation marks the current page and Escape closes the mobile menu with focus
+restored. Results keep the existing video/review tabs; thumbnail score reasons
+are now available by disclosure instead of hover only. Optimizer transitions
+respect reduced motion. Existing analysis data is not removed or re-scored.
+The cinematic scene, models, camera and GSAP sequence are unchanged. One
+reduced-motion ResizeObserver callback now captures its scope and checks its
+cleanup flag, preventing a null-ref error after navigation.
+Audit details, coverage and limits: docs/frontend-quality-audit.md.
+Validation used isolated SQLite/test accounts only, never production Snowflake.
+
+Quality-polish main integration: preserved origin/main 870bfd9, including
+automatic TikTok/Instagram linking with ownership consent and import progress,
+photo-post routes and caption-based report titles, and the team's newer
+sectioned analysis report with its navigation timeline. Search supports both
+video and photo-post reports. Existing provider readiness gates remain active.

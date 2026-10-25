@@ -7,6 +7,7 @@ import "./cinematic.css";
 import "./app-theme.css";
 import "./experience.css";
 import "./identity.css";
+import "./product-polish.css";
 import { Navigation } from "@/components/navigation";
 import { SessionProvider } from "@/components/session";
 import { AuthProvider } from "@/lib/auth";
