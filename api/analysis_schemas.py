@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
+from api.hook_schemas import HookAnalysis
 
 FormatId = Literal["tiktok", "instagram", "shorts", "youtube"]
 
@@ -123,6 +124,7 @@ class AnalysisReport(BaseModel):
     overallSuggestions: list[str] = Field(default_factory=list)
     thumbnails: ThumbnailComparison | None = None
     posting: PostingAdvice | None = None
+    hookAnalysis: HookAnalysis | None = None
     warnings: list[str] = Field(default_factory=list)
 
 

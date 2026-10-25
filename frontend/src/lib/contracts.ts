@@ -18,6 +18,50 @@ export const suggestionSchema = z.object({
   edits: z.array(z.string()),
 });
 export type Suggestions = z.infer<typeof suggestionSchema>;
+export const hookAnalysisSchema = z
+  .object({
+    method: z.literal("ai_review"),
+    windowSeconds: z.number().positive().max(5),
+    score: score.nullable(),
+    summary: z.string().min(1).max(700),
+    opening: z.string().min(1).max(700),
+    suggestedOpening: z.string().min(1).max(700),
+    criteria: z
+      .array(
+        z.object({
+          id: z.enum(["attention", "clarity", "pacing", "audio_text"]),
+          label: z.string(),
+          score: score.nullable(),
+          evidence: z.string().min(1).max(700),
+        }),
+      )
+      .length(4)
+      .refine(
+        (items) => new Set(items.map((item) => item.id)).size === 4,
+        "Duplicate hook criteria",
+      ),
+    evidence: z
+      .array(
+        z.object({
+          start: z.number().nonnegative().lt(5),
+          end: z.number().positive().max(5),
+          observation: z.string().min(1).max(700),
+          edit: z.string().min(1).max(700),
+        }),
+      )
+      .max(3),
+  })
+  .superRefine((review, ctx) => {
+    review.evidence.forEach((item, index) => {
+      if (item.end <= item.start || item.end > review.windowSeconds)
+        ctx.addIssue({
+          code: "custom",
+          message: "Evidence outside opening window",
+          path: ["evidence", index],
+        });
+    });
+  });
+export type HookAnalysis = z.infer<typeof hookAnalysisSchema>;
 export const resultSchema = z
   .object({
     id: z.string().min(1),
@@ -73,6 +117,7 @@ export const resultSchema = z
       }),
     ),
     overallSuggestions: z.array(z.string()).optional(),
+    hookAnalysis: hookAnalysisSchema.nullable().optional(),
     thumbnails: z
       .object({
         summary: z.string(),
@@ -133,6 +178,15 @@ export const resultSchema = z
       .optional(),
   })
   .superRefine((result, ctx) => {
+    if (
+      result.hookAnalysis &&
+      result.hookAnalysis.windowSeconds > result.video.durationSeconds
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "Opening window exceeds video",
+        path: ["hookAnalysis", "windowSeconds"],
+      });
     result.observations.forEach((o, i) => {
       if (o.end < o.time || o.end > result.video.durationSeconds)
         ctx.addIssue({

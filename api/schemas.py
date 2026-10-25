@@ -4,6 +4,7 @@ from datetime import date, datetime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, StringConstraints
+from api.hook_schemas import HookAnalysis
 
 Platform = Literal["youtube", "tiktok", "instagram", "linkedin"]
 UserId = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
@@ -175,6 +176,7 @@ class ContentAnalysis(BaseModel):
     platform_scores: list[ContentScore]
     strengths: list[str]
     moments: list[VideoMoment] = []  # timestamped problem stretches (videos only), checked against the duration
+    hook_analysis: HookAnalysis | None = None
 
 
 class CombinedScore(BaseModel):
