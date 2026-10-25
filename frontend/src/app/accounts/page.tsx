@@ -14,8 +14,11 @@ const formFrom = (account: Account | undefined): Record<string, string> => ({
 });
 import {
   accounts as api,
+  waitForImport,
   type Account,
   type Audience,
+  type ImportJob,
+  type ImportPlatform,
   type ManualAccountInput,
   type Platform,
 } from "@/lib/account-api";
@@ -24,37 +27,47 @@ import { useAuth } from "@/lib/auth";
 const PLATFORMS: {
   id: Platform;
   name: string;
-  auto: boolean;
+  // youtube: YouTube Data API (instant); scraper: public profile import that runs in the background
+  auto: "youtube" | "scraper" | null;
   followersLabel: string;
   hint: string;
+  manualHint: string;
+  placeholder?: string;
 }[] = [
   {
     id: "youtube",
     name: "YouTube",
-    auto: true,
+    auto: "youtube",
     followersLabel: "Subscribers",
     hint: "Paste your channel link or @handle - we fetch your stats automatically.",
+    manualHint: "Enter your stats from YouTube Studio → Analytics.",
+    placeholder: "youtube.com/@yourchannel",
   },
   {
     id: "tiktok",
     name: "TikTok",
-    auto: false,
+    auto: "scraper",
     followersLabel: "Followers",
-    hint: "From TikTok: Profile → menu → Creator tools → Analytics.",
+    hint: "Enter your @handle - we import your public stats and latest videos automatically (takes about a minute).",
+    manualHint: "From TikTok: Profile → menu → Creator tools → Analytics.",
+    placeholder: "@yourhandle",
   },
   {
     id: "instagram",
     name: "Instagram",
-    auto: false,
+    auto: "scraper",
     followersLabel: "Followers",
-    hint: "From Instagram: Profile → Professional dashboard → Insights.",
+    hint: "Enter your @handle - we import your public stats and latest posts automatically (takes about a minute).",
+    manualHint: "From Instagram: Profile → Professional dashboard → Insights.",
+    placeholder: "@yourhandle",
   },
   {
     id: "linkedin",
     name: "LinkedIn",
-    auto: false,
+    auto: null,
     followersLabel: "Followers",
     hint: "From LinkedIn: your profile or page → Analytics.",
+    manualHint: "From LinkedIn: your profile or page → Analytics.",
   },
 ];
 const AGE_RANGES = ["13-17", "18-24", "25-34", "35-44", "45-54", "55+"];
@@ -146,20 +159,43 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+const importStage = (phase: string) =>
+  phase.endsWith("_launching")
+    ? "Starting the import"
+    : ({
+        queued: "Waiting to start",
+        polling: "Collecting your public posts",
+        results: "Saving your stats",
+        complete: "Done",
+      }[phase] ?? "Importing");
+const hasAudience = (a: Audience) =>
+  Object.values(a).some(
+    (v) => v !== undefined && v !== "" && !(Array.isArray(v) && !v.length),
+  );
+
 function PlatformCard({
   platform,
   account,
+  importAvailable,
   onSaved,
   onUnlinked,
 }: {
   platform: (typeof PLATFORMS)[number];
   account: Account | undefined;
+  importAvailable: boolean;
   onSaved: (a: Account) => void;
   onUnlinked: () => void;
 }) {
+  const auto = platform.auto;
+  // Scraper imports need the backend's Apify token and worker: the option stays visible but can't run.
+  const blocked = auto === "scraper" && !importAvailable;
   const [editing, setEditing] = useState(!account);
-  const [manual, setManual] = useState(!platform.auto);
-  const [channel, setChannel] = useState("");
+  const [manual, setManual] = useState(!auto || blocked);
+  const [channel, setChannel] = useState(
+    auto === "scraper" && account?.handle ? `@${account.handle}` : "",
+  );
+  const [authorized, setAuthorized] = useState(false);
+  const [progress, setProgress] = useState("");
   const [form, setForm] = useState<Record<string, string>>(formFrom(account));
   const [audience, setAudience] = useState<Audience>(account?.audience ?? {});
   const [busy, setBusy] = useState(false);
@@ -175,8 +211,33 @@ function PlatformCard({
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
+      setProgress("");
     }
   }
+
+  // Start (or refresh) a background import, wait for it, then load the saved account.
+  async function scrape(start: () => Promise<ImportJob>) {
+    setProgress("Starting the import");
+    await waitForImport(await start(), (job) =>
+      setProgress(
+        `${importStage(job.phase)}${job.progress ? ` · ${job.progress}%` : ""}`,
+      ),
+    );
+    const saved = (await api.list()).find((a) => a.platform === platform.id);
+    if (!saved)
+      throw new Error("The import finished but no account was saved.");
+    return hasAudience(audience)
+      ? api.updateAudience(platform.id, audience)
+      : saved;
+  }
+  const connect = () =>
+    run(() =>
+      auto === "scraper"
+        ? scrape(() =>
+            api.importProfile(platform.id as ImportPlatform, channel),
+          )
+        : api.connectYouTube(channel, audience),
+    );
 
   const saveManual = () => {
     const body: ManualAccountInput = {
@@ -218,6 +279,12 @@ function PlatformCard({
         )}
       </div>
 
+      {progress && (
+        <p role="status" className="flex items-center gap-2 text-sm">
+          <span className="status-dot" /> {progress}
+        </p>
+      )}
+      {error && !editing && <p className="text-sm text-red-600">{error}</p>}
       {account && !editing && (
         <>
           <div className="text-sm">
@@ -275,14 +342,18 @@ function PlatformCard({
             >
               Edit
             </button>
-            {platform.auto && account.connection === "api" && (
+            {auto && account.connection === "api" && (
               <button
                 disabled={busy}
                 onClick={() =>
                   run(() =>
-                    api.connectYouTube(
-                      account.external_id ?? account.handle ?? "",
-                    ),
+                    auto === "scraper"
+                      ? scrape(() =>
+                          api.refreshImport(platform.id as ImportPlatform),
+                        )
+                      : api.connectYouTube(
+                          account.external_id ?? account.handle ?? "",
+                        ),
                   )
                 }
                 className="rounded-md border px-3 py-1 disabled:opacity-40"
@@ -320,21 +391,37 @@ function PlatformCard({
       {editing && (
         <>
           <p className="text-xs opacity-60">
-            {manual
-              ? platform.hint.replace(
-                  /^Paste.*automatically\. ?/,
-                  "Enter your stats from YouTube Studio → Analytics.",
-                )
-              : platform.hint}
+            {manual ? platform.manualHint : platform.hint}
           </p>
-          {platform.auto && !manual ? (
-            <div className="flex gap-2">
+          {blocked && !manual && (
+            <p className="rounded-md border px-3 py-2 text-xs">
+              Automatic import isn’t set up on this server yet. Add{" "}
+              <code>APIFY_API_TOKEN</code> and{" "}
+              <code>SOCIAL_WORKER_ENABLED=true</code> to the backend’s{" "}
+              <code>.env</code> and restart it - or enter your stats manually.
+            </p>
+          )}
+          {auto && !manual ? (
+            <div className="flex flex-col gap-2">
               <input
                 className={input}
-                placeholder="youtube.com/@yourchannel"
+                placeholder={platform.placeholder}
                 value={channel}
+                disabled={busy}
                 onChange={(e) => setChannel(e.target.value)}
               />
+              {auto === "scraper" && (
+                <label className="flex items-start gap-2 text-xs opacity-80">
+                  <input
+                    type="checkbox"
+                    checked={authorized}
+                    disabled={busy}
+                    onChange={(e) => setAuthorized(e.target.checked)}
+                  />
+                  This is my account, or I have permission to import it. Only
+                  public profile data is collected.
+                </label>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2">
@@ -361,22 +448,23 @@ function PlatformCard({
             <button
               disabled={
                 busy ||
-                (platform.auto && !manual
-                  ? !channel.trim()
+                (auto && !manual
+                  ? !channel.trim() ||
+                    (auto === "scraper" && (!authorized || blocked))
                   : !(form.handle ?? "").trim())
               }
-              onClick={() =>
-                platform.auto && !manual
-                  ? run(() => api.connectYouTube(channel, audience))
-                  : saveManual()
-              }
+              onClick={() => (auto && !manual ? connect() : saveManual())}
               className="rounded-md bg-foreground px-3 py-1.5 text-background disabled:opacity-40"
             >
               {busy
-                ? "Saving..."
-                : platform.auto && !manual
-                  ? "Connect channel"
-                  : "Save"}
+                ? auto === "scraper" && !manual
+                  ? "Importing..."
+                  : "Saving..."
+                : auto === "scraper" && !manual
+                  ? "Connect automatically"
+                  : auto && !manual
+                    ? "Connect channel"
+                    : "Save"}
             </button>
             {account && (
               <button
@@ -386,8 +474,9 @@ function PlatformCard({
                 Cancel
               </button>
             )}
-            {platform.auto && (
+            {auto && (
               <button
+                disabled={busy}
                 onClick={() => setManual(!manual)}
                 className="ml-auto text-xs underline opacity-70"
               >
@@ -405,6 +494,19 @@ export default function AccountsPage() {
   const { user, loading } = useAuth();
   const [linked, setLinked] = useState<Account[] | null>(null);
   const [loadError, setLoadError] = useState("");
+  const [importAvailable, setImportAvailable] = useState(false);
+
+  useEffect(() => {
+    if (user)
+      api
+        .importStatus()
+        .then((status) =>
+          setImportAvailable(
+            status.worker_enabled && !!status.configured.APIFY_API_TOKEN,
+          ),
+        )
+        .catch(() => setImportAvailable(false));
+  }, [user]);
 
   useEffect(() => {
     if (user)
@@ -456,8 +558,9 @@ export default function AccountsPage() {
           {PLATFORMS.map((p) => (
             <PlatformCard
               // remount when the saved account changes, so the form starts from fresh values
-              key={`${p.id}-${linked.find((a) => a.platform === p.id)?.updated_at ?? "new"}`}
+              key={`${p.id}-${linked.find((a) => a.platform === p.id)?.updated_at ?? "new"}-${importAvailable}`}
               platform={p}
+              importAvailable={importAvailable}
               account={linked.find((a) => a.platform === p.id)}
               onSaved={(a) =>
                 setLinked([

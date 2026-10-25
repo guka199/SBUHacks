@@ -117,4 +117,82 @@ export const accounts = {
     }),
   unlink: (platform: Platform) =>
     request<{ ok: boolean }>(`/accounts/${platform}`, { method: "DELETE" }),
+  // Automatic TikTok/Instagram import (public data via the backend's Apify worker)
+  importStatus: () =>
+    request<{
+      configured: Record<string, boolean>;
+      worker_enabled: boolean;
+    }>("/accounts/providers/status"),
+  importProfile: (platform: ImportPlatform, handle: string) =>
+    request<ImportJob>(
+      "/accounts/import",
+      json({
+        platform,
+        profile_url: profileUrl(platform, handle),
+        authorized: true,
+        max_posts: 30,
+      }),
+    ),
+  refreshImport: (platform: ImportPlatform) =>
+    request<ImportJob>(`/accounts/${platform}/refresh`, json({})),
+  importJob: (id: string) =>
+    request<ImportJob>(`/accounts/jobs/${encodeURIComponent(id)}`),
 };
+
+export type ImportPlatform = "tiktok" | "instagram";
+export interface ImportJob {
+  id: string;
+  platform: Platform;
+  status:
+    | "queued"
+    | "running"
+    | "retrying"
+    | "succeeded"
+    | "failed"
+    | "needs_attention";
+  phase: string;
+  progress: number;
+  error: string | null;
+}
+
+const HANDLE = {
+  tiktok: /^[A-Za-z0-9_.]{1,32}$/,
+  instagram: /^[A-Za-z0-9_.]{1,30}$/,
+};
+/** "@name", "name" or a pasted profile link -> the public profile URL the backend expects. */
+export function profileUrl(platform: ImportPlatform, value: string): string {
+  const text = value.trim();
+  const fromUrl = text.match(
+    platform === "tiktok"
+      ? /tiktok\.com\/@([^/?#]+)/i
+      : /instagram\.com\/([^/?#]+)/i,
+  );
+  const handle = (fromUrl ? fromUrl[1] : text).replace(/^@/, "");
+  if (!HANDLE[platform].test(handle))
+    throw new Error(
+      `Enter a valid ${platform === "tiktok" ? "TikTok" : "Instagram"} handle, e.g. @yourname`,
+    );
+  return platform === "tiktok"
+    ? `https://www.tiktok.com/@${handle}`
+    : `https://www.instagram.com/${handle}`;
+}
+
+/** Poll an import until it finishes; scraping a profile takes ~30 s to a few minutes. */
+export async function waitForImport(
+  job: ImportJob,
+  onProgress: (job: ImportJob) => void,
+): Promise<void> {
+  const deadline = Date.now() + 12 * 60 * 1000;
+  while (true) {
+    onProgress(job);
+    if (job.status === "succeeded") return;
+    if (job.status === "failed" || job.status === "needs_attention")
+      throw new Error(job.error || "The import didn't finish. Try again.");
+    if (Date.now() > deadline)
+      throw new Error(
+        "The import is taking longer than expected. Check back in a few minutes.",
+      );
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    job = await accounts.importJob(job.id);
+  }
+}
