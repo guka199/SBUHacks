@@ -66,11 +66,16 @@ export default function ReportsPage() {
               key={report.id}
             >
               <strong>
-                {report.kind === "post" && report.post
-                  ? `Post · ${report.post.caption || "Untitled"}${report.post.variants > 1 ? ` · ${report.post.variants} variants` : ""}`
-                  : (report.video?.name ?? "Video")}
+                {report.caption ||
+                  report.post?.caption ||
+                  report.video?.name ||
+                  "Untitled"}
               </strong>
               <span>
+                {report.kind === "post"
+                  ? `Post · ${report.post?.images ?? 0} photo${report.post?.images === 1 ? "" : "s"}${(report.post?.variants ?? 1) > 1 ? ` · ${report.post?.variants} variants` : ""}`
+                  : `Video · ${report.video?.name ?? ""}`}{" "}
+                ·{" "}
                 {new Date(
                   report.createdAt.replace(" ", "T") +
                     (report.createdAt.includes("Z") ? "" : "Z"),

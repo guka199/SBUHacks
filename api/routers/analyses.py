@@ -118,18 +118,20 @@ def _job(row: dict) -> AnalysisJob:
 
 @router.get("")
 def list_analyses(user_id: str = Depends(require_user_id)) -> list[dict]:
-    rows = db.query("SELECT id, report, created_at FROM ANALYSES WHERE user_id = %s "
+    rows = db.query("SELECT id, caption, report, created_at FROM ANALYSES WHERE user_id = %s "
                     "ORDER BY created_at DESC LIMIT 50", (user_id,))
     items = []
     for r in rows:
         report = json.loads(r["report"])
+        caption = " ".join((r.get("caption") or "").split())[:140]  # one line for the list
         if report.get("kind") == "post":
             first = report["variants"][0]
-            items.append({"id": r["id"], "kind": "post", "createdAt": str(r["created_at"]),
+            items.append({"id": r["id"], "kind": "post", "caption": caption, "createdAt": str(r["created_at"]),
                           "post": {"caption": first["caption"][:120], "variants": len(report["variants"]),
                                    "images": len(first["images"])}})
         else:
-            items.append({"id": r["id"], "kind": "video", "video": report["video"], "createdAt": str(r["created_at"])})
+            items.append({"id": r["id"], "kind": "video", "caption": caption, "video": report["video"],
+                          "createdAt": str(r["created_at"])})
     return items
 
 

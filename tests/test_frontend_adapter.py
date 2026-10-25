@@ -398,9 +398,15 @@ class PostAnalysisTests(unittest.TestCase):
 
     def test_post_rows_stay_out_of_video_endpoints_and_list_shows_them(self):
         stored = {"kind": "post", "variants": [{"caption": "Hello", "images": [{}, {}]}]}
-        self.base.query.return_value = [{"id": "a" * 32, "user_id": OWNER, "report": json.dumps(stored),
-                                         "created_at": "2026-10-25 10:00:00"}]
+        video = {"video": {"name": "clip_final_v3.mp4"}}
+        self.base.query.return_value = [
+            {"id": "a" * 32, "user_id": OWNER, "report": json.dumps(stored), "caption": "Hello",
+             "created_at": "2026-10-25 10:00:00"},
+            {"id": "b" * 32, "user_id": OWNER, "report": json.dumps(video), "caption": "Cold brew\nin 3 steps",
+             "created_at": "2026-10-25 09:00:00"}]
         self.assertEqual(self.base.client.get(f"/api/analyses/{'a' * 32}").status_code, 404)
         listed = self.base.client.get("/api/analyses").json()
         self.assertEqual(listed[0]["kind"], "post")
         self.assertEqual(listed[0]["post"], {"caption": "Hello", "variants": 1, "images": 2})
+        self.assertEqual([item["caption"] for item in listed], ["Hello", "Cold brew in 3 steps"])  # one line
+        self.assertEqual(listed[1]["video"]["name"], "clip_final_v3.mp4")

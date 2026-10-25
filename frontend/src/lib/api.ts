@@ -188,6 +188,7 @@ export async function waitForAnalysis(
 export interface SavedReport {
   id: string;
   kind: "video" | "post";
+  caption?: string; // the report's (first) caption, on one line
   createdAt: string;
   video?: VideoMetadata;
   post?: { caption: string; variants: number; images: number };
