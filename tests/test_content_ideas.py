@@ -59,6 +59,7 @@ class ContextFixture(unittest.TestCase):
             if "FROM POSTS" in sql: return self.posts
             if "FROM ANALYSES" in sql: return self.reports
             if "FROM DRAFTS" in sql: return self.drafts
+            if "FROM IDEA_PREFERENCES" in sql or "FROM CHANNEL_MEMORIES" in sql: return []
             raise AssertionError(sql)
         self.query = self.mock(context.db, "query", side_effect=query)
 
@@ -180,7 +181,7 @@ class IdeaTests(ContextFixture):
 
     def test_generation_attaches_server_sources_and_writes_only_current_owner(self):
         channel = self.build()
-        with patch.object(ideas.db, "query", return_value=[]), patch.object(ideas, "_generate", return_value=generated(channel)), patch.object(ideas.db, "execute_many") as execute:
+        with patch.object(ideas.db, "query", side_effect=lambda sql, params: [{"id": OWNER}] if "FROM USERS" in sql else []), patch.object(ideas, "_generate", return_value=generated(channel)), patch.object(ideas.db, "execute_many") as execute:
             result = ideas.generate_ideas(OWNER, channel, 3)
         self.assertEqual(len(result), 3)
         self.assertEqual(result[0].sources[0], channel.sources[0])

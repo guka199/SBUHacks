@@ -42,6 +42,53 @@ const sourceSchema = z.object({
   url: z.string().nullable(),
 });
 export type IdeaSource = z.infer<typeof sourceSchema>;
+export const creatorGoals = [
+  "growth",
+  "engagement",
+  "sales",
+  "series",
+] as const;
+export const goalNames: Record<(typeof creatorGoals)[number], string> = {
+  growth: "Grow my audience",
+  engagement: "Start more conversations",
+  sales: "Support sales",
+  series: "Build a continuing series",
+};
+export const creatorPreferencesSchema = z.object({
+  goal: z.enum(creatorGoals).nullable(),
+  goal_details: z.string().max(500),
+  filming_minutes: z.number().int().min(5).max(480).nullable(),
+  style_notes: z.string().max(500),
+  audience_notes: z.string().max(500),
+  topics_to_avoid: z.array(z.string().min(1).max(100)).max(10),
+});
+export type CreatorPreferences = z.infer<typeof creatorPreferencesSchema>;
+export const emptyCreatorPreferences = (): CreatorPreferences => ({
+  goal: null,
+  goal_details: "",
+  filming_minutes: null,
+  style_notes: "",
+  audience_notes: "",
+  topics_to_avoid: [],
+});
+const preferencesResponseSchema = z.object({
+  preferences: creatorPreferencesSchema,
+  updated_at: z.string().nullable(),
+});
+const memoryObservationSchema = z.object({
+  label: z.string(),
+  source_ids: z.array(z.string()),
+});
+const channelMemorySchema = z.object({
+  summary: z.string(),
+  themes: z.array(memoryObservationSchema),
+  style: z.array(memoryObservationSchema),
+  covered_topics: z.array(memoryObservationSchema),
+  sources: z.array(sourceSchema),
+  generated_at: z.string(),
+  is_stale: z.boolean(),
+});
+export type ChannelMemory = z.infer<typeof channelMemorySchema>;
 export const channelContextSchema = z.object({
   creator: z.object({
     display_name: z.string(),
@@ -67,6 +114,11 @@ export const channelContextSchema = z.object({
   last_updated: z.string().nullable(),
   collected_at: z.string(),
   warnings: z.array(z.string()),
+  creator_preferences: creatorPreferencesSchema.default(
+    emptyCreatorPreferences,
+  ),
+  preferences_updated_at: z.string().nullable().default(null),
+  memory: channelMemorySchema.nullable().default(null),
 });
 export type ChannelContext = z.infer<typeof channelContextSchema>;
 export const contentIdeaSchema = z.object({
@@ -83,6 +135,10 @@ export const contentIdeaSchema = z.object({
   context_warnings: z.array(z.string()),
   status: z.enum(["suggested", "saved", "dismissed"]),
   created_at: z.string(),
+  creator_preferences: creatorPreferencesSchema.default(
+    emptyCreatorPreferences,
+  ),
+  memory_generated_at: z.string().nullable().default(null),
 });
 export type ContentIdea = z.infer<typeof contentIdeaSchema>;
 const generatedSchema = z.object({
@@ -116,6 +172,26 @@ async function request(
 }
 
 export const ideasApi = {
+  async preferences(signal: AbortSignal) {
+    return preferencesResponseSchema.parse(
+      await request("/preferences", signal),
+    );
+  },
+  async savePreferences(preferences: CreatorPreferences, signal: AbortSignal) {
+    return preferencesResponseSchema.parse(
+      await request(
+        "/preferences",
+        signal,
+        creatorPreferencesSchema.parse(preferences),
+        "PUT",
+      ),
+    );
+  },
+  async refreshMemory(signal: AbortSignal) {
+    return channelContextSchema.parse(
+      await request("/memory/refresh", signal, {}),
+    );
+  },
   async context(platform: IdeaPlatform | null, signal: AbortSignal) {
     return channelContextSchema.parse(
       await request(

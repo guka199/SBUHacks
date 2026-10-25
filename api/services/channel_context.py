@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from statistics import median
 
 from api.idea_schemas import ChannelAccount, ChannelContext, ChannelSource, CreatorProfile, IdeaPlatform
-from api.services import accounts, db
+from api.services import accounts, creator_memory, db
 
 POST_LIMIT = 50
 MAX_POST_SOURCES = 30
@@ -175,6 +175,7 @@ def build_context(user_id: str, platform: IdeaPlatform | None = None, *, now: da
         (user_id, REVIEW_LIMIT),
     )
     review_captions = set()
+    memory_reviews = []
     unreadable = False
     for row in reports[:REVIEW_LIMIT]:
         report = _json(row.get("report"), dict)
@@ -197,6 +198,15 @@ def build_context(user_id: str, platform: IdeaPlatform | None = None, *, now: da
             review_notes=(_notes(preferred.get("strengths")) + _notes(preferred.get("opportunities")))[:6],
             updated_at=_iso(row.get("created_at")), url=f"/analysis/{row['id']}",
         ))
+        # Fingerprint all bounded review variants, independently of the selected
+        # target platform, so switching platforms does not invalidate global memory.
+        memory_reviews.append({
+            "id": f"analysis:{row['id']}", "summary": text(report.get("summary"), 1000),
+            "reviews": [{"platform": text(variant.get("id"), 30),
+                         "gemini_used": _truth(variant.get("geminiUsed")),
+                         "notes": (_notes(variant.get("strengths")) + _notes(variant.get("opportunities")))[:6]}
+                        for variant in variants[:5]],
+        })
     # Include older /score drafts when there is no equivalent saved analysis.
     drafts = db.query(
         "SELECT id, caption, platforms, content_review, suggestions, gemini_used, created_at FROM DRAFTS "
@@ -218,6 +228,9 @@ def build_context(user_id: str, platform: IdeaPlatform | None = None, *, now: da
             summary=text(review.get("summary"), 1000) if used_gemini else "Model-only draft; video content was not reviewed.",
             review_notes=_notes(_json(row.get("suggestions"), list)), updated_at=_iso(row.get("created_at")),
         ))
+        memory_reviews.append({"id": f"draft:{text(row.get('id'), 64)}",
+                               "summary": text(review.get("summary"), 1000), "gemini_used": used_gemini,
+                               "notes": _notes(_json(row.get("suggestions"), list))})
     if unreadable:
         warnings.append("Some saved reports could not be read and were excluded.")
     published_count = sum(s.kind == "published_post" for s in sources)
@@ -230,7 +243,7 @@ def build_context(user_id: str, platform: IdeaPlatform | None = None, *, now: da
     if target_account and not any(a.platform == target_account for a in account_context):
         warnings.append("No account is linked for the target platform; audience details for that platform are unknown.")
     updates = [s.updated_at for s in sources if s.updated_at] + [a.refreshed_at for a in account_context if a.refreshed_at]
-    return ChannelContext(
+    context = ChannelContext(
         creator=CreatorProfile(display_name=text(profile.get("display_name"), 120),
                                account_type=text(profile.get("account_type"), 30) or None, niche=text(profile.get("niche"), 250) or None),
         target_platform=platform, accounts=account_context, sources=sources[:40], published_posts=published_count,
@@ -238,3 +251,4 @@ def build_context(user_id: str, platform: IdeaPlatform | None = None, *, now: da
         history_status="insufficient" if distinct_count < 2 else "limited" if distinct_count < 5 else "available",
         last_updated=max(updates) if updates else None, collected_at=now.isoformat(), warnings=warnings,
     )
+    return creator_memory.attach_direction(user_id, context, memory_reviews)

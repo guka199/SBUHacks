@@ -1,10 +1,31 @@
 """Personalized follow-up ideas. Mirror browser-facing fields in frontend/src/lib/ideas.ts."""
 
-from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Annotated, Literal
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, StringConstraints
 
 IdeaPlatform = Literal["youtube", "shorts", "tiktok", "instagram", "linkedin"]
 IdeaStatus = Literal["suggested", "saved", "dismissed"]
+CreatorGoal = Literal["growth", "engagement", "sales", "series"]
+ShortTopic = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
+
+
+class CreatorPreferences(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    goal: CreatorGoal | None = None
+    goal_details: str = Field(default="", max_length=500)
+    filming_minutes: int | None = Field(default=None, ge=5, le=480, strict=True)
+    style_notes: str = Field(default="", max_length=500)
+    audience_notes: str = Field(default="", max_length=500)
+    topics_to_avoid: list[ShortTopic] = Field(default_factory=list, max_length=10)
+
+
+class CreatorPreferencesResponse(BaseModel):
+    preferences: CreatorPreferences
+    updated_at: str | None = None
+
+
+class RefreshMemoryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
 
 class ChannelSource(BaseModel):
@@ -46,7 +67,28 @@ class ChannelAccount(BaseModel):
     refreshed_at: str | None = None
 
 
+class MemoryObservation(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    label: str = Field(min_length=3, max_length=160)
+    source_ids: list[str] = Field(min_length=1, max_length=4)
+
+
+class GeneratedMemory(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    summary: str = Field(min_length=10, max_length=800)
+    themes: list[MemoryObservation] = Field(min_length=1, max_length=6)
+    style: list[MemoryObservation] = Field(default_factory=list, max_length=4)
+    covered_topics: list[MemoryObservation] = Field(min_length=1, max_length=10)
+
+
+class ChannelMemory(GeneratedMemory):
+    sources: list[ChannelSource] = Field(max_length=40)
+    generated_at: str
+    is_stale: bool = False
+
+
 class ChannelContext(BaseModel):
+    _memory_fingerprint: str = PrivateAttr(default="")
     creator: CreatorProfile
     target_platform: IdeaPlatform | None = None
     accounts: list[ChannelAccount]
@@ -59,6 +101,9 @@ class ChannelContext(BaseModel):
     last_updated: str | None = None
     collected_at: str
     warnings: list[str]
+    creator_preferences: CreatorPreferences = Field(default_factory=CreatorPreferences)
+    preferences_updated_at: str | None = None
+    memory: ChannelMemory | None = None
 
 
 class GenerateIdeasRequest(BaseModel):
@@ -96,6 +141,8 @@ class ContentIdea(BaseModel):
     context_warnings: list[str]
     status: IdeaStatus
     created_at: str
+    creator_preferences: CreatorPreferences = Field(default_factory=CreatorPreferences)
+    memory_generated_at: str | None = None
 
 
 class GeneratedIdeasResponse(BaseModel):

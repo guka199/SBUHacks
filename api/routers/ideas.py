@@ -5,9 +5,10 @@ import re
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from api.idea_schemas import (ChannelContext, ContentIdea, GeneratedIdeasResponse, GenerateIdeasRequest,
-                              IdeaPlatform, IdeaStatus, IdeaStatusRequest)
-from api.services import channel_context, gemini, ideas
+from api.idea_schemas import (ChannelContext, ContentIdea, CreatorPreferences, CreatorPreferencesResponse,
+                              GeneratedIdeasResponse, GenerateIdeasRequest, IdeaPlatform, IdeaStatus,
+                              IdeaStatusRequest, RefreshMemoryRequest)
+from api.services import channel_context, creator_memory, gemini, ideas
 from api.services.auth import require_user_id
 
 log = logging.getLogger(__name__)
@@ -33,6 +34,44 @@ def context(platform: IdeaPlatform | None = None, user_id: str = Depends(require
     return _context(user_id, platform)
 
 
+@router.get("/preferences", response_model=CreatorPreferencesResponse)
+def preferences(user_id: str = Depends(require_user_id)):
+    try:
+        return creator_memory.get_preferences(user_id)
+    except Exception as exc:
+        log.warning("Creator preferences unavailable: %s", type(exc).__name__)
+        raise HTTPException(503, "Could not load your idea preferences. Please try again") from None
+
+
+@router.put("/preferences", response_model=CreatorPreferencesResponse)
+def save_preferences(request: CreatorPreferences, user_id: str = Depends(require_user_id)):
+    try:
+        return creator_memory.save_preferences(user_id, request)
+    except Exception as exc:
+        log.warning("Creator preferences could not be saved: %s", type(exc).__name__)
+        raise HTTPException(503, "Could not save your idea preferences. Please try again") from None
+
+
+def _require_history_and_gemini(context: ChannelContext):
+    if not context.can_generate:
+        raise HTTPException(422, "Add at least two different captions or video analyses, or connect a channel with recent posts")
+    if not gemini.is_configured():
+        raise HTTPException(503, "Gemini is not configured for content ideas")
+
+
+@router.post("/memory/refresh", response_model=ChannelContext)
+def refresh_memory(request: RefreshMemoryRequest, user_id: str = Depends(require_user_id)):
+    context = _context(user_id, None)
+    _require_history_and_gemini(context)
+    try:
+        creator_memory.refresh_memory(user_id, context)
+    except Exception as exc:
+        log.warning("Channel memory refresh failed: %s", type(exc).__name__)
+        raise HTTPException(502, "Could not build and save channel memory from your history. Please try again") from None
+    # Recheck freshness and read the latest preferences after a slow provider call.
+    return _context(user_id, None)
+
+
 @router.get("", response_model=list[ContentIdea])
 def list_ideas(platform: IdeaPlatform | None = None, status: IdeaStatus | None = None,
                user_id: str = Depends(require_user_id)):
@@ -42,12 +81,18 @@ def list_ideas(platform: IdeaPlatform | None = None, status: IdeaStatus | None =
 @router.post("/generate", response_model=GeneratedIdeasResponse)
 def generate(request: GenerateIdeasRequest, user_id: str = Depends(require_user_id)):
     context = _context(user_id, request.platform)
-    if not context.can_generate:
-        raise HTTPException(422, "Add at least two different captions or video analyses, or connect a channel with recent posts")
-    if not gemini.is_configured():
-        raise HTTPException(503, "Gemini is not configured for content ideas")
+    _require_history_and_gemini(context)
     try:
+        if context.memory is None or context.memory.is_stale:
+            global_context = context if request.platform is None else _context(user_id, None)
+            creator_memory.refresh_memory(user_id, global_context)
+            context = _context(user_id, request.platform)
+            if context.memory is None or context.memory.is_stale:
+                raise creator_memory.InvalidMemory("Channel history changed during memory refresh; retry")
+            _require_history_and_gemini(context)
         generated = ideas.generate_ideas(user_id, context, request.count)
+    except HTTPException:
+        raise
     except Exception as exc:
         log.warning("Content idea generation failed: %s", type(exc).__name__)
         raise HTTPException(502, "Could not generate and save ideas grounded in your history. Please try again") from None

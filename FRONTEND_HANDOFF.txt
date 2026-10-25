@@ -1,7 +1,11 @@
 CURRENT BACKEND INTEGRATION (October 24, 2026)
 Personalized follow-up content is now available at /ideas: owner-scoped history
 context, real Gemini generation, server-checked source references and saved/
-dismissed ideas in Snowflake. docs/content-ideas.md covers this API and limits.
+dismissed ideas in Snowflake. The direction editor saves creator goals, filming
+time, style/audience notes and avoided topics; channel memory summarizes themes,
+style and covered topics with evidence. Missing/stale memory rebuilds during
+generation; explicit creator direction takes priority. docs/content-ideas.md
+covers the API, storage, checks and limits.
 The live /api/analyses adapter, cookie authentication, accounts/settings,
 saved reports/video playback and Gemini rewrites are now implemented.
 docs/frontend-backend.md supersedes the original API/demo/unfinished-status

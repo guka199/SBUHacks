@@ -37,7 +37,7 @@ Demo analytics, scores, suggestions and processing remain explicitly illustrativ
 
 `/` story · `/studio` entry · `/analyze` or `/upload` · `/demo` · `/analysis` · `/analysis/[id]` · `/analysis/[id]/optimize` · `/signup` · `/login` · `/accounts` · `/settings` · `/reports` · `/ideas` · `/workspace-preview` · `/credits`.
 
-**Content ideas:** `/ideas` uses the signed-in creator's posts, audience and saved video reviews to generate 3–5 grounded follow-ups. Select a platform, inspect sources, save useful ideas or dismiss them. Connect a channel or provide at least two distinct captions/analyses first. See [data/API contract](../docs/content-ideas.md).
+**Content ideas:** `/ideas` uses the signed-in creator's posts, audience and saved video reviews to generate 3–5 grounded follow-ups. Save a goal, filming budget and style/audience preferences; inspect the reusable channel memory and its source references. Select a platform, save useful ideas or dismiss them. Connect a channel or provide at least two distinct captions/analyses first. See [data/API contract](../docs/content-ideas.md).
 
 [FRONTEND_HANDOFF.txt](../FRONTEND_HANDOFF.txt) covers architecture, complete API JSON examples and integration. [ASSET_NOTICES.md](ASSET_NOTICES.md) records artists/licenses. [DESIGN.md](DESIGN.md) and `design-system/viralpilot` describe tokens/motion. [QA_REPORT.md](QA_REPORT.md) and `screenshots/` contain browser evidence and limits.
 

@@ -50,17 +50,18 @@ def set_password_hash(user_id: str, password_hash: str) -> None:
 
 def delete_user(user_id: str) -> None:
     """Delete the user and everything they stored: linked accounts, posts, drafts and uploaded media."""
-    for table in ("ACCOUNTS", "POSTS", "DRAFTS", "ANALYSES", "CONTENT_IDEAS"):
-        db.execute(f"DELETE FROM {table} WHERE user_id = %s", (user_id,))
-    if db.backend() == "snowflake":  # analytics tables from data.setup - may not exist on a fresh database
-        for table in ("PREDICTIONS", "RAW_POSTS", "POST_FEATURES", "CONTRIBUTIONS"):
-            try:
-                db.execute(f"DELETE FROM {table} WHERE user_id = %s", (user_id,))
-            except Exception as e:
-                if "does not exist" not in str(e):
-                    raise
-    db.remove_folder(user_id)
-    db.execute("DELETE FROM USERS WHERE id = %s", (user_id,))
+    with db.creator_data_lock:
+        for table in ("ACCOUNTS", "POSTS", "DRAFTS", "ANALYSES", "CONTENT_IDEAS", "IDEA_PREFERENCES", "CHANNEL_MEMORIES"):
+            db.execute(f"DELETE FROM {table} WHERE user_id = %s", (user_id,))
+        if db.backend() == "snowflake":  # analytics tables from data.setup - may not exist on a fresh database
+            for table in ("PREDICTIONS", "RAW_POSTS", "POST_FEATURES", "CONTRIBUTIONS"):
+                try:
+                    db.execute(f"DELETE FROM {table} WHERE user_id = %s", (user_id,))
+                except Exception as e:
+                    if "does not exist" not in str(e):
+                        raise
+        db.remove_folder(user_id)
+        db.execute("DELETE FROM USERS WHERE id = %s", (user_id,))
 
 
 def get_user_by_email(email: str) -> dict | None:

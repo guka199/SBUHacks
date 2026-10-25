@@ -15,15 +15,25 @@ import { useAuth } from "@/lib/auth";
 import { CopyButton } from "@/components/ui";
 import {
   ideasApi,
+  goalNames,
   ideaPlatforms,
   localDate,
   platformNames,
   sourceLink,
   type ChannelContext,
+  type ChannelMemory,
   type ContentIdea,
+  type CreatorPreferences,
   type IdeaPlatform,
   type IdeaSource,
 } from "@/lib/ideas";
+import {
+  DirectionEditor,
+  directionDraft,
+  directionIsDirty,
+  parseDirection,
+  type DirectionDraft,
+} from "./direction-editor";
 import styles from "./ideas.module.css";
 
 function Evidence({ source }: { source: IdeaSource }) {
@@ -79,6 +89,118 @@ function Evidence({ source }: { source: IdeaSource }) {
   );
 }
 
+function MemoryPanel({
+  memory,
+  canGenerate,
+  disabled,
+  refreshing,
+  onRefresh,
+}: {
+  memory: ChannelMemory | null;
+  canGenerate: boolean;
+  disabled: boolean;
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
+  return (
+    <section className={styles.memory} aria-labelledby="memory-heading">
+      <div className={styles.sectionHeading}>
+        <div>
+          <span className={styles.eyebrow}>
+            Summarized from your saved history
+          </span>
+          <h2 id="memory-heading">Your channel memory</h2>
+        </div>
+        <button
+          className="text-link"
+          disabled={disabled || !canGenerate}
+          onClick={onRefresh}
+        >
+          {refreshing ? (
+            <Loader2 size={15} className="spin" />
+          ) : (
+            <RefreshCw size={15} />
+          )}
+          {refreshing
+            ? "Building memory…"
+            : memory
+              ? "Refresh memory"
+              : "Build memory"}
+        </button>
+      </div>
+      {!memory ? (
+        <p className={styles.subtle}>
+          {canGenerate
+            ? "Generate ideas to build a reusable summary of your themes, style, and topics already covered. You can also build it now."
+            : "Add at least two different posts or video reviews to build channel memory."}
+        </p>
+      ) : (
+        <>
+          <p className={styles.memorySummary}>{memory.summary}</p>
+          <p className={styles.subtle}>
+            Built {localDate(memory.generated_at)} · {memory.sources.length}{" "}
+            source posts / reviews.
+            {memory.is_stale
+              ? " Your stored context has changed. Generation will refresh memory first."
+              : " Matches the current stored context."}
+          </p>
+          <div className={styles.memoryColumns}>
+            {(
+              [
+                ["Recurring themes", memory.themes],
+                ["Inferred style", memory.style],
+                ["Topics already covered", memory.covered_topics],
+              ] as const
+            ).map(([title, observations]) => (
+              <div key={title}>
+                <h3>{title}</h3>
+                {observations.length ? (
+                  <ul>
+                    {observations.map((item, index) => (
+                      <li key={`${item.label}:${index}`}>
+                        {item.label}
+                        <span className={styles.sourceRefs}>
+                          {item.source_ids
+                            .map(
+                              (id) =>
+                                memory.sources.findIndex(
+                                  (source) => source.id === id,
+                                ) + 1,
+                            )
+                            .filter(Boolean)
+                            .map((number) => `Source ${number}`)
+                            .join(" · ")}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className={styles.subtle}>Not enough evidence yet.</p>
+                )}
+              </div>
+            ))}
+          </div>
+          <details className={styles.contextDetails}>
+            <summary>Inspect memory sources</summary>
+            <div className={styles.sourceGrid}>
+              {memory.sources.map((source, index) => (
+                <div key={source.id}>
+                  <span className={styles.sourceRefs}>Source {index + 1}</span>
+                  <Evidence source={source} />
+                </div>
+              ))}
+            </div>
+          </details>
+          <p className={styles.subtle}>
+            These are AI inferences from saved captions and reviews. Correct
+            style or audience details in your direction above.
+          </p>
+        </>
+      )}
+    </section>
+  );
+}
+
 export default function IdeasPage() {
   const { user, loading } = useAuth();
   const [platform, setPlatform] = useState<IdeaPlatform | "all">("all");
@@ -87,6 +209,7 @@ export default function IdeasPage() {
   const [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<{
     key: string;
+    revision: number;
     context: ChannelContext;
     ideas: ContentIdea[];
   } | null>(null);
@@ -94,17 +217,33 @@ export default function IdeasPage() {
     key: string;
     message: string;
   } | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [operation, setOperation] = useState<
+    "generate" | "memory" | "preferences" | null
+  >(null);
   const [actionId, setActionId] = useState("");
+  const [direction, setDirection] = useState<{
+    draft: DirectionDraft;
+    saved: CreatorPreferences;
+    updatedAt: string | null;
+  } | null>(null);
   const [notice, setNotice] = useState("");
   const active = useRef<AbortController | null>(null);
+  const reading = useRef<AbortController | null>(null);
+  const requestActive = useRef(false);
   const key = `${user?.id}:${platform}:${savedOnly}`;
   const current = data?.key === key ? data : null;
   const error = failure?.key === key ? failure.message : "";
+  const isLoadingContext = (!current || current.revision !== refresh) && !error;
+  const busy = operation === "generate";
+  const working = !!operation || !!actionId;
+  const controlsDisabled = working || isLoadingContext;
+  const dirty =
+    !!direction && directionIsDirty(direction.draft, direction.saved);
 
   useEffect(() => {
     if (!user) return;
     const controller = new AbortController();
+    reading.current = controller;
     const chosen = platform === "all" ? null : platform;
     Promise.all([
       ideasApi.context(chosen, controller.signal),
@@ -112,12 +251,26 @@ export default function IdeasPage() {
     ])
       .then(([context, ideas]) => {
         if (!controller.signal.aborted) {
-          setData({ key, context, ideas });
+          setData({ key, revision: refresh, context, ideas });
+          setDirection((previous) =>
+            previous && directionIsDirty(previous.draft, previous.saved)
+              ? previous
+              : {
+                  draft: directionDraft(context.creator_preferences),
+                  saved: context.creator_preferences,
+                  updatedAt: context.preferences_updated_at,
+                },
+          );
           setFailure(null);
         }
       })
       .catch((error) => {
-        if (!controller.signal.aborted)
+        if (!controller.signal.aborted) {
+          setData((previous) =>
+            previous?.key === key
+              ? { ...previous, revision: refresh }
+              : previous,
+          );
           setFailure({
             key,
             message:
@@ -125,18 +278,120 @@ export default function IdeasPage() {
                 ? error.message
                 : "Could not load your ideas",
           });
+        }
       });
     return () => controller.abort();
   }, [user, key, platform, savedOnly, refresh]);
-  useEffect(() => () => active.current?.abort(), []);
+  useEffect(
+    () => () => {
+      active.current?.abort();
+      reading.current?.abort();
+    },
+    [],
+  );
 
-  async function generate() {
-    if (busy || actionId || !current?.context.can_generate) return;
+  function beginRequest() {
+    if (requestActive.current || isLoadingContext) return null;
+    requestActive.current = true;
+    reading.current?.abort();
     const controller = new AbortController();
     active.current = controller;
-    setBusy(true);
     setNotice("");
     setFailure(null);
+    return controller;
+  }
+
+  function endRequest(controller: AbortController) {
+    if (active.current === controller) {
+      requestActive.current = false;
+      active.current = null;
+      if (!controller.signal.aborted) {
+        setOperation(null);
+        setActionId("");
+      }
+    }
+  }
+
+  async function saveDirection() {
+    if (!direction || !dirty || !current) return;
+    const parsed = parseDirection(direction.draft);
+    if (!parsed.preferences) return;
+    const controller = beginRequest();
+    if (!controller) return;
+    setOperation("preferences");
+    try {
+      const result = await ideasApi.savePreferences(
+        parsed.preferences,
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+      setDirection({
+        draft: directionDraft(result.preferences),
+        saved: result.preferences,
+        updatedAt: result.updated_at,
+      });
+      setData((previous) =>
+        previous
+          ? {
+              ...previous,
+              context: {
+                ...previous.context,
+                creator_preferences: result.preferences,
+                preferences_updated_at: result.updated_at,
+              },
+            }
+          : null,
+      );
+      setNotice(
+        "Your direction is saved. New ideas will use these preferences.",
+      );
+    } catch (error) {
+      if (!controller.signal.aborted)
+        setFailure({
+          key,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Could not save your direction",
+        });
+    } finally {
+      endRequest(controller);
+    }
+  }
+
+  async function refreshMemory() {
+    if (dirty || !current?.context.can_generate) return;
+    const controller = beginRequest();
+    if (!controller) return;
+    setOperation("memory");
+    try {
+      const refreshed = await ideasApi.refreshMemory(controller.signal);
+      const context =
+        platform === "all"
+          ? refreshed
+          : await ideasApi.context(platform, controller.signal);
+      if (controller.signal.aborted) return;
+      setData((previous) => (previous ? { ...previous, context } : null));
+      setNotice("Channel memory refreshed from your saved history.");
+    } catch (error) {
+      if (!controller.signal.aborted)
+        setFailure({
+          key,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Could not refresh channel memory",
+        });
+    } finally {
+      endRequest(controller);
+    }
+  }
+
+  async function generate() {
+    if (dirty || !current?.context.can_generate) return;
+    const controller = beginRequest();
+    if (!controller) return;
+    setOperation("generate");
     try {
       const result = await ideasApi.generate(
         platform === "all" ? null : platform,
@@ -148,6 +403,7 @@ export default function IdeasPage() {
       setSavedOnly(false);
       setData({
         key: nextKey,
+        revision: refresh,
         context: result.context,
         ideas: [...result.ideas, ...(current?.ideas ?? [])].slice(0, 50),
       });
@@ -162,17 +418,14 @@ export default function IdeasPage() {
             error instanceof Error ? error.message : "Could not generate ideas",
         });
     } finally {
-      if (!controller.signal.aborted) setBusy(false);
+      endRequest(controller);
     }
   }
 
   async function update(idea: ContentIdea, status: ContentIdea["status"]) {
-    if (busy || actionId) return;
-    const controller = new AbortController();
-    active.current = controller;
+    const controller = beginRequest();
+    if (!controller) return;
     setActionId(idea.id);
-    setFailure(null);
-    setNotice("");
     try {
       const updated = await ideasApi.status(idea.id, status, controller.signal);
       if (controller.signal.aborted) return;
@@ -205,7 +458,7 @@ export default function IdeasPage() {
             error instanceof Error ? error.message : "Could not update idea",
         });
     } finally {
-      if (!controller.signal.aborted) setActionId("");
+      endRequest(controller);
     }
   }
 
@@ -246,7 +499,7 @@ export default function IdeasPage() {
               Target platform
               <select
                 value={platform}
-                disabled={busy || !!actionId}
+                disabled={controlsDisabled}
                 onChange={(event) => {
                   setPlatform(event.target.value as IdeaPlatform | "all");
                   setNotice("");
@@ -264,7 +517,7 @@ export default function IdeasPage() {
               How many ideas?
               <select
                 value={count}
-                disabled={busy || !!actionId}
+                disabled={controlsDisabled}
                 onChange={(event) => setCount(Number(event.target.value))}
               >
                 {[3, 4, 5].map((value) => (
@@ -277,7 +530,14 @@ export default function IdeasPage() {
             <button
               className="button button-accent"
               onClick={generate}
-              disabled={busy || !!actionId || !current?.context.can_generate}
+              disabled={
+                controlsDisabled || dirty || !current?.context.can_generate
+              }
+              title={
+                dirty
+                  ? "Save your direction before generating ideas"
+                  : undefined
+              }
             >
               {busy ? (
                 <Loader2 className="spin" size={18} />
@@ -288,7 +548,7 @@ export default function IdeasPage() {
             </button>
             <button
               className="text-link"
-              disabled={busy || !!actionId}
+              disabled={controlsDisabled}
               onClick={() => {
                 setFailure(null);
                 setRefresh((value) => value + 1);
@@ -308,11 +568,36 @@ export default function IdeasPage() {
               {notice}
             </p>
           )}
-          {busy && (
+          {(busy || operation === "memory") && (
             <p className={styles.subtle} role="status">
-              Using saved text and reviews. Your videos are not being uploaded
-              again. Leaving this page may not stop accepted generation.
+              {operation === "memory"
+                ? "Building channel memory from saved text and reviews."
+                : "Building or refreshing channel memory as needed, then finding ideas for your direction."}{" "}
+              Your videos are not being uploaded again. Leaving this page may
+              not stop accepted generation.
             </p>
+          )}
+          {direction && (
+            <DirectionEditor
+              draft={direction.draft}
+              dirty={dirty}
+              updatedAt={direction.updatedAt}
+              disabled={controlsDisabled || !current}
+              saving={operation === "preferences"}
+              onChange={(draft) =>
+                setDirection((previous) =>
+                  previous ? { ...previous, draft } : null,
+                )
+              }
+              onSave={saveDirection}
+              onReset={() =>
+                setDirection((previous) =>
+                  previous
+                    ? { ...previous, draft: directionDraft(previous.saved) }
+                    : null,
+                )
+              }
+            />
           )}
           {!current && !error ? (
             <p role="status">Loading your channel history…</p>
@@ -357,6 +642,13 @@ export default function IdeasPage() {
                     </div>
                   </details>
                 </section>
+                <MemoryPanel
+                  memory={current.context.memory}
+                  canGenerate={current.context.can_generate}
+                  disabled={controlsDisabled || dirty}
+                  refreshing={operation === "memory"}
+                  onRefresh={refreshMemory}
+                />
                 {!current.context.can_generate && (
                   <section className={styles.empty}>
                     <h2>Give your next idea a starting point.</h2>
@@ -381,14 +673,14 @@ export default function IdeasPage() {
                   aria-label="Idea list filter"
                 >
                   <button
-                    disabled={busy || !!actionId}
+                    disabled={controlsDisabled}
                     aria-pressed={!savedOnly}
                     onClick={() => setSavedOnly(false)}
                   >
                     All ideas
                   </button>
                   <button
-                    disabled={busy || !!actionId}
+                    disabled={controlsDisabled}
                     aria-pressed={savedOnly}
                     onClick={() => setSavedOnly(true)}
                   >
@@ -436,6 +728,25 @@ export default function IdeasPage() {
                             reviews
                           </summary>
                           <p>{idea.channel_summary}</p>
+                          {idea.creator_preferences.goal && (
+                            <p>
+                              Goal when generated:{" "}
+                              {goalNames[idea.creator_preferences.goal]}.
+                            </p>
+                          )}
+                          {idea.creator_preferences.filming_minutes != null && (
+                            <p>
+                              Filming time available:{" "}
+                              {idea.creator_preferences.filming_minutes}{" "}
+                              minutes.
+                            </p>
+                          )}
+                          {idea.memory_generated_at && (
+                            <p>
+                              Used channel memory from{" "}
+                              {localDate(idea.memory_generated_at)}.
+                            </p>
+                          )}
                           {idea.sources.map((source) => (
                             <Evidence key={source.id} source={source} />
                           ))}
@@ -449,7 +760,7 @@ export default function IdeasPage() {
                           <span>{localDate(idea.created_at)}</span>
                           <button
                             className="text-link"
-                            disabled={busy || !!actionId}
+                            disabled={controlsDisabled}
                             onClick={() =>
                               update(
                                 idea,
@@ -475,7 +786,7 @@ export default function IdeasPage() {
                             className="icon-button"
                             aria-label={`Dismiss ${idea.title}`}
                             title="Dismiss idea"
-                            disabled={busy || !!actionId}
+                            disabled={controlsDisabled}
                             onClick={() => update(idea, "dismissed")}
                           >
                             <X size={16} />
