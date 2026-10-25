@@ -35,14 +35,8 @@ export function choreograph(
     .to(s, { y: 2.1, z: 2.65, duration: 48, ease: "sine.inOut" }, 38)
     .to(s, { y: 2.09, z: 2, duration: 14, ease: "power2.inOut" }, 86);
   tl.to(
-    ".caption-opening,.hero-wash,.hero-loop-control",
+    ".caption-opening,.hero-wash",
     { autoAlpha: 0, y: -20, duration: 9 },
-    2,
-  );
-  tl.fromTo(
-    ".skip-experience",
-    { y: 80 },
-    { y: 0, duration: 9, ease: "power2.out" },
     2,
   );
   if (mode === "flat")
@@ -255,9 +249,5 @@ export function choreograph(
     95,
   );
   tl.to(".product-demonstration", { autoAlpha: 0, duration: 4 }, 96);
-  tl.to(
-    ".experience-controls,.experience-scroll,.skip-experience",
-    { autoAlpha: 0, duration: 3 },
-    97,
-  );
+  tl.to(".experience-scroll", { autoAlpha: 0, duration: 3 }, 97);
 }

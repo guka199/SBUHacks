@@ -1,0 +1,96 @@
+.sections {
+  background: var(--light-yellow);
+  color: var(--ink);
+  padding-inline: clamp(24px, 6vw, 96px);
+}
+.motionToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(32px, 6vw, 96px);
+  padding-block: clamp(48px, 7vw, 96px);
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 112px;
+}
+.heading h2 {
+  font: 400 clamp(36px, 4.5vw, 64px)/1 var(--font-display);
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.heading h2 span {
+  color: var(--red);
+}
+.heading > p {
+  margin-top: 24px;
+  max-width: 40ch;
+  line-height: 1.6;
+}
+.features {
+  margin: 0;
+}
+.features > div {
+  padding-block: 24px;
+  border-bottom: 1px solid var(--line);
+}
+.features > div:first-child {
+  padding-top: 0;
+}
+.features dt {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.features dd {
+  margin: 8px 0 0;
+  max-width: 52ch;
+  line-height: 1.6;
+}
+.platforms {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.platforms li {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding-block: 24px;
+  border-bottom: 1px solid var(--line);
+}
+.platforms li:first-child {
+  padding-top: 0;
+}
+.platforms h3 {
+  font-family: var(--font-body);
+  font-size: 22px;
+  font-weight: 700;
+}
+.platforms p {
+  margin-top: 4px;
+  line-height: 1.6;
+}
+.platforms svg {
+  flex-shrink: 0;
+  color: var(--red);
+}
+@media (max-width: 700px) {
+  .section {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    scroll-margin-top: 96px;
+  }
+  .features dt {
+    font-size: 18px;
+  }
+}

@@ -5,6 +5,8 @@ Read this before making changes. It is the single source of truth for every team
 
 Frontend UI work must follow `frontend/UI_UX_GUIDELINES.md` and `frontend/AGENTS.md`: preserve the approved red/yellow identity, typography, homepage animations and existing backend behavior; reuse current tokens/components, keep one primary page scrollbar and verify desktop/mobile layouts. The guidelines include the current dated audit of requested skills, separate from historical usage claims.
 
+Landing navigation is How it works / Features / Platforms. Start creating retains the original `/analyze` destination for signed-in users and uses `/login?next=/analyze` otherwise. The user explicitly excluded studio changes: do not redirect this CTA to `/studio` or modify studio/analysis layouts, controls, auth forms or shared product styling as part of landing navigation work.
+
 ## Project
 
 **PostPilot** — SBUHacks 2026 hackathon project (24h). One place for content creators and business pages to:

@@ -1,0 +1,35 @@
+.landing :global(.mobile-nav) .mobileStart {
+  color: var(--light-yellow);
+  background: var(--red);
+  margin-top: 8px;
+}
+.landing a[aria-disabled="true"] {
+  cursor: wait;
+  opacity: 0.65;
+}
+@media (max-width: 600px) {
+  .landing :global(.nav-inner) {
+    gap: 12px;
+    padding-inline: 16px;
+  }
+  .landing :global(.brand) {
+    font-size: 20px;
+    gap: 4px;
+  }
+  .landing :global(.nav-actions) {
+    gap: 8px;
+  }
+  .landing :global(.nav-actions .button) {
+    display: inline-flex;
+    padding: 10px 12px;
+    min-height: 44px;
+    font-size: 11px;
+    gap: 8px;
+    white-space: nowrap;
+  }
+}
+@media (max-width: 359px) {
+  .landing :global(.nav-actions .button svg) {
+    display: none;
+  }
+}
