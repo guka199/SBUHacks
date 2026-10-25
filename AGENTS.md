@@ -3,6 +3,8 @@
 Read this before making changes. It is the single source of truth for every teammate's AI assistant
 (Claude Code, Cursor, Copilot, Codex, ...). When a decision changes, update this file in the same PR.
 
+Frontend UI work must follow `frontend/UI_UX_GUIDELINES.md` and `frontend/AGENTS.md`: preserve the approved red/yellow identity, typography, homepage animations and existing backend behavior; reuse current tokens/components, keep one primary page scrollbar and verify desktop/mobile layouts. The guidelines include the current dated audit of requested skills, separate from historical usage claims.
+
 ## Project
 
 **PostPilot** — SBUHacks 2026 hackathon project (24h). One place for content creators and business pages to:
@@ -328,3 +330,17 @@ The user authorized merging the cinematic ViralPilot frontend into main. It live
 - User authorized pushing and merging PR #4 after compatibility checks. Integrated main 0878a14 into codex/channel-content-ideas, preserving hook review, thumbnails, posting plan, social imports/worker, Ideas routes/tables and the CSS Module fix.
 - Conflict resolution combines all app/social/Ideas deletion in db.transaction under creator_data_lock, clears research cache, and retains media/analytics cleanup. Extended the existing deletion regression to check Ideas tables and other-owner preservation. Made an existing Snowflake path assertion resolve both paths for macOS /tmp symlinks.
 - Combined tree: 122 Python tests, 16 frontend tests, full frontend lint/type generation/TypeScript, production build, Python compilation and whitespace checks passed. Tests use mocked providers/temporary SQLite; no new live paid provider calls.
+
+### All-platform content ideas (October 24, 2026)
+
+- Branch codex/cross-platform-ideas adds the explicit all_platforms target to Ideas context/generate/list and compatible stored JSON. Null remains automatic individual-platform selection. Core idea has one title/hook/outline plus exactly five platform adaptations (platform/format/hook/execution), rendered one at a time under View details; Copy includes all versions. Old payloads default adaptations to []. No DB migration or trained model changes.
+- Every cross-platform idea must cite personal history from at least two known platforms when available. Server checks complete/nonduplicate adaptation coverage, target, existing citations/novelty/type mix and validates the whole batch before saving. Cross-platform generation cap 8192 output tokens, single-platform 4096; one repair retry retained. Single-platform provider schema omits adaptations.
+- Global source sampling now uses owner-scoped ROW_NUMBER platform recency ranks, round-robin up to 50 posts. Retain up to 24 balanced recent sources + six balanced stronger eligible observations, fill spare slots, then max ten draft reviews (40 total). Same sampling across all modes avoids target-only memory churn. Evidence remains descriptive within same-platform/format/age cohorts.
+- All-platform research uses first known native platform with its existing cache, never all_platforms as a search provider. UI/prompt disclose that platform's signals are not verified trends across the others. No extra paid-provider fan-out. Missing account history/audiences and unknown professional context cannot be invented; ideas are creative adaptations, not success probabilities.
+- Python compilation, TypeScript, targeted ESLint, production build and whitespace checks passed. Live all-platform context/list loaded through the proxy. No tests added/run and no new live Gemini generation for this extension.
+
+### Ideas goal removal (October 24, 2026)
+
+- User requested removing goals completely. Removed goal selector, success-details field, archived goal labels and unused CSS/icons; platform/country/trends are first, remaining optional preferences stay under Customize.
+- Legacy goal/goal_details fields remain deprecated for client/snapshot compatibility. creator_memory.get_preferences/save_preferences normalize active values to null/empty; generation excludes them from JSON and no longer instructs goal-based behavior. Existing archived payloads are not rewritten. Draft dirty checking ignores legacy fields.
+- Python compilation, TypeScript, targeted ESLint, production build and whitespace checks passed. No tests added/run or new live Gemini generation for this removal.

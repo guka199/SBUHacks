@@ -12,7 +12,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from statistics import median
 
-from api.idea_schemas import ChannelAccount, ChannelContext, ChannelSource, CreatorProfile, IdeaPlatform
+from api.idea_schemas import ChannelAccount, ChannelContext, ChannelSource, CreatorProfile, IdeaTarget, IDEA_PLATFORMS
 from api.services import accounts, creator_memory, db
 
 POST_LIMIT = 50
@@ -129,7 +129,19 @@ def compare_views(sources: list[ChannelSource]) -> None:
             source.comparison_label = label + " at statistics snapshot"
 
 
-def build_context(user_id: str, platform: IdeaPlatform | None = None, *, now: datetime | None = None) -> ChannelContext:
+def _balanced(sources: list[ChannelSource], limit: int) -> list[ChannelSource]:
+    groups = {key: [source for source in sources if source.platform == key] for key in IDEA_PLATFORMS}
+    result = []
+    for index in range(max((len(group) for group in groups.values()), default=0)):
+        for group in groups.values():
+            if index < len(group) and len(result) < limit:
+                result.append(group[index])
+        if len(result) >= limit:
+            break
+    return result
+
+
+def build_context(user_id: str, platform: IdeaTarget | None = None, *, now: datetime | None = None) -> ChannelContext:
     now = _date(now) or datetime.now(timezone.utc)
     profile = accounts.get_user(user_id) or {}
     linked = accounts.list_accounts(user_id)
@@ -156,20 +168,30 @@ def build_context(user_id: str, platform: IdeaPlatform | None = None, *, now: da
             typical_views=_number(account.get("typical_views")), audience=cleaned,
             refreshed_at=_iso(account.get("updated_at")),
         ))
+    # Use the same bounded, balanced sample in every mode so channel memory
+    # stays reusable and one busy account cannot crowd out the other platforms.
+    # Window functions work in both SQLite and Snowflake. Round-robin ranks
+    # share the 50-row budget, while a single account can still use all 50.
+    fields = "platform, external_id, caption, format, posted_at, loaded_at, views, likes, comments, shares"
+    placeholders = ", ".join(["%s"] * len(IDEA_PLATFORMS))
     posts = db.query(
-        "SELECT platform, external_id, caption, format, posted_at, loaded_at, views, likes, comments, shares "
-        "FROM POSTS WHERE user_id = %s ORDER BY posted_at DESC LIMIT %s", (user_id, POST_LIMIT),
+        f"SELECT {fields} FROM (SELECT {fields}, ROW_NUMBER() OVER "
+        "(PARTITION BY platform ORDER BY posted_at DESC, external_id DESC) AS sample_rank "
+        f"FROM POSTS WHERE user_id = %s AND platform IN ({placeholders})) sampled "
+        "ORDER BY sample_rank, platform LIMIT %s", (user_id, *IDEA_PLATFORMS, POST_LIMIT),
     )
     published = _published(posts[:POST_LIMIT], now)
     compare_views(published)
-    # Retain recent content and a few stronger observations from eligible cohorts.
-    stronger = sorted((p for p in published if p.relative_views is not None), key=lambda p: p.relative_views, reverse=True)[:6]
-    chosen = published[:24]
-    known = {p.id for p in chosen}
-    chosen += [p for p in stronger if p.id not in known]
-    chosen_ids = {p.id for p in chosen}
-    chosen += [p for p in published if p.id not in chosen_ids][:max(0, MAX_POST_SOURCES-len(chosen))]
-    sources = chosen[:MAX_POST_SOURCES]
+    # Keep recent examples plus eligible stronger observations, balancing each
+    # set across platforms. Comparisons stay strictly within their own cohorts.
+    chosen = _balanced(published, 24)
+    known = {source.id for source in chosen}
+    stronger = sorted((source for source in published if source.relative_views is not None and source.id not in known),
+                      key=lambda source: source.relative_views, reverse=True)
+    chosen += _balanced(stronger, 6)
+    known = {source.id for source in chosen}
+    chosen += _balanced([source for source in published if source.id not in known], MAX_POST_SOURCES-len(chosen))
+    sources = list(chosen)
     reports = db.query(
         "SELECT id, caption, report, created_at FROM ANALYSES WHERE user_id = %s ORDER BY created_at DESC LIMIT %s",
         (user_id, REVIEW_LIMIT),
@@ -239,9 +261,14 @@ def build_context(user_id: str, platform: IdeaPlatform | None = None, *, now: da
         warnings.append("No published posts are available; ideas can use draft content but cannot identify successful published topics.")
     if distinct_count < 5:
         warnings.append("There is limited content history. Add more posts or video analyses for more context.")
-    target_account = "youtube" if platform == "shorts" else platform
+    target_account = None if platform == "all_platforms" else "youtube" if platform == "shorts" else platform
     if target_account and not any(a.platform == target_account for a in account_context):
         warnings.append("No account is linked for the target platform; audience details for that platform are unknown.")
+    if platform == "all_platforms":
+        covered = sorted({source.platform for source in sources if source.platform in IDEA_PLATFORMS})
+        warnings.append("Cross-platform ideas use the available saved history, sampled across accounts. "
+                        "Platforms without saved content or audience data receive creative adaptations, not validated performance predictions.")
+        warnings.append("Saved history platforms: " + (", ".join(covered) if covered else "none") + ".")
     updates = [s.updated_at for s in sources if s.updated_at] + [a.refreshed_at for a in account_context if a.refreshed_at]
     context = ChannelContext(
         creator=CreatorProfile(display_name=text(profile.get("display_name"), 120),
