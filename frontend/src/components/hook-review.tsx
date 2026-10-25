@@ -10,7 +10,9 @@ export function HookReview({
   playable,
   reviewed,
   onPlay,
+  omitEvidence = false,
 }: {
+  omitEvidence?: boolean;
   review: HookAnalysis | null | undefined;
   playable: boolean;
   reviewed: boolean;
@@ -97,7 +99,7 @@ export function HookReview({
           <small>Suggested edit · preview it before publishing.</small>
         </div>
       </div>
-      {review.evidence.length > 0 && (
+      {!omitEvidence && review.evidence.length > 0 && (
         <div className="hook-evidence">
           <h3>Specific moments to work on</h3>
           <ul>

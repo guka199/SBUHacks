@@ -473,3 +473,24 @@ fix into main under frontend/. Existing backend/ML/data/web files are unchanged.
 No force push, history replacement, credentials, dependencies or build artifacts
 are part of the delivery. Latest startup commands: cd frontend; npm ci;
 npm run dev. Run npm run check and npm run build in the same directory.
+
+
+ANALYSIS RESULTS UX (October 24, 2026)
+Frontend source branch: feature/analysis-results-ux, delivered to main.
+The results workbench keeps the player beside three accessible review tabs:
+Moments that matter, Overall suggestions, and Opening analysis. Timestamped
+fixes and opening evidence share one paginated list (three findings per page),
+with precise bounded playback and a highlighted timeline segment. Whole-video
+recommendations are deduplicated conservatively; distinct findings are retained.
+Opening ratings, criteria, copy and before/after feedback reuse HookReview.
+The player sticks on desktop; tablet/mobile use normal document flow without
+independent scroll containers. The homepage and animation system are unchanged.
+Thumbnail comparison retains the large previews, scores, strengths and edits.
+The highest average score is highlighted (including ties); platform-specific
+recommendation reasons remain available in a compact disclosure above previews.
+Implementation: frontend/src/components/dashboard.tsx, hook-review.tsx,
+frontend/src/lib/review.ts, and app/app-theme.css. API schemas are unchanged.
+Validation before delivery: lint, TypeScript, 15 frontend tests and production
+build passed. Browser checks covered desktop 1440px, tablet 820px, phone 390px,
+three thumbnails, long descriptions, pagination, seeking and bounded playback.
+Synthetic UI fixtures/media stayed in ignored isolated QA storage.
