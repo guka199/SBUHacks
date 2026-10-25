@@ -191,6 +191,20 @@ def now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
+def _key_file(encoded: str) -> Path:
+    """Write a base64 private key from the environment to a private temp file once (the connector wants a path)."""
+    import base64
+    import hashlib
+    import tempfile
+
+    data = base64.b64decode(encoded)
+    path = Path(tempfile.gettempdir()) / f"snowflake_key_{hashlib.sha256(data).hexdigest()[:12]}.p8"
+    if not path.exists():
+        path.touch(mode=0o600)
+        path.write_bytes(data)
+    return path
+
+
 def snowflake_params() -> dict:
     """Connection settings from .env. Key-pair auth (SNOWFLAKE_PRIVATE_KEY_PATH) or password."""
     params = dict(
@@ -199,7 +213,9 @@ def snowflake_params() -> dict:
         warehouse=os.getenv("SNOWFLAKE_WAREHOUSE") or None,
         role=os.getenv("SNOWFLAKE_ROLE") or None,
     )
-    if key := os.getenv("SNOWFLAKE_PRIVATE_KEY_PATH"):
+    if encoded := os.getenv("SNOWFLAKE_PRIVATE_KEY_B64"):  # hosted deploys: the .p8 file's contents, base64-encoded
+        params |= {"private_key_file": str(_key_file(encoded)), "authenticator": "SNOWFLAKE_JWT"}
+    elif key := os.getenv("SNOWFLAKE_PRIVATE_KEY_PATH"):
         path = Path(key) if Path(key).is_absolute() else ROOT / key
         params |= {"private_key_file": str(path), "authenticator": "SNOWFLAKE_JWT"}
     else:

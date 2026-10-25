@@ -1,0 +1,18 @@
+# Keep the backend image small: only api/, shared/ and models/ are copied.
+.git
+.env
+.env.*
+.secrets/
+**/.venv
+**/node_modules
+**/.next
+frontend/
+web/
+data/
+ml/
+tests/
+docs/
+models/benchmark/
+**/__pycache__
+**/*.pyc
+api/static/
