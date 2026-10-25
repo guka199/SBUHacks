@@ -172,7 +172,7 @@ class StorageTests(unittest.TestCase):
         with patch.dict(os.environ, values, clear=True), patch.object(snowflake.snowflake.connector, 'connect', return_value=MagicMock()) as connect:
             with snowflake.get_connection(bootstrap=True):
                 pass
-        self.assertEqual(connect.call_args.kwargs['private_key_file'], '/tmp/test_key.p8')
+        self.assertEqual(Path(connect.call_args.kwargs['private_key_file']), Path('/tmp/test_key.p8').resolve())
         self.assertEqual(connect.call_args.kwargs['authenticator'], 'SNOWFLAKE_JWT')
         self.assertNotIn('password', connect.call_args.kwargs)
         self.assertNotIn('database', connect.call_args.kwargs)

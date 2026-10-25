@@ -1,0 +1,15 @@
+[
+  {
+    "id": "tt-fixture-1",
+    "text": "Synthetic camera transition tutorial",
+    "createTimeISO": "2026-09-01T12:00:00.000Z",
+    "authorMeta": {"id": "fixture-tt-creator", "name": "viralpilot_fixture", "nickName": "Synthetic Creator", "fans": 18000, "following": 128, "video": 60, "privateAccount": false},
+    "playCount": 30000, "diggCount": 2100, "commentCount": 90, "shareCount": 150,
+    "webVideoUrl": "https://www.tiktok.com/@viralpilot_fixture/video/1000000000000000001"
+  },
+  {
+    "id": "tt-fixture-2", "text": "Synthetic follow-up", "createTime": 1788868800,
+    "authorMeta.name": "viralpilot_fixture", "authorMeta.fans": 18000,
+    "playCount": 0, "diggCount": 0, "commentCount": 0, "shareCount": 0
+  }
+]

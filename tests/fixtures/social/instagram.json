@@ -1,0 +1,15 @@
+[
+  {
+    "id": "fixture-ig-creator",
+    "username": "viralpilot_fixture",
+    "fullName": "Synthetic Creator",
+    "followersCount": 12500,
+    "followsCount": 210,
+    "postsCount": 84,
+    "private": false,
+    "latestPosts": [
+      {"id": "ig-fixture-1", "ownerUsername": "viralpilot_fixture", "type": "Video", "shortCode": "fixture1", "caption": "A synthetic editing tutorial", "timestamp": "2026-09-01T12:00:00.000Z", "videoViewCount": 45000, "likesCount": 3200, "commentsCount": 140},
+      {"id": "ig-fixture-2", "type": "Image", "caption": "Synthetic behind the scenes", "timestamp": "2026-09-08T14:00:00Z", "likesCount": 0, "commentsCount": 0}
+    ]
+  }
+]
