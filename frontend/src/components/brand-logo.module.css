@@ -1,0 +1,26 @@
+.wordmark {
+  display: block;
+  width: 180px;
+  height: auto;
+  flex: none;
+  /* The supplied screenshot crop has near-white edge pixels. Light surfaces
+     blend those pixels without tracing, stretching or repainting the logo. */
+  mix-blend-mode: multiply;
+}
+
+.wordmark.reveal {
+  width: 360px;
+  max-width: 80%;
+}
+
+@media (max-width: 600px) {
+  .wordmark {
+    width: 136px;
+  }
+}
+
+@media (max-width: 359px) {
+  .wordmark {
+    width: 112px;
+  }
+}

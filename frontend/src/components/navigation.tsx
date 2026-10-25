@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, X, ArrowUpRight } from "lucide-react";
-import { Mark } from "./ui";
+import { BrandLogo } from "./brand-logo";
 import { API_MODE } from "@/lib/api";
 import { AnimatedLink } from "./ui/animated-link";
 import { useAuth } from "@/lib/auth";
@@ -41,11 +41,13 @@ export function Navigation() {
         Skip to content
       </a>
       <nav className="nav-inner" aria-label="Main navigation">
-        <Link className="brand" href="/" onClick={close}>
-          <Mark />
-          <span>
-            viralpilot<span className="brand-dot">®</span>
-          </span>
+        <Link
+          className="brand"
+          href="/"
+          onClick={close}
+          aria-label="ViralPilot home"
+        >
+          <BrandLogo />
         </Link>
         <div className="desktop-nav">
           {landing ? (

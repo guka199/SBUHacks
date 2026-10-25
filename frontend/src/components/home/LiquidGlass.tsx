@@ -1,4 +1,5 @@
-import { Mark } from "../ui";
+import { BrandLogo } from "../brand-logo";
+import styles from "./liquid-glass-brand.module.css";
 export const glassShapes = {
   flowing:
     "M .08 .16 C .18 -.04 .36 .08 .5 .05 C .72 .01 .93 .02 .98 .23 C 1.02 .42 .93 .59 .96 .76 C .99 .97 .75 1 .53 .94 C .34 1.01 .13 .98 .07 .81 C -.04 .65 .03 .41 .08 .16 Z",
@@ -79,11 +80,9 @@ export function LiquidGlass() {
               strokeWidth=".004"
             />
           </svg>
-          <div className="liquid-meet">
-            <Mark />
-            <span>
-              Meet <em>ViralPilot.</em>
-            </span>
+          <div className={`liquid-meet ${styles.reveal}`}>
+            <span className={styles.label}>Meet</span>
+            <BrandLogo variant="reveal" />
           </div>
         </div>
       </div>

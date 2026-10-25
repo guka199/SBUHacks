@@ -1,0 +1,10 @@
+.reveal.reveal {
+  flex-direction: column;
+  gap: 12px;
+}
+
+.label {
+  font: 700 14px/1 var(--font-body);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}

@@ -51,3 +51,18 @@ The social analytics windows are original React/HTML illustrations with authored
 | Keyboard case and sculpted keycaps | liweihang, MIT | [Keyboard Designer](https://github.com/Hanggesimida/keyboard-designer), pinned revision in manifest. Assembled into 68-key layout, recolored, shared geometry instanced, original legend atlas added and compressed. Full MIT notice retained. |
 
 `public/assets/hardware/sources.json` records exact download URLs, hashes, source sizes and changes. `LICENSES.txt` and `KEYBOARD_LICENSE.txt` travel with these files. The `/credits` page supplies visible attribution, including creators, source links, licenses and changes. Names and product appearances do not imply endorsement. `scripts/fetch-hardware-assets.mjs` reproduces downloads; `build-licensed-keyboard.mjs` assembles the keyboard. Runtime assets are already committed; source downloads are optional.
+
+
+## Supplied ViralPilot logo (October 25, 2026)
+
+Source: user-supplied viralpilot_logo_assets.zip. The wordmark and light dragon
+icon are raster screenshot crops, used at the user's direction for this project.
+No third-party open license or original vector master was provided; do not
+represent these as CC0, vector artwork, or a reusable asset library.
+Only logo_horizontal_transparent.png and icon_light.png were included as
+lossless WebP derivatives in public/brand (about 156 KiB combined). Native app
+icons are proportion-preserving PNG resizes with cream padding. No repainting
+or vector tracing. The standalone symbol crop contains text fragments and the
+dark icon contains an upload badge, so neither is shipped. The wordmark uses
+multiply blending on existing light surfaces to soften screenshot edge pixels.
+For dark surfaces or large-format use, obtain original transparent/vector art.

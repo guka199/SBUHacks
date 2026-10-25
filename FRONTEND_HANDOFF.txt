@@ -540,3 +540,25 @@ automatic TikTok/Instagram linking with ownership consent and import progress,
 photo-post routes and caption-based report titles, and the team's newer
 sectioned analysis report with its navigation timeline. Search supports both
 video and photo-post reports. Existing provider readiness gates remain active.
+
+
+DRAGON LOGO INTEGRATION (October 25, 2026)
+Source branch: feature/dragon-logo. Main delivery approved by the user.
+The navigation now uses the supplied full ViralPilot dragon wordmark, with
+responsive widths and an accessible home-link name. The shared Mark component
+uses the supplied light icon, retaining its original SVG frame and selectors
+for the existing Liquid Glass, product demonstration and studio layouts.
+The SVG is only a raster image wrapper, not vector-traced artwork.
+Next.js app/icon.png and apple-icon.png provide browser/home-screen icons.
+Components: frontend/src/components/brand-logo.tsx and its CSS Module;
+assets: frontend/public/brand. No dependency, auth/API, animation timeline or
+backend changes. The earlier auth-dragon animation remains saved separately
+in stash@{0}; it was not reapplied over the latest teammate changes.
+Source/license limitations: frontend/ASSET_NOTICES.md, supplied-logo section.
+Use the existing frontend install/dev commands; no new setup is required.
+Validation: lint, TypeScript and all 24 existing frontend tests passed.
+Desktop/mobile browser checks cover wordmark loading, proportions, responsive
+fit, the mobile menu and generated icon links.
+Production build passed, including generated icon and apple-icon routes.
+
+Logo reveal follow-up: LiquidGlass now reuses BrandLogo with a responsive reveal variant, replacing the small icon tile plus separately typed name. A compact Meet label sits above the full wordmark. GSAP targets and timing are unchanged. Desktop forward/reverse browser inspection verified the reveal.

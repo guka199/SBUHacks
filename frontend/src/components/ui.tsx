@@ -18,12 +18,12 @@ export function Mark() {
     <svg
       width="31"
       height="31"
-      viewBox="0 0 32 32"
+      viewBox="0 0 192 179"
       fill="none"
       aria-hidden="true"
     >
-      <path d="M3 5h8l7 15 6-15h5L18 29 3 5Z" fill="currentColor" />
-      <path d="m5 25 5-10 4 8-1 2H5Z" fill="currentColor" />
+      {/* Raster inside the existing SVG frame preserves animation selectors. */}
+      <image href="/brand/viralpilot-icon.webp" width="192" height="179" />
     </svg>
   );
 }
