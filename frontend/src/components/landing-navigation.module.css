@@ -7,6 +7,16 @@
   cursor: wait;
   opacity: 0.65;
 }
+.profileIcon {
+  flex-shrink: 0;
+  color: var(--red);
+}
+.profileName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 @media (max-width: 600px) {
   .landing :global(.nav-inner) {
     gap: 12px;

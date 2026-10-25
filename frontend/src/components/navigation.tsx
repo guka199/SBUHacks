@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Menu, X, ArrowUpRight } from "lucide-react";
+import { Menu, X, ArrowUpRight, CircleUserRound } from "lucide-react";
 import { BrandLogo } from "./brand-logo";
 import { API_MODE } from "@/lib/api";
 import { AnimatedLink } from "./ui/animated-link";
@@ -58,7 +58,6 @@ export function Navigation() {
             ))
           ) : (
             <>
-              <AnimatedLink href="/#story">How it works</AnimatedLink>
               {user && (
                 <>
                   <AnimatedLink
@@ -99,17 +98,33 @@ export function Navigation() {
                 className="text-link account-nav"
                 href={user ? "/settings" : "/login"}
                 onClick={close}
+                aria-label={
+                  user ? `${user.display_name}, your profile` : undefined
+                }
+                aria-current={
+                  user && pathname === "/settings" ? "page" : undefined
+                }
+                title={user ? `Your profile: ${user.display_name}` : undefined}
               >
-                {user ? user.display_name : "Sign in"}
-              </Link>
-              {pathname !== "/dashboard" && (
-                <span className="mode-indicator">
-                  <span />
-                  {pathname === "/demo" || API_MODE === "demo"
-                    ? "Demo mode"
-                    : "Live mode"}
+                {user && (
+                  <CircleUserRound
+                    className={styles.profileIcon}
+                    size={20}
+                    strokeWidth={1.7}
+                    aria-hidden="true"
+                  />
+                )}
+                <span className={styles.profileName}>
+                  {user ? user.display_name : "Sign in"}
                 </span>
-              )}
+              </Link>
+              {pathname !== "/dashboard" &&
+                (pathname === "/demo" || API_MODE === "demo") && (
+                  <span className="mode-indicator">
+                    <span />
+                    Demo mode
+                  </span>
+                )}
             </>
           )}
           <Link
@@ -152,9 +167,6 @@ export function Navigation() {
             </>
           ) : (
             <>
-              <Link href="/#story" onClick={close}>
-                How it works
-              </Link>
               <Link href="/studio" onClick={close}>
                 Explore the studio
               </Link>

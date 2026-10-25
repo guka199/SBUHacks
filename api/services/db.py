@@ -330,6 +330,27 @@ def remove_folder(folder: str) -> None:
         execute(f"REMOVE @{ANALYSIS_STAGE}/{folder}/")
 
 
+def remove_report_media(user_id: str, report_id: str) -> None:
+    """Remove only one report's UUID-prefixed files within the owner's folder."""
+    import re
+
+    if not all(re.fullmatch(r"[0-9a-f]{32}", value) for value in (user_id, report_id)):
+        raise ValueError("invalid report media identifiers")
+    if backend() == "sqlite":
+        folder = LOCAL_UPLOADS / user_id
+        if folder.is_symlink():
+            raise ValueError("invalid report media folder")
+        for path in folder.glob(f"{report_id}*"):
+            if path.is_file() or path.is_symlink():
+                path.unlink(missing_ok=True)
+    else:
+        # Snowflake stage paths are prefixes. UUID validation prevents path/SQL injection;
+        # the full 32-character report ID cannot match another generated report ID.
+        # https://docs.snowflake.com/en/sql-reference/sql/remove
+        execute(f"REMOVE @{ANALYSIS_STAGE}/{user_id}/{report_id}")
+        execute(f"REMOVE @{STAGE}/{user_id}/{report_id}")
+
+
 def store_files(files: list[tuple[bytes, str]], folder: str, stage: str = STAGE) -> list[str]:
     """Save several files at once: one PUT round trip to Snowflake (vs. one per file). Returns their paths."""
     import re

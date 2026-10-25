@@ -293,6 +293,35 @@ def get_analysis(analysis_id: str, user_id: str = Depends(require_user_id)) -> A
     return _job(_row(analysis_id, user_id))
 
 
+@router.delete("/{analysis_id}")
+def delete_analysis(analysis_id: str, user_id: str = Depends(require_user_id)) -> dict:
+    # Both video and photo-post reports live in ANALYSES. Never accept a client owner ID.
+    if not re.fullmatch(r"[0-9a-f]{32}", analysis_id):
+        raise HTTPException(404, "Report not found")
+    try:
+        with db.creator_data_lock:
+            with db.transaction() as tx:
+                rows = tx.execute("SELECT id FROM ANALYSES WHERE id = %s AND user_id = %s", (analysis_id, user_id))
+                if not rows:
+                    raise HTTPException(404, "Report not found")
+                tx.execute("DELETE FROM ANALYSES WHERE id = %s AND user_id = %s", (analysis_id, user_id))
+                # Channel memory is regenerable and may quote the deleted review.
+                tx.execute("DELETE FROM CHANNEL_MEMORIES WHERE user_id = %s", (user_id,))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.warning("Report deletion failed (%s)", type(exc).__name__)
+        raise HTTPException(503, "Could not delete the report. Please try again.") from None
+    try:
+        db.remove_report_media(user_id, analysis_id)
+    except Exception as exc:
+        # DB removal already succeeded. Do not misreport failure and leave a stale card.
+        # Media routes require an existing owner-scoped report, so orphaned files are inaccessible.
+        log.warning("Deleted report media cleanup failed (%s)", type(exc).__name__)
+        return {"ok": True, "warning": "Report deleted, but saved media cleanup could not finish."}
+    return {"ok": True}
+
+
 def _serve(path: str | None, media_type: str, user_id: str, label: str):
     """Serve one of the owner's stored files: locally from data/uploads, else a short-lived presigned stage URL."""
     if not path:
