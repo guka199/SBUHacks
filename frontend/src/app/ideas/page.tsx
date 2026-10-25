@@ -19,7 +19,6 @@ import { CopyButton } from "@/components/ui";
 import {
   ideasApi,
   ideaKindNames,
-  goalNames,
   ideaPlatforms,
   localDate,
   platformNames,
@@ -256,7 +255,7 @@ function MemoryPanel({
           </details>
           <p className={styles.subtle}>
             These are AI inferences from saved captions and reviews. Correct
-            style or audience details in your direction above.
+            style or audience details under Customize.
           </p>
         </>
       )}
@@ -436,9 +435,7 @@ export default function IdeasPage() {
     try {
       await persistDirection(controller);
       if (controller.signal.aborted) return;
-      setNotice(
-        "Your direction is saved. New ideas will use these preferences.",
-      );
+      setNotice("Preferences saved. New ideas will use them.");
     } catch (error) {
       if (!controller.signal.aborted)
         setFailure({
@@ -729,27 +726,6 @@ export default function IdeasPage() {
             <h2 id="generate-heading" className={styles.srOnly}>
               Generate ideas
             </h2>
-            {direction && (
-              <DirectionEditor
-                draft={direction.draft}
-                dirty={dirty}
-                disabled={controlsDisabled || !current}
-                saving={operation === "preferences"}
-                onChange={(draft) =>
-                  setDirection((previous) =>
-                    previous ? { ...previous, draft } : null,
-                  )
-                }
-                onSave={saveDirection}
-                onReset={() =>
-                  setDirection((previous) =>
-                    previous
-                      ? { ...previous, draft: directionDraft(previous.saved) }
-                      : null,
-                  )
-                }
-              />
-            )}
             <div className={styles.controls}>
               <label>
                 Platform
@@ -785,6 +761,27 @@ export default function IdeasPage() {
                 onTopic={setTrendTopic}
               />
             </div>
+            {direction && (
+              <DirectionEditor
+                draft={direction.draft}
+                dirty={dirty}
+                disabled={controlsDisabled || !current}
+                saving={operation === "preferences"}
+                onChange={(draft) =>
+                  setDirection((previous) =>
+                    previous ? { ...previous, draft } : null,
+                  )
+                }
+                onSave={saveDirection}
+                onReset={() =>
+                  setDirection((previous) =>
+                    previous
+                      ? { ...previous, draft: directionDraft(previous.saved) }
+                      : null,
+                  )
+                }
+              />
+            )}
             {platform === "all_platforms" && (
               <p className={styles.fieldHint}>
                 Shared concepts for YouTube, Shorts, TikTok, Instagram and
@@ -1080,12 +1077,6 @@ export default function IdeasPage() {
                               reviews
                             </summary>
                             <p>{idea.channel_summary}</p>
-                            {idea.creator_preferences.goal && (
-                              <p>
-                                Goal when generated:{" "}
-                                {goalNames[idea.creator_preferences.goal]}.
-                              </p>
-                            )}
                             {idea.creator_preferences.filming_minutes !=
                               null && (
                               <p>

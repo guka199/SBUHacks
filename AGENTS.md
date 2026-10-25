@@ -333,3 +333,9 @@ The user authorized merging the cinematic ViralPilot frontend into main. It live
 - Global source sampling now uses owner-scoped ROW_NUMBER platform recency ranks, round-robin up to 50 posts. Retain up to 24 balanced recent sources + six balanced stronger eligible observations, fill spare slots, then max ten draft reviews (40 total). Same sampling across all modes avoids target-only memory churn. Evidence remains descriptive within same-platform/format/age cohorts.
 - All-platform research uses first known native platform with its existing cache, never all_platforms as a search provider. UI/prompt disclose that platform's signals are not verified trends across the others. No extra paid-provider fan-out. Missing account history/audiences and unknown professional context cannot be invented; ideas are creative adaptations, not success probabilities.
 - Python compilation, TypeScript, targeted ESLint, production build and whitespace checks passed. Live all-platform context/list loaded through the proxy. No tests added/run and no new live Gemini generation for this extension.
+
+### Ideas goal removal (October 24, 2026)
+
+- User requested removing goals completely. Removed goal selector, success-details field, archived goal labels and unused CSS/icons; platform/country/trends are first, remaining optional preferences stay under Customize.
+- Legacy goal/goal_details fields remain deprecated for client/snapshot compatibility. creator_memory.get_preferences/save_preferences normalize active values to null/empty; generation excludes them from JSON and no longer instructs goal-based behavior. Existing archived payloads are not rewritten. Draft dirty checking ignores legacy fields.
+- Python compilation, TypeScript, targeted ESLint, production build and whitespace checks passed. No tests added/run or new live Gemini generation for this removal.

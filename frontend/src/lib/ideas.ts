@@ -114,12 +114,6 @@ export const creatorGoals = [
   "sales",
   "series",
 ] as const;
-export const goalNames: Record<(typeof creatorGoals)[number], string> = {
-  growth: "Grow my audience",
-  engagement: "Start more conversations",
-  sales: "Support sales",
-  series: "Build a continuing series",
-};
 export const creatorPreferencesSchema = z.object({
   goal: z.enum(creatorGoals).nullable(),
   goal_details: z.string().max(500),

@@ -1,8 +1,7 @@
 CURRENT BACKEND INTEGRATION (October 24, 2026)
 Personalized follow-up content is now available at /ideas: owner-scoped history
 context, real Gemini generation, server-checked source references and saved/
-dismissed ideas in Snowflake. The direction editor saves creator goals, filming
-time, style/audience notes and avoided topics; channel memory summarizes themes,
+dismissed ideas in Snowflake. Customize saves filming time, style/audience notes and avoided topics; channel memory summarizes themes,
 style and covered topics with evidence. Missing/stale memory rebuilds during
 generation; explicit creator direction takes priority. docs/content-ideas.md
 covers the API, storage, checks and limits.
@@ -10,7 +9,8 @@ Ideas generation also offers recent external signals: YouTube API examples or
 dated Google Search-grounded reports for the chosen platform/market/topic.
 Follow-up, trend-inspired (when evidence fits), and evergreen types show dated
 sources and coverage limits. Useful/not-useful feedback persists per idea under View details.
-The simplified Ideas UI always requests three ideas, hides optional preferences
+Goals and success-details inputs are removed; saved legacy goals no longer affect
+new generation. The simplified Ideas UI always requests three ideas, hides optional preferences
 under Customize and research options under Trend settings, and collapses card
 outlines/rationale/evidence. The usefulness-comparison UI is removed. These are not native cross-platform
 trend feeds or measured popularity-growth predictions. See docs/content-ideas.md.

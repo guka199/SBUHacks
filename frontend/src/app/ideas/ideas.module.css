@@ -319,10 +319,6 @@
 .direction {
   min-width: 0;
 }
-.direction h3 {
-  font-size: 13px;
-  font-weight: 600;
-}
 .generator {
   background: var(--raised);
   scroll-margin-top: 110px;
@@ -500,61 +496,6 @@
 }
 .historyActions button {
   font-size: 12px;
-}
-.goalOptions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  grid-column: 1 / -1;
-}
-.directionFields .goalOption {
-  display: block;
-  position: relative;
-  cursor: pointer;
-}
-.goalOption input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  min-height: 0;
-  padding: 0;
-  opacity: 0;
-}
-.goalContent {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-radius: 30px;
-  transition:
-    background 0.15s,
-    color 0.15s,
-    border-color 0.15s;
-}
-.goalContent strong {
-  font-size: 13px;
-  white-space: nowrap;
-}
-.goalIcon {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.goalOption input:checked + .goalContent {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--ground);
-}
-.goalOption input:focus-visible + .goalContent {
-  outline: 2px solid var(--ink);
-  outline-offset: 4px;
-}
-.goalOption:hover .goalContent {
-  border-color: var(--ink);
-}
-.goalOption input:disabled + .goalContent {
-  cursor: not-allowed;
 }
 .filmingControls,
 .timePresets {
@@ -918,11 +859,6 @@
 .page .notice button:focus-visible {
   outline-color: var(--ground);
 }
-@media (prefers-reduced-motion: reduce) {
-  .goalContent {
-    transition: none;
-  }
-}
 @media (max-width: 760px) {
   .page {
     padding-top: 30px;
@@ -969,9 +905,6 @@
   .controls > .trendToggle {
     grid-column: 1 / -1;
     min-height: 36px;
-  }
-  .goalContent {
-    padding: 9px 12px;
   }
   .controls > button {
     width: 100%;

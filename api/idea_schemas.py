@@ -15,8 +15,10 @@ ShortTopic = Annotated[str, StringConstraints(strip_whitespace=True, min_length=
 
 class CreatorPreferences(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    goal: CreatorGoal | None = None
-    goal_details: str = Field(default="", max_length=500)
+    # Retained so older clients and stored idea snapshots remain readable.
+    # Active preferences ignore these fields after removal of the Goals UI.
+    goal: CreatorGoal | None = Field(default=None, deprecated=True)
+    goal_details: str = Field(default="", max_length=500, deprecated=True)
     filming_minutes: int | None = Field(default=None, ge=5, le=480, strict=True)
     style_notes: str = Field(default="", max_length=500)
     audience_notes: str = Field(default="", max_length=500)
