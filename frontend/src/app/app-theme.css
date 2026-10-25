@@ -1132,17 +1132,17 @@ meter::-webkit-meter-optimum-value {
 .report-nav { position: sticky; top: 24px; }
 .report-nav ol { list-style: none; margin: 0; padding: 0 0 0 4px; position: relative; }
 .report-nav ol::before { content: ""; position: absolute; left: 9px; top: 12px; bottom: 12px; width: 2px; background: #f7d87f; }
-.report-nav a { position: relative; display: flex; align-items: center; gap: 12px; padding: 9px 0; font-size: 14px; color: #171717; text-decoration: none; }
+.report-nav a { position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0; font-size: 14px; color: #171717; text-decoration: none; }
 .report-nav a:hover { color: #be1a1a; }
 .report-nav-dot { width: 12px; height: 12px; flex-shrink: 0; border-radius: 999px; border: 2px solid #be1a1a; background: #f8ebab; z-index: 1; }
 .report-nav a[aria-current="location"] { font-weight: 600; color: #be1a1a; }
 .report-nav a[aria-current="location"] .report-nav-dot { background: #be1a1a; box-shadow: 0 0 0 4px #f7d87f; }
 .report-nav small { margin-left: auto; min-width: 22px; text-align: center; font-size: 11px; padding: 1px 6px; border-radius: 999px; background: #f7d87f; color: #171717; font-weight: 600; }
-.report-sections { display: grid; gap: 56px; min-width: 0; }
+.report-sections { display: grid; gap: 48px; min-width: 0; }
 .report-sections > section { min-width: 0; }
 .section-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 18px; }
-/* Same heading style as the review cards (opening, posting, thumbnails, copy) */
-.report-sections .section-heading h2 { font-family: var(--font-body); text-transform: none; font-size: 25px; font-weight: 500; letter-spacing: -0.3px; margin: 0; }
+/* Major section titles use the identity's uppercase display treatment (UI_UX_GUIDELINES.md) */
+.report-sections .section-heading h2 { font-size: 28px; letter-spacing: -0.02em; margin: 0; }
 .report-card { background: #f8ebab; border: 1px solid #f7d87f; border-radius: 20px; padding: 30px; }
 .section-heading span { font-size: 13px; color: #be1a1a; }
 .report-summary { background: #f8ebab; border: 1px solid #f7d87f; border-radius: 20px; padding: 28px; }
@@ -1167,7 +1167,7 @@ meter::-webkit-meter-optimum-value {
 .moment-list p { margin: 6px 0 0; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
 .moment-list .moment-fix { display: flex; gap: 6px; font-weight: 500; }
 .moment-list .moment-fix svg { flex-shrink: 0; margin-top: 4px; color: #be1a1a; }
-.moment-play { display: inline-flex; align-items: center; gap: 6px; height: fit-content; padding: 8px 12px; border-radius: 999px; border: 0; background: #171717; color: #f8ebab; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; }
+.moment-play { display: inline-flex; align-items: center; gap: 6px; height: fit-content; min-height: 44px; padding: 8px 14px; border-radius: 999px; border: 0; background: #171717; color: #f8ebab; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; }
 .moment-play:disabled { opacity: .5; cursor: not-allowed; }
 .report-empty { font-size: 14px; color: #be1a1a; }
 .report-sections .posting-review, .report-sections .thumbnail-review { margin: 0; }
@@ -1176,7 +1176,7 @@ meter::-webkit-meter-optimum-value {
   .report-nav { top: 0; z-index: 5; margin: 0 -16px; padding: 8px 16px; background: #f8ebab; border-bottom: 1px solid #f7d87f; }
   .report-nav ol { display: flex; gap: 6px; overflow-x: auto; padding: 0; scrollbar-width: none; }
   .report-nav ol::before, .report-nav-dot { display: none; }
-  .report-nav a { white-space: nowrap; padding: 7px 12px; border: 1px solid #f7d87f; border-radius: 999px; font-size: 13px; background: #fffbe6; }
+  .report-nav a { white-space: nowrap; min-height: 44px; padding: 0 14px; border: 1px solid #f7d87f; border-radius: 999px; font-size: 13px; background: #fffbe6; }
   .report-nav a[aria-current="location"] { background: #171717; color: #f8ebab; border-color: #171717; }
   .report-nav small { margin-left: 4px; }
   .moments-layout { grid-template-columns: minmax(0, 1fr); }
