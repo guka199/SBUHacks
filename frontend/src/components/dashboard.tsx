@@ -24,6 +24,7 @@ import {
 import { makeDemoResult, makeSuggestions } from "@/lib/demo";
 import { API_MODE, analysisApi, delay, waitForAnalysis } from "@/lib/api";
 import { timecode } from "@/lib/video";
+import { collectReview, thumbnailLeaders } from "@/lib/review";
 import { useSession } from "./session";
 import { CopyButton, PlatformIcon } from "./ui";
 import { useAuth } from "@/lib/auth";
@@ -265,6 +266,7 @@ function PostingReview({ result }: { result: AnalysisResult }) {
 function ThumbnailReview({ result }: { result: AnalysisResult }) {
   const review = result.thumbnails;
   if (!review?.items.length) return null;
+  const leaders = thumbnailLeaders(review);
   const src = (index: number) => analysisApi.thumbnailUrl(result.id, index);
   const shortName = (id: PlatformId) =>
     platforms.find((p) => p.id === id)!.short;
@@ -275,21 +277,30 @@ function ThumbnailReview({ result }: { result: AnalysisResult }) {
         <span>Gemini thumbnail comparison</span>
       </div>
       <p className="thumbnail-summary">{review.summary}</p>
-      <ul className="thumbnail-picks">
-        {review.picks.map((pick) => (
-          <li key={pick.platform}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- private, presigned image */}
-            <img src={src(pick.index)} alt={`Thumbnail ${pick.index + 1}`} />
-            <div>
+      <p className="thumbnail-recommendation">
+        <strong>
+          {thumbnailLeaders(review)
+            .map((index) => `Thumbnail ${index + 1}`)
+            .join(" & ")}
+        </strong>{" "}
+        ·{" "}
+        {leaders.length > 1
+          ? "Joint best average score"
+          : "Best average score across reviewed platforms"}
+      </p>
+      <details className="thumbnail-reasons">
+        <summary>Platform recommendations</summary>
+        <ul>
+          {review.picks.map((pick) => (
+            <li key={pick.platform}>
               <strong>
-                <PlatformIcon id={pick.platform} /> {nameOf(pick.platform)}
-                <span>→ Thumbnail {pick.index + 1}</span>
-              </strong>
-              <p>{pick.reason}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
+                {nameOf(pick.platform)} · Thumbnail {pick.index + 1}
+              </strong>{" "}
+              — {pick.reason}
+            </li>
+          ))}
+        </ul>
+      </details>
       <div className="thumbnail-cards">
         {review.items.map((item) => {
           const wins = review.picks
@@ -298,7 +309,7 @@ function ThumbnailReview({ result }: { result: AnalysisResult }) {
           return (
             <article
               key={item.index}
-              className={`thumbnail-card ${wins.length ? "winner" : ""}`}
+              className={`thumbnail-card ${leaders.includes(item.index) ? "winner" : ""}`}
             >
               <div className="thumbnail-frame">
                 {/* eslint-disable-next-line @next/next/no-img-element -- private, presigned image */}
@@ -313,8 +324,13 @@ function ThumbnailReview({ result }: { result: AnalysisResult }) {
                   {item.name} · {item.width} × {item.height}
                 </span>
               </h3>
-              {wins.length > 0 && (
-                <p className="best-label">Best for {wins.join(", ")}</p>
+              {(wins.length > 0 || leaders.includes(item.index)) && (
+                <p className="best-label">
+                  {leaders.includes(item.index) ? "Best overall · " : ""}
+                  {wins.length > 0
+                    ? `Best for ${wins.join(", ")}`
+                    : "Highest average score"}
+                </p>
               )}
               <dl className="thumbnail-scores">
                 {result.platforms.map((p) => {
@@ -374,10 +390,16 @@ function AnalysisStudio({
   embedded: boolean;
 }) {
   const [view, setView] = useState(initialView);
+  const [reviewTab, setReviewTab] = useState("moments");
+  const [momentPage, setMomentPage] = useState(0);
   const [report, setReport] = useState(result);
   const [tone, setTone] = useState<RewriteRequest["tone"]>("direct");
   const [selected, setSelected] = useState(result.platforms[0].id);
   const [currentTime, setCurrentTime] = useState(0);
+  const [selectedRange, setSelectedRange] = useState<{
+    time: number;
+    end: number;
+  } | null>(null);
   const [mediaError, setMediaError] = useState(false);
   const [activeObservation, setActiveObservation] = useState(
     result.observations[0]?.id ?? "",
@@ -402,22 +424,38 @@ function AnalysisStudio({
   }
   // Play only the flagged stretch of the video, then pause at its end.
   function playClip(o: Observation) {
+    setSelectedRange(o);
     clipEnd.current = null;
     clipStart.current = o.time;
     seek(o.time, o.id);
-    video.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const bounds = video.current?.getBoundingClientRect();
+    if (bounds && (bounds.top < 0 || bounds.bottom > window.innerHeight))
+      video.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "center",
+      });
     void video.current
       ?.play()
       .then(() => (clipEnd.current = o.end))
       .catch(() => undefined);
   }
-  const clips = result.observations.filter((o) => o.kind !== "strength");
-  const overallSuggestions = result.overallSuggestions?.length
-    ? result.overallSuggestions
-    : [...new Set(result.platforms.flatMap((p) => p.opportunities))].slice(
-        0,
-        5,
-      );
+  const { moments, overall: overallSuggestions } = collectReview(result);
+  const activeMoment =
+    selectedRange ?? moments.find((o) => o.id === activeObservation);
+  const reviewTabs = [
+    ["moments", "Moments that matter"],
+    ["overall", "Overall suggestions"],
+    ["opening", "Opening analysis"],
+  ] as const;
+  function selectMoment(o: Observation) {
+    setReviewTab("moments");
+    setMomentPage(
+      Math.floor(moments.findIndex((item) => item.id === o.id) / 3),
+    );
+    playClip(o);
+  }
   function download() {
     const url = URL.createObjectURL(
       new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }),
@@ -670,7 +708,7 @@ function AnalysisStudio({
         )}
         {(view === "overview" || view === "insights") && (
           <>
-            <div className="insight-grid">
+            <div className="insight-grid review-workbench">
               <section className="video-panel">
                 <div className="panel-heading">
                   <h2>The video, with perspective.</h2>
@@ -735,6 +773,16 @@ function AnalysisStudio({
                     <span>{timecode(currentTime)}</span>
                     <span>{timecode(result.video.durationSeconds)}</span>
                   </div>
+                  {activeMoment && (
+                    <div
+                      className="timeline-selection"
+                      aria-hidden="true"
+                      style={{
+                        left: `${(activeMoment.time / result.video.durationSeconds) * 100}%`,
+                        width: `${Math.max(0.5, ((activeMoment.end - activeMoment.time) / result.video.durationSeconds) * 100)}%`,
+                      }}
+                    />
+                  )}
                   <input
                     aria-label="Seek video"
                     type="range"
@@ -746,7 +794,7 @@ function AnalysisStudio({
                     onChange={(event) => seek(Number(event.target.value))}
                   />
                   <div className="timeline-observations">
-                    {result.observations.map((o) => (
+                    {moments.map((o) => (
                       <button
                         key={o.id}
                         title={`${timecode(o.time)} · ${kindLabels[o.kind]}: ${o.title}`}
@@ -754,164 +802,203 @@ function AnalysisStudio({
                         style={{
                           left: `${Math.min(96, (o.time / result.video.durationSeconds) * 100)}%`,
                         }}
-                        onClick={() => playClip(o)}
-                        className={o.kind}
+                        onClick={() => selectMoment(o)}
+                        className={`${o.kind} ${activeObservation === o.id ? "selected" : ""}`}
+                        aria-pressed={activeObservation === o.id}
                         disabled={!videoUrl || mediaError}
                       />
                     ))}
                   </div>
                 </div>
               </section>
-              <section className="observations-panel">
-                <div className="panel-heading">
-                  <h2>Moments that matter.</h2>
-                  <span>{result.observations.length} observations</span>
-                </div>
-                <div className="observation-list">
-                  {!result.observations.length && (
-                    <div className="whole-video-review">
-                      <p>
-                        This review covers the whole video. No timestamped
-                        observations are available.
-                      </p>
-                      <h3>What works</h3>
-                      <ul>
-                        {active.strengths?.map((text) => (
-                          <li key={text}>{text}</li>
-                        ))}
-                      </ul>
-                      <h3>What to improve</h3>
-                      <ul>
-                        {active.opportunities.map((text) => (
-                          <li key={text}>{text}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {result.observations.map((o) => (
+              <section
+                className="observations-panel review-panel"
+                aria-label="Video analysis and suggestions"
+              >
+                <div
+                  className="review-tabs"
+                  role="tablist"
+                  aria-label="Review categories"
+                >
+                  {reviewTabs.map(([id, label], index) => (
                     <button
-                      key={o.id}
-                      className={`observation ${activeObservation === o.id ? "active" : ""}`}
-                      onClick={() => playClip(o)}
-                      disabled={!videoUrl || mediaError}
+                      type="button"
+                      key={id}
+                      id={`review-tab-${id}`}
+                      role="tab"
+                      aria-selected={reviewTab === id}
+                      aria-controls={`review-panel-${id}`}
+                      tabIndex={reviewTab === id ? 0 : -1}
+                      onClick={() => setReviewTab(id)}
+                      onKeyDown={(event) => {
+                        const next =
+                          event.key === "ArrowRight"
+                            ? (index + 1) % 3
+                            : event.key === "ArrowLeft"
+                              ? (index + 2) % 3
+                              : event.key === "Home"
+                                ? 0
+                                : event.key === "End"
+                                  ? 2
+                                  : -1;
+                        if (next >= 0) {
+                          event.preventDefault();
+                          setReviewTab(reviewTabs[next][0]);
+                          document
+                            .getElementById(`review-tab-${reviewTabs[next][0]}`)
+                            ?.focus();
+                        }
+                      }}
                     >
-                      <span className={`observation-time ${o.kind}`}>
-                        {timecode(o.time)}–{timecode(o.end)}
-                        {o.kind === "strength" ? (
-                          <Check size={13} />
-                        ) : (
-                          <ArrowUpRight size={13} />
-                        )}
-                      </span>
-                      <span>
-                        <strong>
-                          <em className={`moment-kind ${o.kind}`}>
-                            {kindLabels[o.kind]}
-                          </em>
-                          {o.title}
-                        </strong>
-                        <span>{o.detail}</span>
-                      </span>
-                      <Play size={13} />
+                      {label}
                     </button>
                   ))}
                 </div>
-                <div className="insight-takeaway">
-                  <Sparkles size={19} />
-                  <p>{result.summary}</p>
-                </div>
-                <button
-                  className="text-link"
-                  onClick={() => setView("optimizer")}
+                <div
+                  role="tabpanel"
+                  id={`review-panel-${reviewTab}`}
+                  aria-labelledby={`review-tab-${reviewTab}`}
+                  tabIndex={0}
+                  className="review-tab-content"
                 >
-                  Turn insights into your next edit <ArrowUpRight size={17} />
-                </button>
-              </section>
-            </div>
-            {result.mode === "live" && (
-              <HookReview
-                review={result.hookAnalysis}
-                playable={!!videoUrl && !mediaError}
-                reviewed={result.platforms.some((p) => p.geminiUsed)}
-                onPlay={(start, end, id) =>
-                  playClip({
-                    id,
-                    time: start,
-                    end,
-                    kind: "improve",
-                    title: "Opening review",
-                    detail: "",
-                    fix: "",
-                  })
-                }
-              />
-            )}
-            <section
-              className="overall-suggestions"
-              aria-labelledby="overall-suggestions-title"
-            >
-              <div className="panel-heading">
-                <h2 id="overall-suggestions-title">Overall suggestions</h2>
-                <span>
-                  {result.mode === "demo"
-                    ? "Sample review"
-                    : "From Gemini's full review"}
-                </span>
-              </div>
-              <div className="overall-grid">
-                <div>
-                  <h3>For the whole video</h3>
-                  <ol className="overall-list">
-                    {overallSuggestions.map((text) => (
-                      <li key={text}>{text}</li>
-                    ))}
-                  </ol>
-                </div>
-                <div>
-                  <h3>Clips to fix</h3>
-                  {!clips.length ? (
-                    <p className="overall-empty">
-                      {result.mode === "live"
-                        ? "Gemini found no specific stretch that is unclear or slows the pacing."
-                        : "No clips flagged."}
-                    </p>
-                  ) : (
-                    <ul className="clip-list">
-                      {clips.map((o) => (
-                        <li
-                          key={o.id}
-                          className={activeObservation === o.id ? "active" : ""}
+                  {reviewTab === "moments" && (
+                    <>
+                      <div className="panel-heading">
+                        <h2>Moments that matter.</h2>
+                        <span>{moments.length} findings</span>
+                      </div>
+                      {!moments.length && (
+                        <p>
+                          No timestamped findings in this report. See Overall
+                          suggestions for whole-video feedback.
+                        </p>
+                      )}
+                      <div className="review-moments">
+                        {moments
+                          .slice(momentPage * 3, momentPage * 3 + 3)
+                          .map((o) => (
+                            <article
+                              key={o.id}
+                              className={`review-moment ${activeObservation === o.id ? "active" : ""}`}
+                            >
+                              <div className="moment-heading">
+                                <button
+                                  className="moment-timestamp"
+                                  disabled={!videoUrl || mediaError}
+                                  onClick={() => selectMoment(o)}
+                                >
+                                  {timecode(o.time)}–{timecode(o.end)}
+                                </button>
+                                <em className={`moment-kind ${o.kind}`}>
+                                  {kindLabels[o.kind]}
+                                </em>
+                              </div>
+                              <h3>{o.title}</h3>
+                              <p>{o.detail}</p>
+                              {o.fix && (
+                                <p className="moment-fix">
+                                  <strong>Suggested edit:</strong> {o.fix}
+                                </p>
+                              )}
+                              <button
+                                className="clip-play"
+                                disabled={!videoUrl || mediaError}
+                                onClick={() => selectMoment(o)}
+                              >
+                                <Play size={13} /> Watch moment
+                              </button>
+                            </article>
+                          ))}
+                      </div>
+                      {moments.length > 3 && (
+                        <nav
+                          className="moment-pagination"
+                          aria-label="More findings"
                         >
                           <button
-                            className="clip-play"
-                            onClick={() => playClip(o)}
-                            disabled={!videoUrl || mediaError}
-                            aria-label={`Play ${timecode(o.time)} to ${timecode(o.end)}`}
+                            disabled={momentPage === 0}
+                            onClick={() => setMomentPage((p) => p - 1)}
                           >
-                            <Play size={14} />
-                            {timecode(o.time)}–{timecode(o.end)}
+                            Previous
                           </button>
-                          <div>
-                            <strong>
-                              <em className={`moment-kind ${o.kind}`}>
-                                {kindLabels[o.kind]}
-                              </em>
-                              {o.title}
-                            </strong>
-                            <p>{o.detail}</p>
-                            {o.fix && (
-                              <p className="clip-fix">
-                                <ArrowUpRight size={14} /> {o.fix}
-                              </p>
-                            )}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                          <span aria-live="polite">
+                            {momentPage * 3 + 1}–
+                            {Math.min(moments.length, momentPage * 3 + 3)} of{" "}
+                            {moments.length}
+                          </span>
+                          <button
+                            disabled={(momentPage + 1) * 3 >= moments.length}
+                            onClick={() => setMomentPage((p) => p + 1)}
+                          >
+                            Next
+                          </button>
+                        </nav>
+                      )}
+                    </>
+                  )}
+                  {reviewTab === "overall" && (
+                    <>
+                      <div className="panel-heading">
+                        <h2>For the whole video.</h2>
+                        <span>
+                          {result.mode === "demo"
+                            ? "Sample review"
+                            : "AI review"}
+                        </span>
+                      </div>
+                      <div className="insight-takeaway">
+                        <Sparkles size={19} />
+                        <p>{result.summary}</p>
+                      </div>
+                      {overallSuggestions.length ? (
+                        <ol className="overall-list">
+                          {overallSuggestions.map((text) => (
+                            <li key={text}>{text}</li>
+                          ))}
+                        </ol>
+                      ) : (
+                        <p>Your specific edits are in Moments that matter.</p>
+                      )}
+                      {!!active.strengths?.length && (
+                        <details className="review-strengths">
+                          <summary>What works for {nameOf(selected)}</summary>
+                          <ul>
+                            {active.strengths.map((text) => (
+                              <li key={text}>{text}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                      <button
+                        className="text-link"
+                        onClick={() => setView("optimizer")}
+                      >
+                        Explore tailored copy <ArrowUpRight size={17} />
+                      </button>
+                    </>
+                  )}
+                  {reviewTab === "opening" && (
+                    <HookReview
+                      review={result.hookAnalysis}
+                      playable={!!videoUrl && !mediaError}
+                      reviewed={result.platforms.some((p) => p.geminiUsed)}
+                      omitEvidence
+                      onPlay={(start, end, id) =>
+                        playClip({
+                          id,
+                          time: start,
+                          end,
+                          kind: "improve",
+                          title: "Opening review",
+                          detail: "",
+                          fix: "",
+                        })
+                      }
+                    />
                   )}
                 </div>
-              </div>
-            </section>
+              </section>
+            </div>
           </>
         )}
         {view === "optimizer" && (
