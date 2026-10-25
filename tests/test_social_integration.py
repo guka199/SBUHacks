@@ -399,10 +399,18 @@ class StorageAndApiTests(unittest.TestCase):
     def test_delete_user_removes_all_social_history(self):
         job = self.launch()
         store.complete(job, normalized())
+        # Both features must be removed together without touching another creator.
+        for owner in (self.user, self.other):
+            db.execute('INSERT INTO CONTENT_IDEAS (id,user_id,payload) VALUES (%s,%s,%s)',
+                       (owner + '-idea', owner, '{}'))
+            for table in ('IDEA_PREFERENCES', 'CHANNEL_MEMORIES'):
+                db.execute(f'INSERT INTO {table} (user_id,payload) VALUES (%s,%s)', (owner, '{}'))
         accounts.delete_user(self.user)
         store.complete(job, normalized())
         self.assertEqual(db.query('SELECT * FROM SOCIAL_SNAPSHOTS'), [])
         self.assertIsNone(accounts.get_user(self.user))
+        for table in ('CONTENT_IDEAS', 'IDEA_PREFERENCES', 'CHANNEL_MEMORIES'):
+            self.assertEqual(db.query(f'SELECT user_id FROM {table}'), [{'user_id': self.other}])
 
     def test_authenticated_endpoints_ownership_pagination_and_cooldown(self):
         response = self.client.post('/accounts/import', json=request().model_dump())

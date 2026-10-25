@@ -24,6 +24,25 @@ STAGE = "MEDIA"  # Snowflake internal stage for uploaded images/videos
 ANALYSIS_STAGE = "ANALYSIS_MEDIA"  # SSE permits browser playback through presigned URLs
 
 SCHEMA = [
+    """CREATE TABLE IF NOT EXISTS IDEA_PREFERENCES (
+        user_id VARCHAR PRIMARY KEY,
+        payload VARCHAR,
+        updated_at TIMESTAMP_NTZ
+    )""",
+    """CREATE TABLE IF NOT EXISTS CHANNEL_MEMORIES (
+        user_id VARCHAR PRIMARY KEY,
+        payload VARCHAR,
+        updated_at TIMESTAMP_NTZ
+    )""",
+    """CREATE TABLE IF NOT EXISTS CONTENT_IDEAS (
+        id VARCHAR PRIMARY KEY,
+        user_id VARCHAR,
+        batch_id VARCHAR,
+        platform VARCHAR,
+        payload VARCHAR,
+        status VARCHAR,
+        created_at TIMESTAMP_NTZ
+    )""",
     """CREATE TABLE IF NOT EXISTS ANALYSES (
         id VARCHAR PRIMARY KEY,
         user_id VARCHAR,
@@ -100,6 +119,9 @@ SCHEMA = [
 ]
 
 _lock = threading.Lock()
+# Coordinate the feature's final writes with full account deletion in this API
+# process. Provider calls run outside this lock; only owner checks/storage use it.
+creator_data_lock = threading.RLock()
 _conn = None
 
 # Additive tables only. Payloads contain normalized, public fields, not raw exports.
