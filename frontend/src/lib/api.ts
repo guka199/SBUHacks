@@ -3,6 +3,7 @@ import {
   rewriteSchema,
   type AnalysisJob,
   type PlatformId,
+  type PostingPlan,
   type RewriteRequest,
   type VideoMetadata,
 } from "./contracts";
@@ -51,6 +52,7 @@ export const analysisApi = {
     metadata: VideoMetadata,
     caption: string,
     thumbnails: File[] = [],
+    posting: PostingPlan = {},
   ): Promise<AnalysisJob> {
     return new Promise((resolve, reject) => {
       if (signal.aborted) {
@@ -116,6 +118,7 @@ export const analysisApi = {
       form.append("metadata", JSON.stringify(metadata));
       form.append("caption", caption);
       for (const thumbnail of thumbnails) form.append("thumbnails", thumbnail);
+      form.append("posting", JSON.stringify(posting));
       xhr.send(form);
     });
   },

@@ -75,6 +75,10 @@ export function StudioGateway({
             <ChartNoAxesCombined size={16} />
             My reports
           </Link>
+          <Link href="/ideas">
+            <Sparkles size={16} />
+            Content ideas
+          </Link>
           <Link href="/accounts">
             <LayoutDashboard size={16} />
             Connected accounts

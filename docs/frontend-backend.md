@@ -87,3 +87,7 @@ Snowflake presigned media needs server-side stage encryption: [official GET_PRES
 ## Thumbnails
 
 `POST /api/analyses` also accepts up to 3 `thumbnails` form files (JPEG/PNG/WebP, 10 MB each). Gemini compares them per format; the report's `thumbnails` = `{summary, items[{index, name, mimeType, width, height, scores, reasons, strengths, improvements}], picks[{platform, index, reason}]}` (`null` when none were uploaded or Gemini failed - then a warning explains it). Images: `GET /api/analyses/{id}/thumbnails/{index}` (owner-scoped; Snowflake serves a presigned URL).
+
+## Posting plan
+
+`POST /api/analyses` also accepts `posting` = JSON `{country?: "GB", plannedTime?: ISO instant with offset, timezone?: IANA zone}` (invalid -> 422). The report's `posting` = `{country, countryName, audienceTimezone, posterTimezone, plannedTime, plannedAudience, plannedPoster, hasAudienceData, summary, audienceFit, platforms[{platform, rating: good|okay|poor|unknown, reason, windows[{days, start, end, startLocal, endLocal}]}], suggestions}`; `null` when there was nothing to plan with or Gemini failed (warning).

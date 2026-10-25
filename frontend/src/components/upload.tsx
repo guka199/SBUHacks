@@ -1,6 +1,12 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState, type DragEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type DragEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -12,7 +18,7 @@ import {
   UploadCloud,
   X,
 } from "lucide-react";
-import { platforms, type PlatformId } from "@/lib/contracts";
+import { platforms, postingCountries, type PlatformId } from "@/lib/contracts";
 import { API_MODE, analysisApi, delay, waitForAnalysis } from "@/lib/api";
 import { makeDemoResult } from "@/lib/demo";
 import {
@@ -34,6 +40,7 @@ const stages = [
   "Comparing platform fit",
   "Preparing recommendations",
 ];
+const noSubscription = () => () => {};
 export function Upload() {
   const session = useSession();
   const router = useRouter();
@@ -54,6 +61,14 @@ export function Upload() {
     [],
   );
   const [thumbnailError, setThumbnailError] = useState("");
+  const [country, setCountry] = useState("");
+  const [postAt, setPostAt] = useState(""); // datetime-local value, in the browser's time zone
+  // The browser's own time zone (empty during server rendering).
+  const zone = useSyncExternalStore(
+    noSubscription,
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+    () => "",
+  );
   const input = useRef<HTMLInputElement>(null);
   const thumbnailInput = useRef<HTMLInputElement>(null);
   const thumbnailUrls = useRef<string[]>([]);
@@ -190,6 +205,11 @@ export function Upload() {
           session.metadata,
           caption,
           thumbnails.map((t) => t.file),
+          {
+            country: country || undefined,
+            plannedTime: postAt ? new Date(postAt).toISOString() : undefined,
+            timezone: zone || undefined,
+          },
         );
         const result = await waitForAnalysis(job, active.signal, (value) => {
           setStage(value.stage);
@@ -446,6 +466,41 @@ export function Upload() {
                 formats separately.
               </p>
             )}
+          {!demo && (
+            <fieldset className="posting-plan" disabled={busy}>
+              <legend>
+                When and where <span>Optional</span>
+              </legend>
+              <label>
+                <span>Country you’re posting for</span>
+                <select
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                >
+                  <option value="">Not specified</option>
+                  {postingCountries.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Planned posting time</span>
+                <input
+                  type="datetime-local"
+                  value={postAt}
+                  onChange={(e) => setPostAt(e.target.value)}
+                />
+              </label>
+              <p className="field-note">
+                In your time zone{zone && ` (${zone.replace(/_/g, " ")})`}. We
+                compare it with your audience from{" "}
+                <Link href="/accounts">Accounts</Link> and suggest better
+                windows.
+              </p>
+            </fieldset>
+          )}
           <div className="mode-note">
             <span className="status-dot" />
             <div>

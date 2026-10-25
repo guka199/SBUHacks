@@ -169,6 +169,100 @@ export function Dashboard({
     />
   );
 }
+const ratingLabels = {
+  good: "Good time",
+  okay: "Okay time",
+  poor: "Poor time",
+  unknown: "No time chosen",
+} as const;
+const zoneName = (zone: string) => zone.split("/").pop()!.replace(/_/g, " ");
+function PostingReview({ result }: { result: AnalysisResult }) {
+  const plan = result.posting;
+  if (!plan) return null;
+  const audienceZone = zoneName(plan.audienceTimezone);
+  return (
+    <section className="posting-review" aria-labelledby="posting-title">
+      <div className="panel-heading">
+        <h2 id="posting-title">When and where to post.</h2>
+        <span>
+          {plan.hasAudienceData
+            ? "Based on your audience from Accounts"
+            : "General advice · add your audience in Accounts"}
+        </span>
+      </div>
+      <div className="posting-facts">
+        <div>
+          <span>Posting for</span>
+          <strong>{plan.countryName ?? "No country chosen"}</strong>
+        </div>
+        <div>
+          <span>Your plan</span>
+          <strong>
+            {plan.plannedAudience
+              ? `${plan.plannedAudience} ${audienceZone} time`
+              : "No time chosen"}
+          </strong>
+          {plan.plannedPoster &&
+            plan.posterTimezone !== plan.audienceTimezone && (
+              <small>
+                = {plan.plannedPoster} your time (
+                {zoneName(plan.posterTimezone!)})
+              </small>
+            )}
+        </div>
+      </div>
+      <p className="posting-summary">{plan.summary}</p>
+      <p className="posting-fit">{plan.audienceFit}</p>
+      {!plan.hasAudienceData && (
+        <p className="field-note">
+          <Link href="/accounts">Add your audience</Link> (ages, countries,
+          language) for advice tailored to your viewers.
+        </p>
+      )}
+      <ul className="posting-platforms">
+        {plan.platforms.map((p) => (
+          <li key={p.platform}>
+            <div className="posting-platform-heading">
+              <PlatformIcon id={p.platform} />
+              <strong>{nameOf(p.platform)}</strong>
+              <em className={`posting-rating ${p.rating}`}>
+                {ratingLabels[p.rating]}
+              </em>
+            </div>
+            <p>{p.reason}</p>
+            <h4>Best windows · {audienceZone} time</h4>
+            <ul>
+              {p.windows.map((w) => (
+                <li key={`${w.days}${w.start}`}>
+                  <b>{w.days}</b> {w.start}–{w.end}
+                  {w.startLocal && w.endLocal && (
+                    <small>
+                      {" "}
+                      ({w.startLocal}–{w.endLocal} your time)
+                    </small>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+      {plan.suggestions.length > 0 && (
+        <>
+          <h3>Make it land there</h3>
+          <ul className="posting-suggestions">
+            {plan.suggestions.map((text) => (
+              <li key={text}>
+                <ArrowUpRight size={16} />
+                {text}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
 function ThumbnailReview({ result }: { result: AnalysisResult }) {
   const review = result.thumbnails;
   if (!review?.items.length) return null;
@@ -608,6 +702,7 @@ function AnalysisStudio({
                 </button>
               </section>
             </div>
+            <PostingReview result={result} />
             <ThumbnailReview result={result} />
           </>
         )}

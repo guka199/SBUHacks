@@ -41,7 +41,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
       const next =
         new URLSearchParams(window.location.search).get("next") ?? "";
       router.push(
-        /^\/(analysis\/[0-9a-f]{32}|reports|accounts|analyze)$/.test(next)
+        /^\/(analysis\/[0-9a-f]{32}|reports|accounts|analyze|ideas)$/.test(next)
           ? next
           : mode === "signup"
             ? "/accounts"

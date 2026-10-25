@@ -247,3 +247,75 @@ class ThumbnailTests(unittest.TestCase):
     def test_thumbnail_download_is_owner_scoped(self):
         self.assertEqual(self.base.client.get(f"/api/analyses/{'a' * 32}/thumbnails/0").status_code, 404)
         self.assertIn(OWNER, self.base.query.call_args.args[1])
+
+
+class PostingTests(unittest.TestCase):
+    LINKED = [{"platform": "tiktok", "followers": 900, "audience": {"age_range": "18-24", "top_countries": ["United Kingdom"]}}]
+
+    def setUp(self):
+        self.base = AdapterTests("test_live_model_fallback_is_honest_and_saved_to_signed_owner")
+        self.base.setUp()
+        self.addCleanup(self.base.doCleanups)
+        from api.services import posting
+        self.posting = posting
+        self.base.mock(posting.accounts, "list_accounts", return_value=[])
+        self.base.mock(posting.accounts, "audience_summary", return_value="creator account")
+
+    def gemini_plan(self):
+        from api.services.gemini import GeminiPlatformTiming, GeminiPostingPlan, GeminiWindow
+        return GeminiPostingPlan(summary="Post later.", audience_fit="Matches.", suggestions=["Use UK spelling."], platforms=[
+            GeminiPlatformTiming(platform="TikTok", rating="poor", reason="Too early.",
+                                 windows=[GeminiWindow(days="Weekdays", start="19:00", end="21:00")]),
+            GeminiPlatformTiming(platform="linkedin", rating="good", reason="not requested", windows=[])])
+
+    def post(self, plan, selected=("tiktok",)):
+        return self.base.client.post("/api/analyses", data={
+            "platforms": json.dumps(list(selected)), "caption": "A real draft caption", "posting": json.dumps(plan),
+            "metadata": json.dumps({"name": "clip.webm", "durationSeconds": 24, "width": 720, "height": 1280}),
+        }, files={"video": ("clip.webm", b"\x1aE\xdf\xa3payload", "video/webm")})
+
+    def test_times_are_converted_here_and_passed_to_the_model_in_utc(self):
+        from api.analysis_schemas import PostingIn
+        from datetime import datetime
+        call = self.base.mock(self.posting.gemini, "plan_posting", return_value=self.gemini_plan())
+        plan = self.posting.validate(PostingIn(country="GB", timezone="America/New_York",
+                                               plannedTime=datetime.fromisoformat("2026-10-31T09:00:00-04:00")))
+        advice = self.posting.advise("u", ["tiktok"], "caption", plan)
+        self.assertEqual((advice.audienceTimezone, advice.plannedAudience, advice.plannedPoster),
+                         ("Europe/London", "Sat 31 Oct, 13:00", "Sat 31 Oct, 09:00"))
+        self.assertIn("Sat 31 Oct, 13:00 Europe/London", call.call_args.args[4])
+        self.assertEqual([p.platform for p in advice.platforms], ["tiktok"])  # unrequested formats dropped
+        window = advice.platforms[0].windows[0]
+        self.assertEqual((window.start, window.startLocal, window.endLocal), ("19:00", "15:00", "17:00"))
+
+    def test_audience_country_is_used_when_none_is_chosen_and_rating_needs_a_time(self):
+        from api.analysis_schemas import PostingIn
+        self.posting.accounts.list_accounts.return_value = self.LINKED
+        self.base.mock(self.posting.gemini, "plan_posting", return_value=self.gemini_plan())
+        advice = self.posting.advise("u", ["tiktok"], "caption", PostingIn())
+        self.assertEqual((advice.country, advice.audienceTimezone, advice.hasAudienceData), ("GB", "Europe/London", True))
+        self.assertEqual(advice.platforms[0].rating, "unknown")
+
+    def test_nothing_to_plan_with_skips_gemini(self):
+        from api.analysis_schemas import PostingIn
+        call = self.base.mock(self.posting.gemini, "plan_posting")
+        self.assertIsNone(self.posting.advise("u", ["tiktok"], "caption", PostingIn()))
+        call.assert_not_called()
+
+    def test_report_includes_advice_and_model_gets_utc_time(self):
+        self.base.mock(analyses.gemini, "is_configured", return_value=True)
+        self.base.mock(self.posting.gemini, "plan_posting", return_value=self.gemini_plan())
+        response = self.post({"country": "GB", "plannedTime": "2026-10-31T13:00:00Z", "timezone": "Europe/London"})
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["result"]["posting"]["platforms"][0]["rating"], "poor")
+        self.assertEqual(self.base.scorer.call_args.kwargs["planned_time"].isoformat(), "2026-10-31T13:00:00+00:00")
+
+    def test_invalid_plans_are_rejected_and_failures_are_warnings(self):
+        self.assertEqual(self.post({"country": "XX"}).status_code, 422)
+        self.assertEqual(self.post({"plannedTime": "2026-10-31T13:00:00"}).status_code, 422)  # no offset
+        self.base.mock(analyses.gemini, "is_configured", return_value=True)
+        self.base.mock(self.posting.gemini, "plan_posting", side_effect=RuntimeError("boom"))
+        response = self.post({"country": "GB"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["result"]["posting"])
+        self.assertTrue(any("posting time" in w for w in response.json()["result"]["warnings"]))

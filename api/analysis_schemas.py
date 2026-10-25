@@ -1,5 +1,6 @@
 """ViralPilot report contract; mirrored in frontend/src/lib/contracts.ts."""
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -76,6 +77,43 @@ class ThumbnailComparison(BaseModel):
     picks: list[ThumbnailPick]
 
 
+class PostingIn(BaseModel):
+    """Optional posting plan from the upload form."""
+    country: str | None = Field(default=None, pattern=r"^[A-Z]{2}$")
+    plannedTime: datetime | None = None  # an exact instant (with UTC offset)
+    timezone: str | None = Field(default=None, max_length=64)  # the poster's IANA zone, e.g. America/New_York
+
+
+class PostingWindow(BaseModel):
+    days: str
+    start: str  # HH:MM in the audience time zone
+    end: str
+    startLocal: str | None = None  # the same window in the poster's own time zone
+    endLocal: str | None = None
+
+
+class PostingPlatform(BaseModel):
+    platform: FormatId
+    rating: Literal["good", "okay", "poor", "unknown"]
+    reason: str
+    windows: list[PostingWindow]
+
+
+class PostingAdvice(BaseModel):
+    country: str | None = None
+    countryName: str | None = None
+    audienceTimezone: str
+    posterTimezone: str | None = None
+    plannedTime: datetime | None = None
+    plannedAudience: str | None = None  # e.g. "Sat 25 Oct, 23:00" in the audience time zone
+    plannedPoster: str | None = None
+    hasAudienceData: bool
+    summary: str
+    audienceFit: str
+    platforms: list[PostingPlatform]
+    suggestions: list[str]
+
+
 class AnalysisReport(BaseModel):
     id: str
     mode: Literal["live"] = "live"
@@ -85,6 +123,7 @@ class AnalysisReport(BaseModel):
     observations: list[Observation] = Field(default_factory=list)
     overallSuggestions: list[str] = Field(default_factory=list)
     thumbnails: ThumbnailComparison | None = None
+    posting: PostingAdvice | None = None
     hookAnalysis: HookAnalysis | None = None
     warnings: list[str] = Field(default_factory=list)
 

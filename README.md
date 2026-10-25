@@ -18,7 +18,7 @@ npm run dev
 # production: npm run build && npm start
 ```
 
-Open http://localhost:3000. The frontend now connects to FastAPI through the same-origin `/backend` proxy: sign in, link accounts, upload a draft, review scores, generate publishing copy, and reopen saved reports. Start the API on port 8000; see [Frontend/backend setup](docs/frontend-backend.md) for live/local storage and configuration. `/demo` remains a labeled sample. Provider secrets belong only in the root `.env`.
+Open http://localhost:3000. The frontend connects to FastAPI through the same-origin `/backend` proxy: sign in, link accounts, upload a draft, review scores, generate publishing copy, and reopen saved reports. `/ideas` generates personalized follow-up content from the creator's stored history; see [Content ideas](docs/content-ideas.md). Start the API on port 8000; see [Frontend/backend setup](docs/frontend-backend.md) for live/local storage and configuration. `/demo` remains a labeled sample. Provider secrets belong only in the root `.env`.
 
 [FRONTEND_HANDOFF.txt](FRONTEND_HANDOFF.txt) is the canonical ten-section team guide. [Frontend README](frontend/README.md), [asset sources/licenses](frontend/ASSET_NOTICES.md) and [browser QA](frontend/QA_REPORT.md) cover the implementation. Set frontend/ as the project root when running or deploying this interface. The original integrated web/ app remains available through its existing commands below.
 
