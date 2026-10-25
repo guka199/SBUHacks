@@ -1,0 +1,47 @@
+{
+  "source": "User-supplied viralpilot_parallax_layers.zip",
+  "canvas": [
+    1855,
+    848
+  ],
+  "processing": "Lossless WebP encoding; mobile reference uniformly resized to 1100 px width",
+  "rest_mean_absolute_rgb_error": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "rest_max_channel_difference": 0,
+  "eye_animation": false,
+  "files": [
+    {
+      "file": "background.webp",
+      "bytes": 27762,
+      "sha256": "342f0b24ad0296272948dd950895cd5f69bb8d511520cab3e0f5e013e11ebe39"
+    },
+    {
+      "file": "dragon.webp",
+      "bytes": 898212,
+      "sha256": "b163c1b10d34d2bd84cf995fd0c666c1512c4f0c8565d1ed6c3c86f12988f175"
+    },
+    {
+      "file": "reference-mobile.webp",
+      "bytes": 686034,
+      "sha256": "304448d86a4eac735e97747694abac0bd70ad2f1c67c9c8f58066e4a046ac6aa"
+    },
+    {
+      "file": "reference_full.webp",
+      "bytes": 1956094,
+      "sha256": "936848bc509bab91916813f77abdd55b12bfafe35c0a86c31968c6016b8c6ee0"
+    },
+    {
+      "file": "sun.webp",
+      "bytes": 382390,
+      "sha256": "30a1ae2d3e387f5193fba2edd87f928f0b690f386174a4387280537668455309"
+    },
+    {
+      "file": "waves.webp",
+      "bytes": 584310,
+      "sha256": "dee5cd1f9fce8a0a79262c0c3c513661b74101e33143c346bc403282aad723e4"
+    }
+  ]
+}

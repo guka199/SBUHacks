@@ -3,5 +3,5 @@ export default function SignupLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="account-page page-gutter">{children}</div>;
+  return <div className="auth-layout">{children}</div>;
 }

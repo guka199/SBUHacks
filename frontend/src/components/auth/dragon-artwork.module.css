@@ -1,0 +1,190 @@
+.stage {
+  position: relative;
+  isolation: isolate;
+  background: #f3e4ca;
+  min-height: calc(100svh - 98px);
+}
+.formArea {
+  position: relative;
+  z-index: 2;
+  width: min(43%, 560px);
+  min-height: calc(100svh - 98px);
+  padding: 48px clamp(28px, 4.8vw, 76px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.formArea > :global(.auth-panel) {
+  width: 100%;
+  max-width: 440px;
+  margin: 0;
+}
+.formArea h1 {
+  font-family: var(--font-display);
+  font-size: clamp(30px, 3.2vw, 48px);
+  line-height: 1.1;
+}
+.formArea :global(.form-intro) {
+  max-width: 36ch;
+}
+.formArea :global(.account-input) {
+  background: #fff9e3d9;
+}
+.art {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  pointer-events: none;
+  contain: paint;
+}
+.paper,
+.reference,
+.cloudDrift,
+.shift,
+.sunEntrance,
+.dragonEntrance,
+.breathe,
+.waveEntrance,
+.waveFlow,
+.motes {
+  position: absolute;
+  inset: 0;
+}
+.paper {
+  background: #f3e4ca url("/art/auth-dragon/background.webp") center / cover;
+}
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  user-select: none;
+}
+.reference,
+.sunEntrance,
+.dragonEntrance,
+.waveEntrance,
+.motes {
+  opacity: 0;
+}
+.reference,
+.shift {
+  transform-origin: 66.5% 40%;
+}
+.sunEntrance {
+  transform-origin: 61% 36%;
+}
+.breathe {
+  transform-origin: 66.5% 40%;
+}
+.cloudDrift {
+  inset: 0;
+}
+.art[data-mode="animated"] .reference,
+.art[data-mode="animated"] .shift {
+  inset: -3px;
+}
+.mote {
+  position: absolute;
+  display: block;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #c49535;
+  opacity: 0;
+}
+.mote:nth-child(3n) {
+  width: 3px;
+  height: 3px;
+}
+.shimmer {
+  position: absolute;
+  inset: 0 0 0 41%;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 20%,
+    #f7d87f22 37%,
+    #f7d87f99 47%,
+    transparent 62%
+  );
+  mix-blend-mode: soft-light;
+}
+.pause {
+  position: absolute;
+  z-index: 3;
+  right: 24px;
+  bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #17171745;
+  border-radius: 9px;
+  background: #f3e4cadb;
+  color: #171717;
+  font-size: 12px;
+}
+.pause:hover {
+  background: #fff9e3;
+}
+.art[data-mode="static"] .reference,
+.art[data-failed="true"] .reference {
+  opacity: 1;
+}
+.art[data-failed="true"] .shift,
+.art[data-failed="true"] .motes,
+.art[data-failed="true"] .shimmer {
+  display: none;
+}
+.art[data-economy="true"] .mote:nth-child(n + 4) {
+  display: none;
+}
+@media (max-width: 949px) {
+  .stage {
+    min-height: 0;
+    padding-bottom: 24px;
+    background: var(--light-yellow);
+  }
+  .art {
+    position: relative;
+    aspect-ratio: 1855 / 848;
+    width: 100%;
+  }
+  .image {
+    object-fit: contain;
+  }
+  .cloudDrift {
+    inset: 0;
+  }
+  .formArea {
+    width: min(100%, 560px);
+    min-height: 0;
+    padding: 28px 24px 32px;
+    margin-inline: auto;
+  }
+  .formArea h1 {
+    font-size: clamp(30px, 5vw, 42px);
+  }
+  .formArea > :global(.auth-panel) {
+    max-width: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .art .reference {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .art .cloudDrift {
+    transform: none !important;
+  }
+  .shift,
+  .motes,
+  .shimmer,
+  .pause {
+    display: none !important;
+  }
+}

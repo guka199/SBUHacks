@@ -59,3 +59,9 @@ node scripts/prepare-polish-assets.mjs /absolute/path/to/user-ocean-photo.jpg
 ```
 
 The last command downloads the CC0 Meadow 2 backplate and processes the supplied photograph. Raw user originals are not distributed. See manifests for exact hashes/source URLs. UI UX Pro Max and the requested Three.js/GSAP/Design DNA/Motion Design/Genjutsu/Taste/Impeccable guidance are applied; local skill tooling is ignored.
+
+
+Authentication artwork: login/signup use the supplied dragon illustration with
+restrained desktop motion and still mobile/reduced-motion fallbacks. No extra
+setup is required. Architecture, asset provenance and verified limits are in
+[the auth animation guide](../docs/auth-dragon-animation.md).

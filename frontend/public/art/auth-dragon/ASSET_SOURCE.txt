@@ -1,0 +1,18 @@
+ViralPilot authentication dragon artwork
+
+Source: viralpilot_parallax_layers.zip, supplied by the user on October 25, 2026.
+The user requested integration of the original illustration and approved layers.
+Artist attribution and a separate redistribution license were not included.
+No third-party or Creative Commons license is asserted here.
+
+Exports: background, flattened reference, sun, dragon and waves are encoded as
+lossless WebP. The mobile flattened reference is uniformly resized to 1100px.
+No repainting, regenerated content, face replacement or eye overlay was used.
+manifest.json contains dimensions, SHA-256 hashes and rest-composition comparison.
+
+The original archive describes approximate masks extracted from a flattened image.
+They overlap and are not original independent artist layers. Use only restrained
+motion over the intact flattened reference to avoid visible seams.
+
+The companion viralpilot_logo_assets.zip was inspected but is not used or copied
+here. Original ZIPs and QA screenshots are excluded from the application assets.

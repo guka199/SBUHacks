@@ -66,3 +66,15 @@ or vector tracing. The standalone symbol crop contains text fragments and the
 dark icon contains an upload badge, so neither is shipped. The wordmark uses
 multiply blending on existing light surfaces to soften screenshot edge pixels.
 For dark surfaces or large-format use, obtain original transparent/vector art.
+
+
+## Authentication dragon (user-supplied, October 25, 2026)
+
+The supplied viralpilot_parallax_layers.zip provides the flattened illustration
+and approximate aligned masks. Lossless WebP exports plus a uniformly resized
+mobile reference are used under public/art/auth-dragon/. Artist attribution and
+a separate redistribution license were not provided; no CC/third-party license
+is asserted. ASSET_SOURCE.txt and manifest.json preserve provenance and hashes.
+The companion logo pack was inspected without replacing the existing site logo.
+No source archive, unused logo crop, generated/repainted eye, or QA screenshot is
+included in the public assets.

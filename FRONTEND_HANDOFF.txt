@@ -562,3 +562,20 @@ fit, the mobile menu and generated icon links.
 Production build passed, including generated icon and apple-icon routes.
 
 Logo reveal follow-up: LiquidGlass now reuses BrandLogo with a responsive reveal variant, replacing the small icon tile plus separately typed name. A compact Meet label sits above the full wordmark. GSAP targets and timing are unchanged. Desktop forward/reverse browser inspection verified the reveal.
+
+
+AUTH DRAGON RESTORED (October 25, 2026)
+Source branch: feature/restore-auth-dragon. Restored the previously saved
+login/signup artwork on top of main's dragon logo and teammate changes.
+The earlier stash remains intact. Auth form/layout paths had no intervening
+team edits. Both routes now use the left form/right animated dragon scene.
+Scoped GSAP entrance/breathing, pointer parallax, cloud/wave drift, bounded
+motes and submit shimmer reuse the original supplied layered artwork.
+Pause, reduced-motion and mobile static fallbacks are included. No new
+dependencies or API/credential changes. Authentication does not wait for art.
+Architecture, asset sources and limitations: docs/auth-dragon-animation.md.
+
+Main delivery approved by the user. Lint, TypeScript and all 24 frontend tests
+passed; desktop/mobile browser checks verified both auth routes and artwork.
+Local environment, database, SQL, credentials and QA files are excluded.
+Production build passed before main delivery.
