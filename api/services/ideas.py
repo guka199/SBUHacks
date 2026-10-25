@@ -6,7 +6,7 @@ import uuid
 
 from pydantic import ValidationError
 
-from api.idea_schemas import ChannelContext, ContentIdea, GeneratedIdeas, IdeaPlatform, IdeaStatus
+from api.idea_schemas import ChannelContext, ContentIdea, GeneratedIdeas, IdeaTarget, IdeaStatus, IDEA_PLATFORMS
 from api.services import db, gemini
 from api.services.channel_context import normalized
 
@@ -27,7 +27,7 @@ Return exactly the requested number of DISTINCT, practical next-content ideas. E
 title, opening hook, 3-5 concise outline beats, approach (sequel/new_angle/repurpose), a brief rationale,
 and 1-4 source_ids copied EXACTLY from the supplied personal history sources. Cite content that supports the idea.
 At least one idea should extend an existing topic and at least one should explore a new angle or adaptation.
-If a target platform is specified, every idea MUST target that exact platform.
+If a single target platform is specified, every idea MUST target that exact platform.
 Respect the creator's niche and audience, including the target account's audience language when available.
 Explain the content connection, not just that a post has many views.
 Published views are lifetime snapshots. relative_views is descriptive only within that source's own
@@ -66,7 +66,8 @@ that does not depend on recent events). When relevant fresh trend_research.sourc
 include at least one trend_inspired idea, adapted to this creator's goals/style and supported by that evidence.
 Never force an unrelated trend or a topic the creator asked to avoid. If none fit, omit trend_inspired ideas.
 For a trend_inspired idea, give 1-3 trend_source_ids copied EXACTLY from trend_research.sources, AND
-personal source_ids showing channel fit. Its platform MUST match the cited external sources' platform.
+personal source_ids showing channel fit. For a single-platform idea, its platform MUST match the cited
+external sources' platform. Cross-platform adaptations follow the additional scope rules below.
 Other idea kinds MUST have an empty trend_source_ids array. Do not label an evergreen/follow-up as trending.
 Only a research status of available permits trend_inspired ideas. If unavailable, disabled or missing,
 generate follow-ups and evergreen ideas only; do not invent current trends from your training knowledge.
@@ -77,6 +78,30 @@ verified. No claims about trending rank, measured growth, popular sounds, native
 demand or platform-wide popularity unless the supplied source explicitly establishes that exact claim.
 Describe a trend-inspired rationale as a timely connection to a recent example/report, with an explicit
 content link to this creator. The app supplies all external links, dates and statistics; output IDs only.
+"""
+    cross_platform = context.target_platform == "all_platforms"
+    instruction += """
+
+CROSS-PLATFORM OUTPUT:
+Only when target_platform is all_platforms, set EVERY idea's platform to all_platforms.
+Each idea is ONE coherent core concept that can be adapted for all five supported formats, not five
+unrelated ideas or a claim that identical content performs everywhere. Find useful intersections across
+the supplied account histories, themes, audience needs and explicit creator preferences. When current
+sources cover at least two platforms, cite personal sources from at least two distinct platforms for
+each idea. When only one has history, ground the concept there and acknowledge the missing evidence.
+Give exactly five adaptations, one each for youtube, shorts, tiktok, instagram, linkedin. Each has
+platform, format (short format label), hook (one opening line), execution (one concrete sentence).
+Keep each adaptation hook under 110 characters and execution under 150. Preserve the SAME core topic
+and factual claims. YouTube can develop an explanation; Shorts/TikTok/Reels need a focused visual beat;
+LinkedIn should offer a useful professional lesson, text post or document angle grounded in the actual
+topic, without invented work history, credentials, clients or business results. Do not invent offers.
+Use each account's audience when known; never assume audiences are identical or promise success on all.
+The shared outline should identify reusable material and the rationale explain why the concept can be
+adapted across these formats. Platforms without history get suggested treatments, not tested predictions.
+In this mode, trend evidence remains scoped to the cited source's actual platform. A recent example
+from one platform may inspire a shared concept, but NEVER claim it is trending or verified on the others.
+For single-platform or unspecified targets, omit adaptations and return a real platform,
+never all_platforms. All other citation, idea-mix and novelty rules still apply.
 """
     payload = {"requested_count": count, "previous_idea_titles": previous_titles[:50],
                # Evidence snapshots inside memory are for the UI. Current sources already
@@ -94,13 +119,20 @@ content link to this creator. The app supplies all external links, dates and sta
     schema["properties"]["ideas"]["maxItems"] = count
     item_schema = schema["properties"]["ideas"]["items"]
     item_schema["required"] = list(item_schema["properties"])
-    if context.target_platform:
-        item_schema["properties"]["platform"]["enum"] = [context.target_platform]
+    item_schema["properties"]["platform"]["enum"] = ([context.target_platform] if context.target_platform else list(IDEA_PLATFORMS))
+    if cross_platform:
+        adaptations_schema = item_schema["properties"]["adaptations"]
+        adaptations_schema["minItems"] = adaptations_schema["maxItems"] = 5
+    else:
+        # Keep the original single-platform provider schema small. The typed
+        # application response supplies an empty list for legacy/new ideas.
+        del item_schema["properties"]["adaptations"]
+        item_schema["required"].remove("adaptations")
     with genai.Client() as client:
         result = client.interactions.create(
             model=os.getenv("GEMINI_MODEL") or gemini.DEFAULT_MODEL,
             input=instruction + "\nSOURCE DATA:\n" + json.dumps(payload, ensure_ascii=False),
-            generation_config={"max_output_tokens": 4096, "temperature": 0.7, "thinking_level": "low"},
+            generation_config={"max_output_tokens": 8192 if cross_platform else 4096, "temperature": 0.7, "thinking_level": "low"},
             response_format={"type": "text", "mime_type": "application/json", "schema": schema},
         )
     return GeneratedIdeas.model_validate_json(result.output_text)
@@ -110,6 +142,9 @@ def validate_generated(result: GeneratedIdeas, context: ChannelContext, count: i
     if len(result.ideas) != count:
         raise InvalidIdeas("Wrong number of ideas")
     source_ids = {source.id for source in context.sources}
+    source_platforms = {source.id: source.platform for source in context.sources}
+    known_history_platforms = set(source_platforms.values()) & set(IDEA_PLATFORMS)
+    cross_platform = context.target_platform == "all_platforms"
     existing = {normalized(title) for title in previous_titles}
     existing.update(normalized(source.text) for source in context.sources)
     outlines = set()
@@ -118,14 +153,23 @@ def validate_generated(result: GeneratedIdeas, context: ChannelContext, count: i
     for idea in result.ideas:
         if context.target_platform and idea.platform != context.target_platform:
             raise InvalidIdeas("Wrong target platform")
+        if not cross_platform and (idea.platform == "all_platforms" or idea.adaptations):
+            raise InvalidIdeas("Unexpected cross-platform output")
         if not set(idea.source_ids).issubset(source_ids) or len(set(idea.source_ids)) != len(idea.source_ids):
             raise InvalidIdeas("Invalid source references")
+        if cross_platform:
+            platforms = [adaptation.platform for adaptation in idea.adaptations]
+            if len(platforms) != len(IDEA_PLATFORMS) or set(platforms) != set(IDEA_PLATFORMS):
+                raise InvalidIdeas("Missing or repeated platform adaptations")
+            cited_platforms = {source_platforms[key] for key in idea.source_ids} & known_history_platforms
+            if len(cited_platforms) < min(2, len(known_history_platforms)):
+                raise InvalidIdeas("Cross-platform idea needs history from multiple available platforms")
         kinds.add(idea.idea_kind)
         trend_ids = set(idea.trend_source_ids)
         if len(trend_ids) != len(idea.trend_source_ids) or not trend_ids.issubset(external):
             raise InvalidIdeas("Invalid external research references")
         if idea.idea_kind == "trend_inspired":
-            if not trend_ids or any(external[key].platform != idea.platform for key in trend_ids):
+            if not trend_ids or (not cross_platform and any(external[key].platform != idea.platform for key in trend_ids)):
                 raise InvalidIdeas("Trend idea needs evidence from its own platform")
         elif trend_ids:
             raise InvalidIdeas("Only trend-inspired ideas may cite external research")
@@ -145,7 +189,7 @@ def _decode(row: dict) -> ContentIdea:
                        created_at=str(row["created_at"]))
 
 
-def list_ideas(user_id: str, platform: IdeaPlatform | None = None, status: IdeaStatus | None = None) -> list[ContentIdea]:
+def list_ideas(user_id: str, platform: IdeaTarget | None = None, status: IdeaStatus | None = None) -> list[ContentIdea]:
     conditions = ["user_id = %s"]
     params = [user_id]
     if platform:
@@ -203,6 +247,7 @@ def generate_ideas(user_id: str, context: ChannelContext, count: int) -> list[Co
         memory_generated_at=context.memory.generated_at if context.memory else None,
         idea_kind=idea.idea_kind, trend_sources=[trend_sources[key] for key in idea.trend_source_ids],
         trend_research=research.model_copy(update={"sources": []}) if research else None,
+        adaptations=sorted(idea.adaptations, key=lambda adaptation: IDEA_PLATFORMS.index(adaptation.platform)),
     ) for idea in result.ideas]
     rows = []
     for idea in saved:

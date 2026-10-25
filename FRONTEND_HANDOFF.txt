@@ -14,6 +14,10 @@ The simplified Ideas UI always requests three ideas, hides optional preferences
 under Customize and research options under Trend settings, and collapses card
 outlines/rationale/evidence. The usefulness-comparison UI is removed. These are not native cross-platform
 trend feeds or measured popularity-growth predictions. See docs/content-ideas.md.
+Ideas also supports All platforms: three common concepts, each with five short
+platform versions under View details (YouTube, Shorts, TikTok, Reels, LinkedIn).
+History sampling is balanced across accounts. Research keeps its actual single-
+platform scope; adaptations are not promises of success on every platform.
 The live /api/analyses adapter, cookie authentication, accounts/settings,
 saved reports/video playback and Gemini rewrites are now implemented.
 docs/frontend-backend.md supersedes the original API/demo/unfinished-status

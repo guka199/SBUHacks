@@ -2,6 +2,16 @@
 
 The signed-in creator can open `/ideas`, inspect the history used, select a target platform and generate three next-post ideas (the API still accepts 3–5). Each has a title, hook, outline, approach, rationale and server-attached references to their own posts/reviews. Ideas are retained, can be saved for later or dismissed, and survive refresh.
 
+## All platforms mode
+
+Choose **All platforms** in the Platform dropdown to request three shared concepts for YouTube, YouTube Shorts, TikTok, Instagram Reels and LinkedIn. Each concept has one common title/hook/outline and exactly five short `adaptations`, each with `platform`, `format`, `hook` and `execution`. Under **View details**, format buttons show one version at a time; Copy includes all versions. These are proposed adaptations, not calibrated predictions that one post will succeed everywhere. Respect the actual niche/offer; LinkedIn versions must not invent professional credentials, clients or business results.
+
+`platform: "all_platforms"` is a distinct target for GET context, POST generate and GET list. Null still means choose an individual platform per idea. All-platform history filters return only all-platform ideas; an unfiltered list includes both. Stored rows use the existing VARCHAR platform and JSON payload; no new table/migration or model training is required. Older payloads default to `adaptations: []` in Python and the browser.
+
+All account audiences and bounded saved history contribute to the context. Published sources are balanced across supported platforms so one account cannot occupy the entire sample. Draft reviews remain AI judgments, not performance. When current sources cover two or more known platforms, every cross-platform concept must cite personal sources from at least two; with only one platform's history, concepts use that evidence and disclose missing platform-specific history/audience. Exactly one adaptation per supported platform is validated before the whole batch is saved. Single-platform output cannot contain all-platform concepts or adaptations.
+
+Optional research keeps its existing bounded scope: it researches the first known linked/history platform and discloses that platform. A recent signal there may inspire a shared concept but is not represented as a verified trend on the other platforms. Cache metadata and server-owned citations remain scoped to their original platform. No five-provider fan-out or additional key is introduced.
+
 ## Creator direction and channel memory
 
 The direction editor saves optional preferences for the signed-in creator across platforms:
@@ -31,7 +41,7 @@ Goal-specific instructions shape the proposal: accessible introductions for grow
 
 - `USERS`: display name, creator/business type and niche. Email, password hashes and wallet details are excluded.
 - `ACCOUNTS`: follower count, typical views, selected audience fields and refresh date. Arbitrary account extras are excluded.
-- `POSTS`: latest 50 stored posts; at most 30 become sources, retaining recent content plus a few stronger eligible observations.
+- `POSTS`: up to 50 owner-scoped rows sampled round-robin by platform using per-platform recency ranks (one account can use the full budget). At most 30 become sources: up to 24 balanced recent examples plus six balanced stronger eligible observations, filling unused slots from remaining history. Same policy in every mode keeps global memory reusable.
 - `ANALYSES` and `DRAFTS`: at most 10 combined reviews, deduplicated by normalized caption. Summaries and edit notes are reused; raw media is never resent.
 
 At most 40 sources are supplied, with bounded titles, captions, summaries and notes. At least two distinct normalized captions are required for generation. Fewer than five are labeled limited history. This is a data-availability label, not statistical confidence.
@@ -57,13 +67,13 @@ The current app has no approved TikTok/Instagram/LinkedIn trend-feed integration
 
 Research has a bounded, owner-scoped in-process LRU cache (128 keys, six hours for usable results, ten minutes for unavailable results). Expiry is also bounded by each source's publication window: exact timestamps for API videos, the last 14 calendar dates for date-only web reports. Checks/expiry/cache reuse are disclosed. Full account deletion clears that owner's cache, and a delayed research completion checks owner existence under the creator lifecycle lock before caching. Cache entries disappear on API restart; evidence used for saved ideas is retained in their database payloads. GET context/list never triggers research.
 
-Each new idea has `idea_kind`: `follow_up`, `trend_inspired`, or `evergreen`. Every batch must include a follow-up and an evergreen idea; generation is instructed to include a trend-inspired idea when the fresh evidence fits the creator. An irrelevant or avoided topic must not be forced. A trend-inspired idea requires 1–3 exact external source IDs **and** 1–4 personal-history source IDs, with the idea platform matching its external evidence. Other kinds cannot claim external trend citations. If signals are unavailable/disabled, only follow-ups and evergreen ideas are allowed and coverage is disclosed. If sources exist but none are used, a warning states that explicitly. No fixture trend data or fabricated rankings/growth are substituted.
+Each new idea has `idea_kind`: `follow_up`, `trend_inspired`, or `evergreen`. Every batch must include a follow-up and an evergreen idea; generation is instructed to include a trend-inspired idea when the fresh evidence fits the creator. An irrelevant or avoided topic must not be forced. A trend-inspired idea requires 1–3 exact external source IDs **and** 1–4 personal-history source IDs, with a single-platform idea matching its external evidence; all-platform concepts retain the original evidence platform and cannot claim the same trend is established elsewhere. Other kinds cannot claim external trend citations. If signals are unavailable/disabled, only follow-ups and evergreen ideas are allowed and coverage is disclosed. If sources exist but none are used, a warning states that explicitly. No fixture trend data or fabricated rankings/growth are substituted.
 
 New ideas retain `idea_kind`, their server-attached `trend_sources`, dated `trend_research` metadata/search suggestions and nullable `feedback`. The batch context contains all fetched sources; per-idea research metadata omits that full source list to avoid redundant evidence, while the idea retains its specific citations. Older ideas default to null kind/research/feedback and an empty external-source list. Old snapshots are dated evidence, not an assertion that their topic is still current.
 
 **Useful idea?** stores `useful`, `not_useful` or null via the private feedback route. These ratings measure subjective usefulness, not engagement, causal impact or prediction accuracy. The comparison panel has been removed from the simplified UI. Feedback does not yet retrain or change generation automatically.
 
-`api/services/ideas.py` uses the existing Gemini credential/model through the Interactions API. Output is bounded to 4,096 tokens and validated as structured JSON. No new model is trained and no scoring feature/model artifacts change.
+`api/services/ideas.py` uses the existing Gemini credential/model through the Interactions API. Output is bounded to 4,096 tokens for single-platform ideas or 8,192 for cross-platform concepts, and validated as structured JSON. No new model is trained and no scoring feature/model artifacts change.
 
 The server checks the requested count and platform, distinct normalized titles and outlines, exact references to supplied source IDs, and duplicate titles against the latest 50 prior ideas (including dismissed ideas). Existing source captions cannot be repeated verbatim as titles. Semantic similarity is not a guarantee; the prompt asks for new angles rather than rewording.
 
@@ -116,3 +126,5 @@ Generation is synchronous. Leaving the page cancels the browser request but acce
 Generation repair (2026-10-24): reproduced a five-idea request failing because Gemini returned the wrong count. After the schema/retry fix, the same signed-in YouTube request with research enabled returned HTTP 200 and displayed five newly stored ideas, increasing the visible history from eight to thirteen. This confirms that flow, not all platform/count combinations or creative effectiveness. No automated tests were added/run for this repair.
 
 UI simplification (2026-10-24): TypeScript, targeted ESLint, production build and whitespace checks passed. No automated tests added/run. Backend generation, stored idea content, feedback and ownership contracts are unchanged; only the UI request count is fixed to three.
+
+All-platform extension (2026-10-24): Python compilation, TypeScript, targeted ESLint, production build and whitespace checks passed. The live all-platform context/list view loaded through the frontend proxy. No automated tests were added/run and no live Gemini idea generation was performed for this extension; creative quality and live structured-output generation remain unverified.

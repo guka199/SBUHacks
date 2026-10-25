@@ -28,7 +28,7 @@ import {
   type ChannelMemory,
   type ContentIdea,
   type CreatorPreferences,
-  type IdeaPlatform,
+  type IdeaTarget,
   type IdeaSource,
 } from "@/lib/ideas";
 import {
@@ -45,6 +45,59 @@ import {
   TrendControls,
   TrendSources,
 } from "./trend-context";
+
+function ideaCopy(idea: ContentIdea) {
+  const outline = idea.outline
+    .map((line, index) => `${index + 1}. ${line}`)
+    .join("\n");
+  const versions = idea.adaptations
+    .map(
+      (version) =>
+        `${platformNames[version.platform]} · ${version.format}\n${version.hook}\n${version.execution}`,
+    )
+    .join("\n\n");
+  return [idea.title, idea.hook, outline, versions]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function PlatformAdaptations({ idea }: { idea: ContentIdea }) {
+  const [selected, setSelected] = useState(idea.adaptations[0]?.platform);
+  const version =
+    idea.adaptations.find((item) => item.platform === selected) ??
+    idea.adaptations[0];
+  if (!version) return null;
+  return (
+    <section className={styles.adaptations} aria-label="Platform versions">
+      <h3 className={styles.detailLabel}>Make it work on each platform</h3>
+      <div
+        className={styles.platformChoices}
+        role="group"
+        aria-label={`Platform versions for ${idea.title}`}
+      >
+        {idea.adaptations.map((item) => (
+          <button
+            key={item.platform}
+            type="button"
+            aria-pressed={version.platform === item.platform}
+            onClick={() => setSelected(item.platform)}
+          >
+            {platformNames[item.platform]}
+          </button>
+        ))}
+      </div>
+      <div
+        className={styles.platformVersion}
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <strong>{version.format}</strong>
+        <p className={styles.versionHook}>{version.hook}</p>
+        <p>{version.execution}</p>
+      </div>
+    </section>
+  );
+}
 
 function Evidence({ source }: { source: IdeaSource }) {
   const href = sourceLink(source);
@@ -213,7 +266,7 @@ function MemoryPanel({
 
 export default function IdeasPage() {
   const { user, loading } = useAuth();
-  const [platform, setPlatform] = useState<IdeaPlatform | "all">("all");
+  const [platform, setPlatform] = useState<IdeaTarget | "all">("all");
   const [useTrends, setUseTrends] = useState(true);
   const [region, setRegion] = useState("US");
   const [trendTopic, setTrendTopic] = useState("");
@@ -704,11 +757,12 @@ export default function IdeasPage() {
                   value={platform}
                   disabled={controlsDisabled}
                   onChange={(event) => {
-                    setPlatform(event.target.value as IdeaPlatform | "all");
+                    setPlatform(event.target.value as IdeaTarget | "all");
                     setNotice("");
                   }}
                 >
                   <option value="all">Choose for me</option>
+                  <option value="all_platforms">All platforms</option>
                   {ideaPlatforms.map((id) => (
                     <option key={id} value={id}>
                       {platformNames[id]}
@@ -731,6 +785,12 @@ export default function IdeasPage() {
                 onTopic={setTrendTopic}
               />
             </div>
+            {platform === "all_platforms" && (
+              <p className={styles.fieldHint}>
+                Shared concepts for YouTube, Shorts, TikTok, Instagram and
+                LinkedIn, using your available account history.
+              </p>
+            )}
             {trendTopicError && (
               <p className="error-message" role="alert">
                 Use at least two characters for the research topic, or leave it
@@ -811,6 +871,7 @@ export default function IdeasPage() {
                   <ResearchSummary
                     research={latestResearch}
                     viewedAt={current.context.collected_at}
+                    crossPlatform={platform === "all_platforms"}
                   />
                 )}
                 <details className={styles.knowledge}>
@@ -884,7 +945,11 @@ export default function IdeasPage() {
                 <div className={styles.resultsHeading} id="ideas-results">
                   <div>
                     <h2 ref={resultsHeading} tabIndex={-1}>
-                      {savedOnly ? "Saved for later" : "Your ideas"}
+                      {savedOnly
+                        ? "Saved for later"
+                        : platform === "all_platforms"
+                          ? "Cross-platform ideas"
+                          : "Your ideas"}
                     </h2>
                   </div>
                   <span className={styles.subtle}>
@@ -962,7 +1027,7 @@ export default function IdeasPage() {
                               : idea.approach.replace("_", " ")}
                           </span>
                           <CopyButton
-                            text={`${idea.title}\n\n${idea.hook}\n\n${idea.outline.map((line, index) => `${index + 1}. ${line}`).join("\n")}`}
+                            text={ideaCopy(idea)}
                             label="Copy content idea"
                           />
                         </div>
@@ -973,7 +1038,14 @@ export default function IdeasPage() {
                             View details{" "}
                             <ChevronDown size={15} aria-hidden="true" />
                           </summary>
-                          <h3 className={styles.detailLabel}>Post outline</h3>
+                          {!!idea.adaptations.length && (
+                            <PlatformAdaptations idea={idea} />
+                          )}
+                          <h3 className={styles.detailLabel}>
+                            {idea.platform === "all_platforms"
+                              ? "Shared concept outline"
+                              : "Post outline"}
+                          </h3>
                           <ol>
                             {idea.outline.map((beat, index) => (
                               <li key={index}>{beat}</li>
