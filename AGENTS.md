@@ -7,6 +7,13 @@ Frontend UI work must follow `frontend/UI_UX_GUIDELINES.md` and `frontend/AGENTS
 
 Landing navigation is How it works / Features / Platforms. Start creating retains the original `/analyze` destination for signed-in users and uses `/login?next=/analyze` otherwise. The user explicitly excluded studio changes: do not redirect this CTA to `/studio` or modify studio/analysis layouts, controls, auth forms or shared product styling as part of landing navigation work.
 
+## Dashboard analytics (October 25, 2026)
+
+- The existing `/dashboard` uses `platform-dashboard.tsx`, scoped CSS and reusable `components/analytics/` charts/rankings. `components/dashboard.tsx` remains the video-report studio; do not confuse the two.
+- `lib/dashboard-loader.ts` combines existing account, published Ideas-context and social snapshot/history APIs without backend changes or collection on load. One account per platform is currently supported. Header Refresh reloads saved data; explicit account Update invokes existing providers. Last-good results survive read failures.
+- `lib/dashboard-analytics.ts` keeps unknown/zero separate, excludes LinkedIn from video-view comparisons, uses captured lifetime publication cohorts rather than views earned in a week, and requires dated snapshots for follower growth. Default Top 10 response lift uses same-account/platform/format/capture-age cohorts with at least three complete posts. Results describe a bounded collected sample. Account details retain native totals/cadence; draft scores remain separate.
+- Design/data semantics: `frontend/design-system/viralpilot/pages/dashboard.md`. Tests use labeled synthetic fixtures. The temporary four-platform browser preview was removed. No new paid provider or Gemini calls are required for verification. User approval is required before committing or pushing this redesign.
+
 ## Project
 
 **PostPilot** — SBUHacks 2026 hackathon project (24h). One place for content creators and business pages to:

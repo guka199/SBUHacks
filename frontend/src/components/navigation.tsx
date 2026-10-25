@@ -102,12 +102,14 @@ export function Navigation() {
               >
                 {user ? user.display_name : "Sign in"}
               </Link>
-              <span className="mode-indicator">
-                <span />
-                {pathname === "/demo" || API_MODE === "demo"
-                  ? "Demo mode"
-                  : "Live mode"}
-              </span>
+              {pathname !== "/dashboard" && (
+                <span className="mode-indicator">
+                  <span />
+                  {pathname === "/demo" || API_MODE === "demo"
+                    ? "Demo mode"
+                    : "Live mode"}
+                </span>
+              )}
             </>
           )}
           <Link
