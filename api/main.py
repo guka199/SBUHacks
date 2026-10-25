@@ -13,7 +13,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from contextlib import asynccontextmanager  # noqa: E402
 
-from api.routers import accounts, analyses, auth, contribute, dashboard, data, drafts, ingest, predict, score, voice  # noqa: E402
+from api.routers import accounts, analyses, auth, contribute, dashboard, data, drafts, ideas, ingest, predict, score, voice  # noqa: E402
 from api.services import db  # noqa: E402
 from api.services.errors import ServiceError  # noqa: E402
 
@@ -39,6 +39,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(analyses.router)
+app.include_router(ideas.router)
 app.include_router(accounts.router)
 app.include_router(drafts.router)
 app.include_router(ingest.router)

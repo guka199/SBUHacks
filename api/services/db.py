@@ -23,6 +23,15 @@ STAGE = "MEDIA"  # Snowflake internal stage for uploaded images/videos
 ANALYSIS_STAGE = "ANALYSIS_MEDIA"  # SSE permits browser playback through presigned URLs
 
 SCHEMA = [
+    """CREATE TABLE IF NOT EXISTS CONTENT_IDEAS (
+        id VARCHAR PRIMARY KEY,
+        user_id VARCHAR,
+        batch_id VARCHAR,
+        platform VARCHAR,
+        payload VARCHAR,
+        status VARCHAR,
+        created_at TIMESTAMP_NTZ
+    )""",
     """CREATE TABLE IF NOT EXISTS ANALYSES (
         id VARCHAR PRIMARY KEY,
         user_id VARCHAR,
