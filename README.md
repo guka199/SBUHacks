@@ -61,7 +61,32 @@ uvicorn api.main:app --reload          # http://localhost:8000/docs
 cd web && npm install && npm run dev   # http://localhost:3000
 ```
 
-## Snowflake
+## Social profile imports (backend)
+
+Authenticated Instagram/TikTok imports use Apify. Automatic LinkedIn collection
+through PhantomBuster is disabled and excluded from the current product scope;
+manual LinkedIn statistics remain available. YouTube keeps its existing API and gains the
+same refresh/snapshot contract. Public metrics are nullable, with durable jobs,
+15-minute refresh cooldowns, optional schedules, history and scorer context.
+
+Install `pip install -r api/requirements.txt`, configure root `.env` using
+`.env.example`, set `SOCIAL_WORKER_ENABLED=true`, then run
+`python -m uvicorn api.main:app --host 127.0.0.1 --port 8000 --workers 1`.
+Use `/docs`: sign in using `/auth/login`, then `POST /accounts/import` and poll
+`GET /accounts/jobs/{id}`. **One API process is required for social imports.**
+No frontend redesign or model retraining is included. Provider credentials are
+now configured locally and read-only authentication passed for both providers;
+offline synthetic tests pass. Live Instagram (`cristiano`) and TikTok
+(`leagueoflegends`) imports also succeeded with three posts each in an isolated
+local test database. Earlier LinkedIn integration code remains inactive behind
+`PHANTOMBUSTER_ENABLED=false`; saved credentials do not enable it automatically.
+See [social integration setup, API contracts and limitations](docs/social-data-integration.md).
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+## Snowflake setup
 
 See [Backend/data setup and API contract](docs/backend-data.md) for Snowflake/PAT credentials, YouTube keys,
 repeatable migrations, CSV import formats, dashboard queries and Cortex access.
