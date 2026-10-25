@@ -134,6 +134,17 @@ export interface VideoMoment {
   fix: string;
 }
 
+export interface HookAnalysis {
+  method: "ai_review";
+  windowSeconds: number;
+  score: number | null;
+  summary: string;
+  opening: string;
+  suggestedOpening: string;
+  criteria: { id: "attention" | "clarity" | "pacing" | "audio_text"; label: string; score: number | null; evidence: string }[];
+  evidence: { start: number; end: number; observation: string; edit: string }[];
+}
+
 export interface ContentAnalysis {
   summary: string;
   hook: number;
@@ -143,6 +154,7 @@ export interface ContentAnalysis {
   platform_scores: { platform: Platform; score: number; reason: string }[];
   strengths: string[];
   moments?: VideoMoment[];
+  hook_analysis?: HookAnalysis | null;
 }
 
 export interface ScoreResponse {

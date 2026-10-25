@@ -27,6 +27,7 @@ import { timecode } from "@/lib/video";
 import { useSession } from "./session";
 import { CopyButton, PlatformIcon } from "./ui";
 import { useAuth } from "@/lib/auth";
+import { HookReview } from "./hook-review";
 
 const exampleResult = makeDemoResult({
   name: "Make something.webm",
@@ -289,9 +290,14 @@ function AnalysisStudio({
   );
   const video = useRef<HTMLVideoElement>(null);
   const clipEnd = useRef<number | null>(null);
+  const clipStart = useRef<number | null>(null);
   const active = result.platforms.find((p) => p.id === selected)!;
   const best = result.platforms.reduce((a, b) => (a.score > b.score ? a : b));
   function seek(time: number, id?: string) {
+    if (!id) {
+      clipStart.current = null;
+      clipEnd.current = null;
+    }
     const target = Math.min(
       time,
       video.current?.duration || result.video.durationSeconds,
@@ -303,6 +309,7 @@ function AnalysisStudio({
   // Play only the flagged stretch of the video, then pause at its end.
   function playClip(o: Observation) {
     clipEnd.current = null;
+    clipStart.current = o.time;
     seek(o.time, o.id);
     video.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     void video.current
@@ -595,17 +602,22 @@ function AnalysisStudio({
                           time >= clipEnd.current
                         ) {
                           clipEnd.current = null;
+                          clipStart.current = null;
                           video.current?.pause();
                         }
                       }}
                       onSeeking={() => {
                         // A manual seek outside the clip ends clip playback.
                         const time = video.current?.currentTime ?? 0;
-                        const clip = result.observations.find(
-                          (o) => o.id === activeObservation,
-                        );
-                        if (clip && (time < clip.time - 0.5 || time > clip.end))
+                        if (
+                          clipStart.current !== null &&
+                          clipEnd.current !== null &&
+                          (time < clipStart.current - 0.5 ||
+                            time > clipEnd.current)
+                        ) {
+                          clipStart.current = null;
                           clipEnd.current = null;
+                        }
                       }}
                       aria-label="Video insights player"
                     />
@@ -721,6 +733,24 @@ function AnalysisStudio({
                 </button>
               </section>
             </div>
+            {result.mode === "live" && (
+              <HookReview
+                review={result.hookAnalysis}
+                playable={!!videoUrl && !mediaError}
+                reviewed={result.platforms.some((p) => p.geminiUsed)}
+                onPlay={(start, end, id) =>
+                  playClip({
+                    id,
+                    time: start,
+                    end,
+                    kind: "improve",
+                    title: "Opening review",
+                    detail: "",
+                    fix: "",
+                  })
+                }
+              />
+            )}
             <section
               className="overall-suggestions"
               aria-labelledby="overall-suggestions-title"

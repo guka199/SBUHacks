@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { resultSchema, jobSchema } from "../src/lib/contracts";
+import {
+  resultSchema,
+  jobSchema,
+  hookAnalysisSchema,
+  type HookAnalysis,
+} from "../src/lib/contracts";
 import { makeDemoResult } from "../src/lib/demo";
 import { MAX_VIDEO_BYTES, validateVideo } from "../src/lib/video";
 
@@ -53,4 +58,87 @@ test("video validation handles empty, oversized, unsupported, and MIME-less brow
   );
   assert.ok(validateVideo({ name: "wrong.txt", type: "video/mp4", size: 42 }));
   assert.ok(validateVideo({ name: "wrong.mp4", type: "text/plain", size: 42 }));
+});
+
+const openingReview: HookAnalysis = {
+  method: "ai_review",
+  windowSeconds: 5,
+  score: 60,
+  summary: "A pause delays the payoff.",
+  opening: "A static title precedes the result.",
+  suggestedOpening: "Show the result first.",
+  criteria: ["attention", "clarity", "pacing", "audio_text"].map((id) => ({
+    id: id as HookAnalysis["criteria"][number]["id"],
+    label: id,
+    score: id === "audio_text" ? null : 60,
+    evidence: "Synthetic fixture observation.",
+  })),
+  evidence: [
+    {
+      start: 0,
+      end: 2,
+      observation: "Static title.",
+      edit: "Shorten the title card.",
+    },
+  ],
+};
+
+test("opening contract preserves legacy reports and explicit unavailable ratings", () => {
+  assert.equal(resultSchema.safeParse(makeDemoResult()).success, true);
+  const report = {
+    ...makeDemoResult(),
+    mode: "live",
+    hookAnalysis: openingReview,
+  };
+  const parsed = resultSchema.parse(report);
+  assert.equal(parsed.hookAnalysis?.method, "ai_review");
+  assert.equal(parsed.hookAnalysis?.criteria[3].score, null);
+  assert.equal(
+    resultSchema.safeParse({ ...report, hookAnalysis: null }).success,
+    true,
+  );
+});
+
+test("opening evidence cannot escape the opening or a short source clip", () => {
+  assert.equal(
+    hookAnalysisSchema.safeParse({
+      ...openingReview,
+      evidence: [{ ...openingReview.evidence[0], end: 6 }],
+    }).success,
+    false,
+  );
+  assert.equal(
+    hookAnalysisSchema.safeParse({
+      ...openingReview,
+      evidence: [{ ...openingReview.evidence[0], start: 2, end: 1 }],
+    }).success,
+    false,
+  );
+  assert.equal(
+    hookAnalysisSchema.safeParse({
+      ...openingReview,
+      criteria: [
+        openingReview.criteria[0],
+        ...openingReview.criteria.slice(0, 3),
+      ],
+    }).success,
+    false,
+  );
+  const short = makeDemoResult({
+    name: "short.mp4",
+    durationSeconds: 2,
+    width: 720,
+    height: 1280,
+  });
+  assert.equal(
+    resultSchema.safeParse({ ...short, hookAnalysis: openingReview }).success,
+    false,
+  );
+  assert.equal(
+    resultSchema.safeParse({
+      ...short,
+      hookAnalysis: { ...openingReview, windowSeconds: 2 },
+    }).success,
+    true,
+  );
 });

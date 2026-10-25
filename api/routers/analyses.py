@@ -162,6 +162,7 @@ async def create_analysis(
     summaries = []
     overall: list[str] = []
     observations: list[Observation] = []
+    hook_review = None
     # Shorts is a format of YouTube, with the same trained model and the real duration.
     # Review it separately so Gemini receives the requested short-form context.
     groups = [([p for p in chosen if p != "shorts"], "video")]
@@ -182,6 +183,8 @@ async def create_analysis(
             warnings.append(response.warning)
         if content:
             summaries.append(content.summary)
+            if hook_review is None:
+                hook_review = content.hook_analysis
             # The Shorts review watches the same video; keep the first review's moments to avoid duplicates
             if not observations:
                 observations = [Observation(id=f"m{i}", time=m.start, end=m.end, kind=m.issue, title=m.title,
@@ -212,7 +215,7 @@ async def create_analysis(
         id=uuid.uuid4().hex, video=info, platforms=[results[p] for p in chosen],
         summary=" ".join(dict.fromkeys(summaries)) or "Model-only report. Gemini did not review this video.",
         warnings=list(dict.fromkeys(warnings)), observations=observations,
-        overallSuggestions=overall[:5], thumbnails=thumbnail_report,
+        overallSuggestions=overall[:5], thumbnails=thumbnail_report, hookAnalysis=hook_review,
     )
     safe_name = f"{report.id}{Path(video.filename or 'video.mp4').suffix.lower()}"
     try:

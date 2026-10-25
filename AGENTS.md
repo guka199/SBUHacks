@@ -259,7 +259,16 @@ The user authorized merging the cinematic ViralPilot frontend into main. It live
 - Cancel ends the client request; accepted server work may still finish. Simultaneous report rewrites are last-writer-wins. Browser-supplied metadata is validated but not probed by a server codec tool.
 - Checks passed: 40 Python tests (29 existing + 11 adapter), 10 frontend tests, lint/typecheck/build and Python syntax compilation. Personal key-pair Snowflake login and the live frontend-proxy signup/account/scoring/report/media/rewrite/ownership flow were exercised. Temporary test accounts and data are removed. Gemini rewrites use required bounded fields and a 2,048-output-token cap after a live malformed-output failure was fixed.
 
-## Social-data integration (backend branch)
+## First-five-seconds review
+
+- User authorized merging/pushing this work to main after checks. Starting point: `feature/five-second-hook-review` combines team main `9c26d87` and saved social checkpoint `644f03f` in `42e56d9`. Preserve subsequent remote main changes; no force push.
+- `api/services/hooks.py` + `api/hook_schemas.py` add an optional Gemini editorial rubric, exposed as `/score` content.hook_analysis and `/api/analyses` result.hookAnalysis. Same Gemini request, no new ML model/features/blend changes. Keep native TypeScript schemas in frontend/src/lib/contracts.ts and web/lib/api.ts synchronized.
+- Review window is 0 to min(5, reported duration); four criteria have nullable ratings/evidence. Mean only assessed criteria. This is not ECR, measured retention or a calibrated audience probability. No SnapUGC weights/training/data included.
+- Dashboard HookReview shows observed/proposed opening, copy, grounded spans and bounded clip playback. Old reports and absent/failed Gemini have honest unavailable states. Invalid optional-hook output must not discard valid whole-video/thumbnail results. Homepage, 3D and cinematic timeline are unchanged.
+- Verification: 100 Python tests, 12 frontend tests, lint/typecheck/production build; real Gemini reviewed an original 8-second QA video and saved/reopened the result through an isolated SQLite API. Desktop/phone browser checks and copy/playback passed. All keys, QA users/files/tools/reports remain ignored and production Snowflake/users are untouched.
+- Full contract, research context and limits: docs/hook-analysis.md. PhantomBuster remains disabled.
+
+## Social-data integration checkpoint
 
 - Branch `feature/social-data-integration`, initially based on main `96caef2`. User authorized a checkpoint commit/push of this branch, followed by fetching the team's latest code. Do not push/merge main without separate approval.
 - Current provider scope: Instagram/TikTok via Apify and existing YouTube. User dropped PhantomBuster; keep `PHANTOMBUSTER_ENABLED=false` (default and local `.env`). No further LinkedIn provider calls/runs unless explicitly requested. Existing manual LinkedIn statistics remain supported.

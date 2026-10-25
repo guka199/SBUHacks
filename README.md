@@ -61,7 +61,16 @@ uvicorn api.main:app --reload          # http://localhost:8000/docs
 cd web && npm install && npm run dev   # http://localhost:3000
 ```
 
-## Social profile imports (backend)
+## Opening review
+
+New video reports include an AI assessment of the first five seconds: four
+explained criteria, specific timestamped edits, an alternative opening and clip
+playback. Set the server-side `GEMINI_API_KEY` and analyze a new video. This is
+editorial feedback, not measured audience retention. Existing models, thumbnail
+comparison and whole-video feedback are preserved.
+See [hook review contract and verification](docs/hook-analysis.md).
+
+## Social profile imports
 
 Authenticated Instagram/TikTok imports use Apify. Automatic LinkedIn collection
 through PhantomBuster is disabled and excluded from the current product scope;
