@@ -125,6 +125,26 @@ export interface CombinedScore {
   vs_account: AccountComparison | null;
 }
 
+export interface VideoMoment {
+  start: number; // seconds into the uploaded video
+  end: number;
+  issue: "unclear" | "pacing" | "improve";
+  title: string;
+  problem: string;
+  fix: string;
+}
+
+export interface HookAnalysis {
+  method: "ai_review";
+  windowSeconds: number;
+  score: number | null;
+  summary: string;
+  opening: string;
+  suggestedOpening: string;
+  criteria: { id: "attention" | "clarity" | "pacing" | "audio_text"; label: string; score: number | null; evidence: string }[];
+  evidence: { start: number; end: number; observation: string; edit: string }[];
+}
+
 export interface ContentAnalysis {
   summary: string;
   hook: number;
@@ -133,6 +153,8 @@ export interface ContentAnalysis {
   trend_fit: number;
   platform_scores: { platform: Platform; score: number; reason: string }[];
   strengths: string[];
+  moments?: VideoMoment[];
+  hook_analysis?: HookAnalysis | null;
 }
 
 export interface ScoreResponse {

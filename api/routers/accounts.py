@@ -6,8 +6,8 @@
     PATCH  /accounts/{platform}/audience update just the target-audience details
     DELETE /accounts/{platform}          unlink
 
-TikTok, Instagram and LinkedIn only share follower/engagement stats with approved developer apps, so those are
-entered manually from each platform's own analytics for now.
+Manual entry remains available. Public-data import/refresh endpoints are defined
+in social_accounts.py; private analytics are not exposed by those imports.
 """
 
 import os
@@ -45,8 +45,8 @@ async def connect_youtube(req: YouTubeConnectIn, user_id: str = Depends(require_
         summary = await run_in_threadpool(youtube.channel_summary, req.channel)
     except youtube.ChannelNotFound as e:
         raise HTTPException(404, str(e)) from None
-    except httpx.HTTPError as e:
-        raise HTTPException(502, f"YouTube API error: {e}") from None
+    except httpx.HTTPError:
+        raise HTTPException(502, 'YouTube request failed; verify backend configuration and quota') from None
 
     posts = summary.pop("posts")
     existing = accounts.get_account(user_id, "youtube") or {}

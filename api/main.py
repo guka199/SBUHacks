@@ -1,6 +1,7 @@
 """PostPilot backend. Run from the repo root: uvicorn api.main:app --reload"""
 
 import os
+import asyncio
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -13,7 +14,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 from contextlib import asynccontextmanager  # noqa: E402
 
-from api.routers import accounts, analyses, auth, contribute, dashboard, data, drafts, ideas, ingest, predict, score, voice  # noqa: E402
+from api.routers import accounts, analyses, auth, contribute, dashboard, data, drafts, ideas, ingest, predict, score, social_accounts, voice  # noqa: E402
 from api.services import db  # noqa: E402
 from api.services.errors import ServiceError  # noqa: E402
 
@@ -21,9 +22,23 @@ from api.services.errors import ServiceError  # noqa: E402
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db.init()  # create tables (Snowflake if configured, else data/local.db)
+    stop = asyncio.Event()
+    worker = None
+    if os.getenv('SOCIAL_WORKER_ENABLED', 'false').lower() == 'true':
+        if int(os.getenv('WEB_CONCURRENCY', '1')) != 1:
+            raise RuntimeError('Social imports require one API worker; see docs/social-data-integration.md')
+        from api.services.social_jobs import run
+        worker = asyncio.create_task(run(stop), name='social-refresh-poller')
     try:
         yield
     finally:
+        stop.set()
+        if worker:
+            worker.cancel()
+            try:
+                await worker
+            except asyncio.CancelledError:
+                pass
         db.close()
 
 
@@ -40,6 +55,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(analyses.router)
 app.include_router(ideas.router)
+app.include_router(social_accounts.router)
 app.include_router(accounts.router)
 app.include_router(drafts.router)
 app.include_router(ingest.router)

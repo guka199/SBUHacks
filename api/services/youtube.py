@@ -75,7 +75,8 @@ def fetch_channel(channel_id: str, max_videos: int = 50) -> ChannelImport:
         subscribers = int(subscribers) if subscribers is not None else None
         snippet = channel.get("snippet", {})
         account = {"platform": "youtube", "external_id": channel["id"],
-                   "handle": snippet.get("customUrl") or snippet.get("title"), "followers": subscribers}
+                   "handle": snippet.get("customUrl") or snippet.get("title"), "followers": subscribers,
+                   "display_name": snippet.get('title'), "total_posts": int(stats['videoCount']) if stats.get('videoCount') is not None else None}
         if not uploads:
             return ChannelImport(account, [])
         video_ids, page_token, seen_tokens = [], None, set()

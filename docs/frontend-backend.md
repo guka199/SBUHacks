@@ -65,7 +65,8 @@ The adapter calls `/score`'s existing implementation, so it shares the trained C
 ## Honest reporting boundaries
 
 - Hook, visual quality and clarity come directly from Gemini's overall review and are labeled accordingly. They are shared within the same review, not independently measured per-platform metrics.
-- Existing `/score` does not provide pacing, format-fit sub-scores or timed observations. These are null/empty in live reports; the interface renders unavailable metrics and whole-video feedback instead of manufacturing numbers or timestamps.
+- `/score` does not provide pacing or format-fit sub-scores; these stay null and render as unavailable.
+- Timed observations come from Gemini: for videos it returns up to 5 `moments` (MM:SS ranges that are `unclear`, hurt `pacing` or need to `improve`, each with problem + fix). `gemini.clean_moments` drops times outside the video. The report maps them to `observations` (timeline markers, "Moments that matter") and the **Overall suggestions** section, which lists the whole-video edits (`overallSuggestions`) plus playable "Clips to fix" (each plays only its range). Model-only reports have no observations.
 - Original publishing copy is not invented by a mapper. The initial report keeps the supplied caption and actual edit suggestions. The optimizer generates the other fields on demand using Gemini.
 - A failed Gemini review remains a genuine statistical-model report with a visible warning. Rewrite failures are errors and never substitute demo copy. Provider keys remain on the API server.
 - Media container headers and upload sizes are checked; duration/dimensions are validated browser-supplied metadata, not a server-side codec probe.
@@ -82,3 +83,11 @@ The adapter calls `/score`'s existing implementation, so it shares the trained C
 - Live validation found an unbounded malformed Gemini rewrite; generation is now capped at 2,048 output tokens with short-copy instructions, required schema fields and length bounds. The corrected provider request succeeded.
 
 Snowflake presigned media needs server-side stage encryption: [official GET_PRESIGNED_URL documentation](https://docs.snowflake.com/en/sql-reference/functions/get_presigned_url). A separate SSE stage avoids changing the existing draft stage.
+
+## Thumbnails
+
+`POST /api/analyses` also accepts up to 3 `thumbnails` form files (JPEG/PNG/WebP, 10 MB each). Gemini compares them per format; the report's `thumbnails` = `{summary, items[{index, name, mimeType, width, height, scores, reasons, strengths, improvements}], picks[{platform, index, reason}]}` (`null` when none were uploaded or Gemini failed - then a warning explains it). Images: `GET /api/analyses/{id}/thumbnails/{index}` (owner-scoped; Snowflake serves a presigned URL).
+
+## Posting plan
+
+`POST /api/analyses` also accepts `posting` = JSON `{country?: "GB", plannedTime?: ISO instant with offset, timezone?: IANA zone}` (invalid -> 422). The report's `posting` = `{country, countryName, audienceTimezone, posterTimezone, plannedTime, plannedAudience, plannedPoster, hasAudienceData, summary, audienceFit, platforms[{platform, rating: good|okay|poor|unknown, reason, windows[{days, start, end, startLocal, endLocal}]}], suggestions}`; `null` when there was nothing to plan with or Gemini failed (warning).

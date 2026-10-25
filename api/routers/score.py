@@ -22,6 +22,7 @@ from api.routers.predict import CONTEXT_FIELDS, FEATURE_HINTS, score_with_model
 from api.schemas import CombinedScore, ContentAnalysis, ContentScore, PredictRequest, ScoreResponse, UserId
 from api.services import accounts, drafts, gemini
 from api.services.auth import current_user_id
+from api.services.hooks import clean_hook_review
 from api.services.predictions import persist
 from shared.features import PLATFORMS
 
@@ -88,6 +89,11 @@ async def score_post(
             log.exception("Gemini review failed")
             warning = f"Gemini review failed ({type(e).__name__}) - showing the model score only."
 
+    hook_review = clean_hook_review(analysis.hook_analysis if analysis else None, ctx.get('duration_sec'),
+                                   bool(media and mime_type and mime_type.startswith('video/')))
+    if analysis and media and mime_type and mime_type.startswith('video/') and hook_review is None:
+        warning = 'The whole-video review is ready, but the focused opening review was unavailable. Analyze again to retry it.'
+
     # 3) Combine
     weight = model_weight()
     content_by_platform = {}
@@ -116,6 +122,8 @@ async def score_post(
             clarity=analysis.clarity, trend_fit=analysis.trend_fit,
             platform_scores=list(content_by_platform.values()),
             strengths=analysis.strengths[:3],
+            moments=gemini.clean_moments(analysis.moments, ctx.get("duration_sec")) if media else [],
+            hook_analysis=hook_review,
         ),
         model_weight=weight,
         gemini_used=analysis is not None,

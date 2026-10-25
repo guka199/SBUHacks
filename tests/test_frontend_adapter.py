@@ -149,3 +149,173 @@ class AdapterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VideoMomentTests(unittest.TestCase):
+    def test_gemini_moments_are_parsed_clamped_and_sorted(self):
+        from api.services.gemini import GeminiMoment, clean_moments
+        def moment(start, end, issue="pacing"):
+            return GeminiMoment(start=start, end=end, issue=issue, title="Slow intro", problem="p", fix="f")
+        kept = clean_moments([moment("00:12", "00:30"), moment("0:03", "0:01", "unclear"),
+                              moment("01:00", "01:05"), moment("soon", "later"), moment("00:12.2", "00:14")], 24)
+        self.assertEqual([(k["start"], k["end"], k["issue"]) for k in kept],
+                         [(3.0, 6.0, "unclear"), (12.0, 24.0, "pacing")])
+
+    def test_report_carries_moments_and_overall_suggestions(self):
+        from api.schemas import ContentAnalysis, VideoMoment
+        tests = AdapterTests("test_live_model_fallback_is_honest_and_saved_to_signed_owner")
+        tests.setUp()
+        self.addCleanup(tests.doCleanups)
+
+        async def score(**kwargs):
+            return ScoreResponse(
+                scores=[CombinedScore(platform="youtube", score=60, model_score=50, content_score=75, top_factors=[])],
+                suggestions=["Open on the result.", "Cut the pause at 0:08."], model_weight=0.6, gemini_used=True,
+                content=ContentAnalysis(summary="A recipe video.", hook=60, visual_quality=70, clarity=55, trend_fit=50,
+                                        platform_scores=[], strengths=["Bright lighting"],
+                                        moments=[VideoMoment(start=8, end=11, issue="pacing", title="Dead air",
+                                                             problem="Nothing happens.", fix="Cut 3 s.")]),
+            )
+        tests.scorer.side_effect = score
+        report = tests.create(["shorts", "youtube"]).json()["result"]
+        self.assertEqual(report["overallSuggestions"], ["Open on the result.", "Cut the pause at 0:08."])
+        self.assertEqual(len(report["observations"]), 1)  # the Shorts review of the same video doesn't duplicate it
+        self.assertEqual(report["observations"][0] | {}, {"id": "m0", "time": 8.0, "end": 11.0, "kind": "pacing",
+                         "title": "Dead air", "detail": "Nothing happens.", "fix": "Cut 3 s."})
+
+
+def _image(fmt="PNG", size=(64, 36)):
+    import io as _io
+    from PIL import Image
+    buffer = _io.BytesIO()
+    Image.new("RGB", size, "#336699").save(buffer, fmt)
+    return buffer.getvalue()
+
+
+class ThumbnailTests(unittest.TestCase):
+    def setUp(self):
+        self.base = AdapterTests("test_live_model_fallback_is_honest_and_saved_to_signed_owner")
+        self.base.setUp()
+        self.addCleanup(self.base.doCleanups)
+        self.configured = self.base.mock(analyses.gemini, "is_configured", return_value=True)
+
+    def post(self, thumbs, selected=("youtube", "tiktok")):
+        return self.base.client.post("/api/analyses", data={
+            "platforms": json.dumps(list(selected)), "caption": "A real draft caption",
+            "metadata": json.dumps({"name": "clip.webm", "durationSeconds": 24, "width": 720, "height": 1280}),
+        }, files=[("video", ("clip.webm", b"\x1aE\xdf\xa3payload", "video/webm"))]
+                 + [("thumbnails", t) for t in thumbs])
+
+    def comparison(self):
+        from api.services.gemini import GeminiThumbnail, GeminiThumbnailComparison, GeminiThumbnailScore
+        def thumb(number, youtube, tiktok):
+            return GeminiThumbnail(number=number, strengths=["Bold text"], improvements=["Crop tighter"], scores=[
+                GeminiThumbnailScore(platform="YouTube", score=youtube, reason=f"yt {number}"),
+                GeminiThumbnailScore(platform="tiktok", score=tiktok, reason=f"tt {number}")])
+        return GeminiThumbnailComparison(summary="Use 1 on YouTube, 2 on TikTok.",
+                                         thumbnails=[thumb(1, 80, 30), thumb(2, 40, 70)])
+
+    def test_best_thumbnail_is_picked_per_platform_and_files_are_saved(self):
+        compare = self.base.mock(analyses.gemini, "compare_thumbnails", return_value=self.comparison())
+        response = self.post([("wide.png", _image(), "image/png"), ("tall.jpg", _image("JPEG", (36, 64)), "image/jpeg")])
+        self.assertEqual(response.status_code, 200, response.text)
+        review = response.json()["result"]["thumbnails"]
+        self.assertEqual({p["platform"]: (p["index"], p["reason"]) for p in review["picks"]},
+                         {"youtube": (0, "yt 1"), "tiktok": (1, "tt 2")})
+        self.assertEqual([(t["name"], t["width"], t["height"]) for t in review["items"]],
+                         [("wide.png", 64, 36), ("tall.jpg", 36, 64)])
+        self.assertEqual(compare.call_args.args[0], ["youtube", "tiktok"])
+        saved = [c.args[2] for c in self.base.store.call_args_list]
+        report_id = response.json()["id"]
+        self.assertEqual(saved[1:], [f"{report_id}_thumb0.png", f"{report_id}_thumb1.jpg"])
+
+    def test_thumbnail_failure_is_a_warning_not_an_error(self):
+        self.base.mock(analyses.gemini, "compare_thumbnails", side_effect=RuntimeError("boom"))
+        response = self.post([("wide.png", _image(), "image/png")])
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["result"]["thumbnails"])
+        self.assertTrue(any("thumbnails" in w for w in response.json()["result"]["warnings"]))
+        self.assertEqual(self.base.store.call_count, 1)  # only the video
+
+    def test_invalid_thumbnails_are_rejected_before_scoring(self):
+        png = ("t.png", _image(), "image/png")
+        self.assertEqual(self.post([png] * 4).status_code, 422)
+        self.assertEqual(self.post([("t.gif", b"GIF89a", "image/gif")]).status_code, 415)
+        self.assertEqual(self.post([("t.jpg", _image(), "image/jpeg")]).status_code, 415)  # PNG bytes labelled JPEG
+        self.base.scorer.assert_not_awaited()
+
+    def test_thumbnail_download_is_owner_scoped(self):
+        self.assertEqual(self.base.client.get(f"/api/analyses/{'a' * 32}/thumbnails/0").status_code, 404)
+        self.assertIn(OWNER, self.base.query.call_args.args[1])
+
+
+class PostingTests(unittest.TestCase):
+    LINKED = [{"platform": "tiktok", "followers": 900, "audience": {"age_range": "18-24", "top_countries": ["United Kingdom"]}}]
+
+    def setUp(self):
+        self.base = AdapterTests("test_live_model_fallback_is_honest_and_saved_to_signed_owner")
+        self.base.setUp()
+        self.addCleanup(self.base.doCleanups)
+        from api.services import posting
+        self.posting = posting
+        self.base.mock(posting.accounts, "list_accounts", return_value=[])
+        self.base.mock(posting.accounts, "audience_summary", return_value="creator account")
+
+    def gemini_plan(self):
+        from api.services.gemini import GeminiPlatformTiming, GeminiPostingPlan, GeminiWindow
+        return GeminiPostingPlan(summary="Post later.", audience_fit="Matches.", suggestions=["Use UK spelling."], platforms=[
+            GeminiPlatformTiming(platform="TikTok", rating="poor", reason="Too early.",
+                                 windows=[GeminiWindow(days="Weekdays", start="19:00", end="21:00")]),
+            GeminiPlatformTiming(platform="linkedin", rating="good", reason="not requested", windows=[])])
+
+    def post(self, plan, selected=("tiktok",)):
+        return self.base.client.post("/api/analyses", data={
+            "platforms": json.dumps(list(selected)), "caption": "A real draft caption", "posting": json.dumps(plan),
+            "metadata": json.dumps({"name": "clip.webm", "durationSeconds": 24, "width": 720, "height": 1280}),
+        }, files={"video": ("clip.webm", b"\x1aE\xdf\xa3payload", "video/webm")})
+
+    def test_times_are_converted_here_and_passed_to_the_model_in_utc(self):
+        from api.analysis_schemas import PostingIn
+        from datetime import datetime
+        call = self.base.mock(self.posting.gemini, "plan_posting", return_value=self.gemini_plan())
+        plan = self.posting.validate(PostingIn(country="GB", timezone="America/New_York",
+                                               plannedTime=datetime.fromisoformat("2026-10-31T09:00:00-04:00")))
+        advice = self.posting.advise("u", ["tiktok"], "caption", plan)
+        self.assertEqual((advice.audienceTimezone, advice.plannedAudience, advice.plannedPoster),
+                         ("Europe/London", "Sat 31 Oct, 13:00", "Sat 31 Oct, 09:00"))
+        self.assertIn("Sat 31 Oct, 13:00 Europe/London", call.call_args.args[4])
+        self.assertEqual([p.platform for p in advice.platforms], ["tiktok"])  # unrequested formats dropped
+        window = advice.platforms[0].windows[0]
+        self.assertEqual((window.start, window.startLocal, window.endLocal), ("19:00", "15:00", "17:00"))
+
+    def test_audience_country_is_used_when_none_is_chosen_and_rating_needs_a_time(self):
+        from api.analysis_schemas import PostingIn
+        self.posting.accounts.list_accounts.return_value = self.LINKED
+        self.base.mock(self.posting.gemini, "plan_posting", return_value=self.gemini_plan())
+        advice = self.posting.advise("u", ["tiktok"], "caption", PostingIn())
+        self.assertEqual((advice.country, advice.audienceTimezone, advice.hasAudienceData), ("GB", "Europe/London", True))
+        self.assertEqual(advice.platforms[0].rating, "unknown")
+
+    def test_nothing_to_plan_with_skips_gemini(self):
+        from api.analysis_schemas import PostingIn
+        call = self.base.mock(self.posting.gemini, "plan_posting")
+        self.assertIsNone(self.posting.advise("u", ["tiktok"], "caption", PostingIn()))
+        call.assert_not_called()
+
+    def test_report_includes_advice_and_model_gets_utc_time(self):
+        self.base.mock(analyses.gemini, "is_configured", return_value=True)
+        self.base.mock(self.posting.gemini, "plan_posting", return_value=self.gemini_plan())
+        response = self.post({"country": "GB", "plannedTime": "2026-10-31T13:00:00Z", "timezone": "Europe/London"})
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["result"]["posting"]["platforms"][0]["rating"], "poor")
+        self.assertEqual(self.base.scorer.call_args.kwargs["planned_time"].isoformat(), "2026-10-31T13:00:00+00:00")
+
+    def test_invalid_plans_are_rejected_and_failures_are_warnings(self):
+        self.assertEqual(self.post({"country": "XX"}).status_code, 422)
+        self.assertEqual(self.post({"plannedTime": "2026-10-31T13:00:00"}).status_code, 422)  # no offset
+        self.base.mock(analyses.gemini, "is_configured", return_value=True)
+        self.base.mock(self.posting.gemini, "plan_posting", side_effect=RuntimeError("boom"))
+        response = self.post({"country": "GB"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["result"]["posting"])
+        self.assertTrue(any("posting time" in w for w in response.json()["result"]["warnings"]))

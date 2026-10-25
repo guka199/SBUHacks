@@ -27,6 +27,7 @@ import { timecode } from "@/lib/video";
 import { useSession } from "./session";
 import { CopyButton, PlatformIcon } from "./ui";
 import { useAuth } from "@/lib/auth";
+import { HookReview } from "./hook-review";
 
 const exampleResult = makeDemoResult({
   name: "Make something.webm",
@@ -35,6 +36,14 @@ const exampleResult = makeDemoResult({
   height: 1280,
 });
 const nameOf = (id: PlatformId) => platforms.find((p) => p.id === id)!.name;
+type Observation = AnalysisResult["observations"][number];
+const kindLabels: Record<Observation["kind"], string> = {
+  strength: "Works well",
+  opportunity: "Opportunity",
+  unclear: "Unclear",
+  pacing: "Hurts pacing",
+  improve: "Needs improving",
+};
 function metricsOf(
   platform: PlatformResult,
   live: boolean,
@@ -159,6 +168,200 @@ export function Dashboard({
     />
   );
 }
+const ratingLabels = {
+  good: "Good time",
+  okay: "Okay time",
+  poor: "Poor time",
+  unknown: "No time chosen",
+} as const;
+const zoneName = (zone: string) => zone.split("/").pop()!.replace(/_/g, " ");
+function PostingReview({ result }: { result: AnalysisResult }) {
+  const plan = result.posting;
+  if (!plan) return null;
+  const audienceZone = zoneName(plan.audienceTimezone);
+  return (
+    <section className="posting-review" aria-labelledby="posting-title">
+      <div className="panel-heading">
+        <h2 id="posting-title">When and where to post.</h2>
+        <span>
+          {plan.hasAudienceData
+            ? "Based on your audience from Accounts"
+            : "General advice · add your audience in Accounts"}
+        </span>
+      </div>
+      <div className="posting-facts">
+        <div>
+          <span>Posting for</span>
+          <strong>{plan.countryName ?? "No country chosen"}</strong>
+        </div>
+        <div>
+          <span>Your plan</span>
+          <strong>
+            {plan.plannedAudience
+              ? `${plan.plannedAudience} ${audienceZone} time`
+              : "No time chosen"}
+          </strong>
+          {plan.plannedPoster &&
+            plan.posterTimezone !== plan.audienceTimezone && (
+              <small>
+                = {plan.plannedPoster} your time (
+                {zoneName(plan.posterTimezone!)})
+              </small>
+            )}
+        </div>
+      </div>
+      <p className="posting-summary">{plan.summary}</p>
+      <p className="posting-fit">{plan.audienceFit}</p>
+      {!plan.hasAudienceData && (
+        <p className="field-note">
+          <Link href="/accounts">Add your audience</Link> (ages, countries,
+          language) for advice tailored to your viewers.
+        </p>
+      )}
+      <ul className="posting-platforms">
+        {plan.platforms.map((p) => (
+          <li key={p.platform}>
+            <div className="posting-platform-heading">
+              <PlatformIcon id={p.platform} />
+              <strong>{nameOf(p.platform)}</strong>
+              <em className={`posting-rating ${p.rating}`}>
+                {ratingLabels[p.rating]}
+              </em>
+            </div>
+            <p>{p.reason}</p>
+            <h4>Best windows · {audienceZone} time</h4>
+            <ul>
+              {p.windows.map((w) => (
+                <li key={`${w.days}${w.start}`}>
+                  <b>{w.days}</b> {w.start}–{w.end}
+                  {w.startLocal && w.endLocal && (
+                    <small>
+                      {" "}
+                      ({w.startLocal}–{w.endLocal} your time)
+                    </small>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+      {plan.suggestions.length > 0 && (
+        <>
+          <h3>Make it land there</h3>
+          <ul className="posting-suggestions">
+            {plan.suggestions.map((text) => (
+              <li key={text}>
+                <ArrowUpRight size={16} />
+                {text}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+function ThumbnailReview({ result }: { result: AnalysisResult }) {
+  const review = result.thumbnails;
+  if (!review?.items.length) return null;
+  const src = (index: number) => analysisApi.thumbnailUrl(result.id, index);
+  const shortName = (id: PlatformId) =>
+    platforms.find((p) => p.id === id)!.short;
+  return (
+    <section className="thumbnail-review" aria-labelledby="thumbnail-title">
+      <div className="panel-heading">
+        <h2 id="thumbnail-title">Which thumbnail to use.</h2>
+        <span>Gemini thumbnail comparison</span>
+      </div>
+      <p className="thumbnail-summary">{review.summary}</p>
+      <ul className="thumbnail-picks">
+        {review.picks.map((pick) => (
+          <li key={pick.platform}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- private, presigned image */}
+            <img src={src(pick.index)} alt={`Thumbnail ${pick.index + 1}`} />
+            <div>
+              <strong>
+                <PlatformIcon id={pick.platform} /> {nameOf(pick.platform)}
+                <span>→ Thumbnail {pick.index + 1}</span>
+              </strong>
+              <p>{pick.reason}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="thumbnail-cards">
+        {review.items.map((item) => {
+          const wins = review.picks
+            .filter((pick) => pick.index === item.index)
+            .map((pick) => shortName(pick.platform));
+          return (
+            <article
+              key={item.index}
+              className={`thumbnail-card ${wins.length ? "winner" : ""}`}
+            >
+              <div className="thumbnail-frame">
+                {/* eslint-disable-next-line @next/next/no-img-element -- private, presigned image */}
+                <img
+                  src={src(item.index)}
+                  alt={`Thumbnail ${item.index + 1}: ${item.name}`}
+                />
+              </div>
+              <h3>
+                Thumbnail {item.index + 1}
+                <span>
+                  {item.name} · {item.width} × {item.height}
+                </span>
+              </h3>
+              {wins.length > 0 && (
+                <p className="best-label">Best for {wins.join(", ")}</p>
+              )}
+              <dl className="thumbnail-scores">
+                {result.platforms.map((p) => {
+                  const value = item.scores[p.id];
+                  return (
+                    <div key={p.id} title={item.reasons[p.id]}>
+                      <dt>{shortName(p.id)}</dt>
+                      <dd>
+                        <meter
+                          min={0}
+                          max={100}
+                          value={value ?? 0}
+                          aria-label={`${nameOf(p.id)} thumbnail score`}
+                        />
+                        <b>{value ?? "–"}</b>
+                      </dd>
+                    </div>
+                  );
+                })}
+              </dl>
+              {item.strengths.length > 0 && (
+                <>
+                  <h4>Works</h4>
+                  <ul>
+                    {item.strengths.map((text) => (
+                      <li key={text}>{text}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {item.improvements.length > 0 && (
+                <>
+                  <h4>Improve</h4>
+                  <ul>
+                    {item.improvements.map((text) => (
+                      <li key={text}>{text}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 function AnalysisStudio({
   result,
   videoUrl,
@@ -180,9 +383,15 @@ function AnalysisStudio({
     result.observations[0]?.id ?? "",
   );
   const video = useRef<HTMLVideoElement>(null);
+  const clipEnd = useRef<number | null>(null);
+  const clipStart = useRef<number | null>(null);
   const active = result.platforms.find((p) => p.id === selected)!;
   const best = result.platforms.reduce((a, b) => (a.score > b.score ? a : b));
   function seek(time: number, id?: string) {
+    if (!id) {
+      clipStart.current = null;
+      clipEnd.current = null;
+    }
     const target = Math.min(
       time,
       video.current?.duration || result.video.durationSeconds,
@@ -191,6 +400,24 @@ function AnalysisStudio({
     setCurrentTime(target);
     if (id) setActiveObservation(id);
   }
+  // Play only the flagged stretch of the video, then pause at its end.
+  function playClip(o: Observation) {
+    clipEnd.current = null;
+    clipStart.current = o.time;
+    seek(o.time, o.id);
+    video.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    void video.current
+      ?.play()
+      .then(() => (clipEnd.current = o.end))
+      .catch(() => undefined);
+  }
+  const clips = result.observations.filter((o) => o.kind !== "strength");
+  const overallSuggestions = result.overallSuggestions?.length
+    ? result.overallSuggestions
+    : [...new Set(result.platforms.flatMap((p) => p.opportunities))].slice(
+        0,
+        5,
+      );
   function download() {
     const url = URL.createObjectURL(
       new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }),
@@ -437,140 +664,255 @@ function AnalysisStudio({
                 </button>
               </section>
             </div>
+            <PostingReview result={result} />
+            <ThumbnailReview result={result} />
           </>
         )}
         {(view === "overview" || view === "insights") && (
-          <div className="insight-grid">
-            <section className="video-panel">
-              <div className="panel-heading">
-                <h2>The video, with perspective.</h2>
-                <span>
-                  {result.mode === "demo"
-                    ? "Sample observations"
-                    : "AI observations"}
-                </span>
-              </div>
-              <div className="video-screen">
-                {videoUrl && !mediaError ? (
-                  <video
-                    ref={video}
-                    src={videoUrl}
-                    controls
-                    playsInline
-                    preload="metadata"
-                    onError={() => setMediaError(true)}
-                    onTimeUpdate={() =>
-                      setCurrentTime(video.current?.currentTime ?? 0)
-                    }
-                    aria-label="Video insights player"
-                  />
-                ) : (
-                  <div className="video-unavailable">
-                    <FileVideo />
-                    <p>
-                      Video preview isn’t available.
-                      <br />
-                      Your insights are still here.
-                    </p>
-                    <Link href="/upload" className="text-link">
-                      Choose a playable video
-                    </Link>
-                  </div>
-                )}
-              </div>
-              <div className="timeline">
-                <div className="timeline-label">
-                  <span>{timecode(currentTime)}</span>
-                  <span>{timecode(result.video.durationSeconds)}</span>
+          <>
+            <div className="insight-grid">
+              <section className="video-panel">
+                <div className="panel-heading">
+                  <h2>The video, with perspective.</h2>
+                  <span>
+                    {result.mode === "demo"
+                      ? "Sample observations"
+                      : "AI observations"}
+                  </span>
                 </div>
-                <input
-                  aria-label="Seek video"
-                  type="range"
-                  min={0}
-                  max={result.video.durationSeconds}
-                  step={0.1}
-                  value={currentTime}
-                  disabled={!videoUrl || mediaError}
-                  onChange={(event) => seek(Number(event.target.value))}
-                />
-                <div className="timeline-observations">
+                <div className="video-screen">
+                  {videoUrl && !mediaError ? (
+                    <video
+                      ref={video}
+                      src={videoUrl}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      onError={() => setMediaError(true)}
+                      onTimeUpdate={() => {
+                        const time = video.current?.currentTime ?? 0;
+                        setCurrentTime(time);
+                        if (
+                          clipEnd.current !== null &&
+                          time >= clipEnd.current
+                        ) {
+                          clipEnd.current = null;
+                          clipStart.current = null;
+                          video.current?.pause();
+                        }
+                      }}
+                      onSeeking={() => {
+                        // A manual seek outside the clip ends clip playback.
+                        const time = video.current?.currentTime ?? 0;
+                        if (
+                          clipStart.current !== null &&
+                          clipEnd.current !== null &&
+                          (time < clipStart.current - 0.5 ||
+                            time > clipEnd.current)
+                        ) {
+                          clipStart.current = null;
+                          clipEnd.current = null;
+                        }
+                      }}
+                      aria-label="Video insights player"
+                    />
+                  ) : (
+                    <div className="video-unavailable">
+                      <FileVideo />
+                      <p>
+                        Video preview isn’t available.
+                        <br />
+                        Your insights are still here.
+                      </p>
+                      <Link href="/upload" className="text-link">
+                        Choose a playable video
+                      </Link>
+                    </div>
+                  )}
+                </div>
+                <div className="timeline">
+                  <div className="timeline-label">
+                    <span>{timecode(currentTime)}</span>
+                    <span>{timecode(result.video.durationSeconds)}</span>
+                  </div>
+                  <input
+                    aria-label="Seek video"
+                    type="range"
+                    min={0}
+                    max={result.video.durationSeconds}
+                    step={0.1}
+                    value={currentTime}
+                    disabled={!videoUrl || mediaError}
+                    onChange={(event) => seek(Number(event.target.value))}
+                  />
+                  <div className="timeline-observations">
+                    {result.observations.map((o) => (
+                      <button
+                        key={o.id}
+                        title={`${timecode(o.time)} · ${kindLabels[o.kind]}: ${o.title}`}
+                        aria-label={`Play ${timecode(o.time)} to ${timecode(o.end)}: ${o.title}`}
+                        style={{
+                          left: `${Math.min(96, (o.time / result.video.durationSeconds) * 100)}%`,
+                        }}
+                        onClick={() => playClip(o)}
+                        className={o.kind}
+                        disabled={!videoUrl || mediaError}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </section>
+              <section className="observations-panel">
+                <div className="panel-heading">
+                  <h2>Moments that matter.</h2>
+                  <span>{result.observations.length} observations</span>
+                </div>
+                <div className="observation-list">
+                  {!result.observations.length && (
+                    <div className="whole-video-review">
+                      <p>
+                        This review covers the whole video. No timestamped
+                        observations are available.
+                      </p>
+                      <h3>What works</h3>
+                      <ul>
+                        {active.strengths?.map((text) => (
+                          <li key={text}>{text}</li>
+                        ))}
+                      </ul>
+                      <h3>What to improve</h3>
+                      <ul>
+                        {active.opportunities.map((text) => (
+                          <li key={text}>{text}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   {result.observations.map((o) => (
                     <button
                       key={o.id}
-                      title={`${timecode(o.time)}: ${o.title}`}
-                      aria-label={`Seek to ${timecode(o.time)}: ${o.title}`}
-                      style={{
-                        left: `${Math.min(96, (o.time / result.video.durationSeconds) * 100)}%`,
-                      }}
-                      onClick={() => seek(o.time, o.id)}
-                      className={o.kind}
+                      className={`observation ${activeObservation === o.id ? "active" : ""}`}
+                      onClick={() => playClip(o)}
                       disabled={!videoUrl || mediaError}
-                    />
+                    >
+                      <span className={`observation-time ${o.kind}`}>
+                        {timecode(o.time)}–{timecode(o.end)}
+                        {o.kind === "strength" ? (
+                          <Check size={13} />
+                        ) : (
+                          <ArrowUpRight size={13} />
+                        )}
+                      </span>
+                      <span>
+                        <strong>
+                          <em className={`moment-kind ${o.kind}`}>
+                            {kindLabels[o.kind]}
+                          </em>
+                          {o.title}
+                        </strong>
+                        <span>{o.detail}</span>
+                      </span>
+                      <Play size={13} />
+                    </button>
                   ))}
+                </div>
+                <div className="insight-takeaway">
+                  <Sparkles size={19} />
+                  <p>{result.summary}</p>
+                </div>
+                <button
+                  className="text-link"
+                  onClick={() => setView("optimizer")}
+                >
+                  Turn insights into your next edit <ArrowUpRight size={17} />
+                </button>
+              </section>
+            </div>
+            {result.mode === "live" && (
+              <HookReview
+                review={result.hookAnalysis}
+                playable={!!videoUrl && !mediaError}
+                reviewed={result.platforms.some((p) => p.geminiUsed)}
+                onPlay={(start, end, id) =>
+                  playClip({
+                    id,
+                    time: start,
+                    end,
+                    kind: "improve",
+                    title: "Opening review",
+                    detail: "",
+                    fix: "",
+                  })
+                }
+              />
+            )}
+            <section
+              className="overall-suggestions"
+              aria-labelledby="overall-suggestions-title"
+            >
+              <div className="panel-heading">
+                <h2 id="overall-suggestions-title">Overall suggestions</h2>
+                <span>
+                  {result.mode === "demo"
+                    ? "Sample review"
+                    : "From Gemini's full review"}
+                </span>
+              </div>
+              <div className="overall-grid">
+                <div>
+                  <h3>For the whole video</h3>
+                  <ol className="overall-list">
+                    {overallSuggestions.map((text) => (
+                      <li key={text}>{text}</li>
+                    ))}
+                  </ol>
+                </div>
+                <div>
+                  <h3>Clips to fix</h3>
+                  {!clips.length ? (
+                    <p className="overall-empty">
+                      {result.mode === "live"
+                        ? "Gemini found no specific stretch that is unclear or slows the pacing."
+                        : "No clips flagged."}
+                    </p>
+                  ) : (
+                    <ul className="clip-list">
+                      {clips.map((o) => (
+                        <li
+                          key={o.id}
+                          className={activeObservation === o.id ? "active" : ""}
+                        >
+                          <button
+                            className="clip-play"
+                            onClick={() => playClip(o)}
+                            disabled={!videoUrl || mediaError}
+                            aria-label={`Play ${timecode(o.time)} to ${timecode(o.end)}`}
+                          >
+                            <Play size={14} />
+                            {timecode(o.time)}–{timecode(o.end)}
+                          </button>
+                          <div>
+                            <strong>
+                              <em className={`moment-kind ${o.kind}`}>
+                                {kindLabels[o.kind]}
+                              </em>
+                              {o.title}
+                            </strong>
+                            <p>{o.detail}</p>
+                            {o.fix && (
+                              <p className="clip-fix">
+                                <ArrowUpRight size={14} /> {o.fix}
+                              </p>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             </section>
-            <section className="observations-panel">
-              <div className="panel-heading">
-                <h2>Moments that matter.</h2>
-                <span>{result.observations.length} observations</span>
-              </div>
-              <div className="observation-list">
-                {!result.observations.length && (
-                  <div className="whole-video-review">
-                    <p>
-                      This review covers the whole video. No timestamped
-                      observations are available.
-                    </p>
-                    <h3>What works</h3>
-                    <ul>
-                      {active.strengths?.map((text) => (
-                        <li key={text}>{text}</li>
-                      ))}
-                    </ul>
-                    <h3>What to improve</h3>
-                    <ul>
-                      {active.opportunities.map((text) => (
-                        <li key={text}>{text}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {result.observations.map((o) => (
-                  <button
-                    key={o.id}
-                    className={`observation ${activeObservation === o.id ? "active" : ""}`}
-                    onClick={() => seek(o.time, o.id)}
-                    disabled={!videoUrl || mediaError}
-                  >
-                    <span className={`observation-time ${o.kind}`}>
-                      {timecode(o.time)}
-                      {o.kind === "strength" ? (
-                        <Check size={13} />
-                      ) : (
-                        <ArrowUpRight size={13} />
-                      )}
-                    </span>
-                    <span>
-                      <strong>{o.title}</strong>
-                      <span>{o.detail}</span>
-                    </span>
-                    <Play size={13} />
-                  </button>
-                ))}
-              </div>
-              <div className="insight-takeaway">
-                <Sparkles size={19} />
-                <p>{result.summary}</p>
-              </div>
-              <button
-                className="text-link"
-                onClick={() => setView("optimizer")}
-              >
-                Turn insights into your next edit <ArrowUpRight size={17} />
-              </button>
-            </section>
-          </div>
+          </>
         )}
         {view === "optimizer" && (
           <Optimizer

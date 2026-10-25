@@ -1,0 +1,3 @@
+profileUrl,postId,postUrl,postContent,postDate,likeCount,commentCount,repostCount,type
+https://www.linkedin.com/in/viralpilot-fixture,li-fixture-1,https://www.linkedin.com/feed/update/urn:li:activity:1000000000000000001/,Synthetic production lessons,2026-09-01T12:00:00Z,75,8,4,post
+https://www.linkedin.com/in/viralpilot-fixture,li-fixture-2,https://www.linkedin.com/feed/update/urn:li:activity:1000000000000000002/,Synthetic launch notes,2026-09-08T12:00:00Z,0,0,,post

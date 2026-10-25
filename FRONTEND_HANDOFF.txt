@@ -449,6 +449,23 @@ Docs, source/licenses, meaningful geometry/reversal tests and browser captures
 accompany the commit. The delivery message gives the verified pushed hash/URL.
 Keep this file current whenever APIs, assets, features or setup change.
 
+HOOK REVIEW UPDATE (October 24, 2026)
+New live video reports now include a focused review of the first min(5 seconds,
+video duration). See docs/hook-analysis.md for the full contract. HookReview in
+frontend/src/components/hook-review.tsx shows four explained ratings, the actual
+opening versus a proposed opening, a copy button and playable evidence spans.
+It reuses the existing video player and Gemini content request. New JSON field:
+AnalysisReport.hookAnalysis (nullable); /score exposes content.hook_analysis.
+Old saved reports remain readable and show an unavailable state until reanalyzed.
+The rating is editorial guidance, not measured retention/ECR or a prediction of
+views. Models, feature definitions, score blending, thumbnails and whole-video
+feedback remain compatible. Root GEMINI_API_KEY is server-only; no new provider
+key or model download is needed. Browser/contract checks cover short windows,
+missing values, timestamps, saved reports, responsive layout and playback.
+100 backend tests, 12 frontend tests, lint/typecheck and production build passed.
+Real Gemini verification used original synthetic footage and isolated SQLite;
+no production accounts/data were changed. The user authorized delivery to main.
+
 Browser rendering note: perspective-transformed backdrop filters left oversized
 ghost captures in Chromium. Moving notifications/controls now use stable
 translucent fills; glass keeps its deformation/caustic/highlights and a locally

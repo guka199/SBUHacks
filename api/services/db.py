@@ -12,6 +12,7 @@ import logging
 import os
 import sqlite3
 import threading
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -122,6 +123,63 @@ _lock = threading.Lock()
 # process. Provider calls run outside this lock; only owner checks/storage use it.
 creator_data_lock = threading.RLock()
 _conn = None
+
+# Additive tables only. Payloads contain normalized, public fields, not raw exports.
+SCHEMA += [
+    '''CREATE TABLE IF NOT EXISTS SOCIAL_LINKS (
+        user_id VARCHAR, platform VARCHAR, profile_url VARCHAR, max_posts INTEGER,
+        active_job VARCHAR, snapshot_id VARCHAR, interval_hours INTEGER,
+        next_refresh FLOAT, last_requested FLOAT,
+        PRIMARY KEY (user_id, platform)
+    )''',
+    '''CREATE TABLE IF NOT EXISTS SOCIAL_JOBS (
+        id VARCHAR PRIMARY KEY, user_id VARCHAR, platform VARCHAR, job_status VARCHAR,
+        phase VARCHAR, progress INTEGER, request_json VARCHAR, state_json VARCHAR,
+        created_at VARCHAR, updated_at VARCHAR, error_message VARCHAR,
+        snapshot_id VARCHAR, next_poll FLOAT, deadline FLOAT
+    )''',
+    '''CREATE TABLE IF NOT EXISTS SOCIAL_SNAPSHOTS (
+        id VARCHAR PRIMARY KEY, user_id VARCHAR, platform VARCHAR,
+        captured_at VARCHAR, payload VARCHAR
+    )''',
+]
+
+
+class Transaction:
+    def __init__(self, connection):
+        self.connection = connection
+
+    def execute(self, sql, params=()):
+        cur = self.connection.cursor()
+        try:
+            cur.execute(sql.replace('%s', '?') if backend() == 'sqlite' else sql, params)
+            if cur.description:
+                columns = [d[0].lower() for d in cur.description]
+                return [dict(zip(columns, tuple(row))) for row in cur.fetchall()]
+            return []
+        finally:
+            cur.close()
+
+
+@contextmanager
+def transaction():
+    """Atomic app operations under the shared connection lock; no ambiguous retries.
+
+    Single API/worker process is required for social job deduplication on Snowflake,
+    whose standard-table PKs are informational. See the deployment guide.
+    """
+    global _conn
+    with _lock:
+        if _conn is None:
+            _conn = _connect()
+        tx = Transaction(_conn)
+        tx.execute('BEGIN IMMEDIATE' if backend() == 'sqlite' else 'BEGIN')
+        try:
+            yield tx
+            _conn.commit()
+        except BaseException:
+            _conn.rollback()
+            raise
 
 
 def backend() -> str:
