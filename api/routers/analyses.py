@@ -195,6 +195,7 @@ async def create_analysis(
     overall: list[str] = []
     observations: list[Observation] = []
     hook_review = None
+    clarity_review = pacing_review = None
     # Shorts is a format of YouTube, with the same trained model and the real duration.
     # Review it separately so Gemini receives the requested short-form context.
     groups = [([p for p in chosen if p != "shorts"], "video")]
@@ -206,7 +207,8 @@ async def create_analysis(
         response = await score_post(
             background=BackgroundTasks(), caption=caption,
             platforms=",".join("youtube" if p == "shorts" else p for p in formats),
-            planned_time=planned_utc, context=json.dumps({"duration_sec": info.durationSeconds, "format": format_name}),
+            planned_time=planned_utc, context=json.dumps({"duration_sec": info.durationSeconds, "format": format_name,
+                                                      "width": info.width, "height": info.height}),
             file=UploadFile(io.BytesIO(media), filename=video.filename,
                             headers=video.headers), user_id=user_id, session_user_id=None,
         )
@@ -217,6 +219,11 @@ async def create_analysis(
             summaries.append(content.summary)
             if hook_review is None:
                 hook_review = content.hook_analysis
+            # Same video in every review group: keep the first clarity/pacing review that came back
+            if clarity_review is None:
+                clarity_review = content.clarity_analysis
+            if pacing_review is None:
+                pacing_review = content.pacing_analysis
             # The Shorts review watches the same video; keep the first review's moments to avoid duplicates
             if not observations:
                 observations = [Observation(id=f"m{i}", time=m.start, end=m.end, kind=m.issue, title=m.title,
@@ -226,12 +233,16 @@ async def create_analysis(
         for target in formats:
             source = "youtube" if target == "shorts" else target
             score = next(s for s in response.scores if s.platform == source)
-            detail = next((s.reason for s in content.platform_scores if s.platform == source), "") if content else ""
+            review = next((s for s in content.platform_scores if s.platform == source), None) if content else None
+            detail = review.reason if review else ""
+            # Per-platform hook / visual / clarity, falling back to the review's overall values (older reviews)
+            per_platform = lambda field: (getattr(review, field, None) if review and getattr(review, field, None)
+                                          is not None else getattr(content, field) if content else None)
             results[target] = ReportPlatform(
                 id=target, score=score.score, modelScore=score.model_score, contentScore=score.content_score,
-                geminiUsed=score.content_score is not None, hook=content.hook if content else None,
+                geminiUsed=score.content_score is not None, hook=per_platform("hook"),
                 modelWeight=response.model_weight if score.content_score is not None else 1.0,
-                visualQuality=content.visual_quality if content else None, clarity=content.clarity if content else None,
+                visualQuality=per_platform("visual_quality"), clarity=per_platform("clarity"),
                 assessment=detail or "Statistical model estimate using caption, duration and linked account context. Media review is unavailable.",
                 opportunities=response.suggestions, strengths=content.strengths if content else [],
                 suggestions=PublishingCopy(caption=caption, edits=response.suggestions),
@@ -256,6 +267,7 @@ async def create_analysis(
         summary=" ".join(dict.fromkeys(summaries)) or "Model-only report. Gemini did not review this video.",
         warnings=list(dict.fromkeys(warnings)), observations=observations,
         overallSuggestions=overall[:5], thumbnails=thumbnail_report, hookAnalysis=hook_review,
+        clarityAnalysis=clarity_review, pacingAnalysis=pacing_review,
         posting=posting_advice,
     )
     safe_name = f"{report.id}{Path(video.filename or 'video.mp4').suffix.lower()}"

@@ -17,6 +17,7 @@ import time
 from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
+from api.services.focus import FOCUS_PROMPT, GeminiFocusReview
 from api.services.hooks import GeminiHookReview
 
 DEFAULT_MODEL = "gemini-3.5-flash-lite"  # ~3 s per review; 3.8-flash took 2-5 min in testing
@@ -42,18 +43,42 @@ class GeminiMoment(BaseModel):
     fix: str = Field(description="one sentence: the concrete edit for this stretch (cut, reorder, caption, reshoot...)")
 
 
+class GeminiContentScore(BaseModel):
+    """Video/post content judged by ONE platform's norms - the same draft lands differently on each platform.
+    Field order matters: the model writes each platform-specific note before the number it justifies."""
+    platform: str = Field(description="one of the platforms you were asked to judge, exactly as written")
+    # Defaults keep a reply that omits these usable (the overall values are used instead); the request schema
+    # still marks every field required - see _review_schema.
+    viewing: str = Field(default="", description="one sentence: how a viewer on THIS platform meets this draft - "
+                                                 "where it appears, orientation/crop, sound on or off, how fast they "
+                                                 "decide to stay")
+    hook_note: str = Field(default="", description="a few words: how the opening plays for THIS platform's viewers")
+    hook: int | None = Field(default=None, description="0-100 for THIS platform")
+    visual_note: str = Field(default="", description="a few words: how the visuals look as displayed on THIS platform")
+    visual_quality: int | None = Field(default=None, description="0-100 for THIS platform")
+    clarity_note: str = Field(default="", description="a few words: how quickly THIS platform's audience gets the "
+                                                      "message")
+    clarity: int | None = Field(default=None, description="0-100 for THIS platform")
+    score: int = Field(description="0-100 percentile vs. typical posts on that platform; 50 = typical")
+    reason: str = Field(description="one sentence: why this score on this platform")
+
+
 class GeminiAnalysis(BaseModel):
     summary: str = Field(description="one sentence describing what the post shows and says")
     hook: int = Field(description="0-100: how strongly the first second / first line grabs attention")
     visual_quality: int = Field(description="0-100: lighting, framing, legibility (50 if there is no media)")
     clarity: int = Field(description="0-100: how quickly the message is understood")
     trend_fit: int = Field(description="0-100: fit with formats that currently perform on these platforms")
-    platform_scores: list[GeminiPlatformScore]
+    platform_scores: list[GeminiContentScore]
     strengths: list[str] = Field(description="up to 3 short things the post does well")
     suggestions: list[str] = Field(description="exactly 3 specific, actionable edits, most impactful first")
     moments: list[GeminiMoment] = Field(
         description="for a VIDEO only: up to 5 timestamped stretches that are unclear, hurt pacing or need improving, "
                     "in time order; empty list for images or caption-only posts")
+    clarity_analysis: GeminiFocusReview | None = Field(
+        default=None, description="Whole-video clarity review for a VIDEO; null for images or caption-only posts")
+    pacing_analysis: GeminiFocusReview | None = Field(
+        default=None, description="Whole-video pacing review for a VIDEO; null for images or caption-only posts")
     hook_analysis: GeminiHookReview | None = Field(default=None,
         description='Focused first-five-seconds video review, or null for image/text-only or unobservable content.')
 
@@ -61,6 +86,7 @@ class GeminiAnalysis(BaseModel):
 PROMPT = """You are an expert social media strategist reviewing a DRAFT post before it is published.
 
 Platforms to judge: {platforms}
+What each platform name means here: {surfaces}
 Caption / title: {caption}
 Planned posting time: {planned}
 Account context: {context}
@@ -75,6 +101,16 @@ Factors the model says hurt the score most:
 Score the CONTENT itself for each platform on the same scale: 50 = a typical post on that platform, 75 = top quarter,
 90+ = exceptional. Judge the hook (first second / first line), visual quality, clarity of the message, and fit with
 what currently performs on each platform. Be calibrated and honest: most drafts land between 30 and 70.
+
+For EACH platform, first describe in one sentence how a viewer there meets this draft, then rate hook,
+visual_quality and clarity by THAT platform's rules - never copy one set of numbers to every platform:
+- TikTok / Reels / Shorts: full-screen 9:16 feed, swiped past in about a second; a slow or static first second is
+  heavily penalised; vertical framing is native; on-screen text carries the message.
+- YouTube (long-form): 16:9 player reached by clicking a thumbnail; viewers give the first 5-10 seconds, so a slow
+  first second matters less; a vertical 9:16 video shows with black side bars and loses visual quality there.
+- Instagram feed/Reels: often watched sound-off and judged on aesthetics; clarity depends on on-screen text.
+- LinkedIn: sound-off, professional audience; clarity means a clear takeaway, entertainment matters less.
+The video is {orientation}. The same draft should therefore usually get different numbers on different platforms.
 
 Then write exactly 3 suggestions, most impactful first. Each must be a concrete edit to THIS post (what to cut, what
 to show first, what to say, when to post), merging in the model's factors where they matter. No generic advice.
@@ -339,6 +375,44 @@ def compare_posts(platforms: list[str], variants: list[dict], profile: str) -> G
     return GeminiPostComparison.model_validate_json(interaction.output_text)
 
 
+PLATFORM_SURFACES = {
+    "tiktok": "TikTok (full-screen 9:16 feed)",
+    "instagram": "Instagram Reels (9:16 feed, often sound-off)",
+    "linkedin": "LinkedIn (feed, sound-off, professional audience)",
+    "youtube": "YouTube long-form (16:9 player reached from a thumbnail; vertical video shows with black side bars)",
+}
+
+
+def _surfaces(platforms: list[str], context: dict) -> str:
+    """Name the exact surface per platform; 'youtube' in a Shorts review means YouTube Shorts."""
+    shorts = context.get("format") == "short"
+    return ", ".join(("youtube = YouTube Shorts (full-screen 9:16 feed)" if p == "youtube" and shorts
+                      else f"{p} = {PLATFORM_SURFACES.get(p, p)}") for p in platforms)
+
+
+def _orientation(context: dict) -> str:
+    """Tell Gemini the real aspect ratio (the upload form knows it) so per-platform visual scores can use it."""
+    width, height = context.get("width"), context.get("height")
+    if not (isinstance(width, (int, float)) and isinstance(height, (int, float)) and width and height):
+        return "of unknown orientation - judge it from the video itself"
+    shape = "vertical" if height > width * 1.1 else "horizontal" if width > height * 1.1 else "square"
+    return f"{shape} ({int(width)}x{int(height)})"
+
+
+def _review_schema() -> dict:
+    """GeminiAnalysis as a request schema, with every per-platform field required and the metrics plain integers."""
+    schema = _inline_refs(GeminiAnalysis.model_json_schema())
+    item = schema["properties"]["platform_scores"]["items"]
+    for key in ("hook", "visual_quality", "clarity"):
+        item["properties"][key] = {"type": "integer", "description": item["properties"][key].get("description", "")}
+    for prop in item["properties"].values():
+        prop.pop("default", None)
+    item["required"] = list(item["properties"])
+    # Ask for the clarity and pacing reviews every time (they may still be null for images)
+    schema["required"] = sorted(set(schema.get("required", [])) | {"clarity_analysis", "pacing_analysis"})
+    return schema
+
+
 def is_configured() -> bool:
     return bool(os.getenv("GEMINI_API_KEY"))
 
@@ -427,11 +501,13 @@ def analyze(
         media=f"yes ({mime_type})" if media else "none - judge the caption only",
         model_scores="\n".join(f"- {p}: {s:.0f}" for p, s in model_scores.items()),
         factors="\n".join(f"- {f}" for f in model_factors) or "- none stood out",
+        orientation=_orientation(context),
+        surfaces=_surfaces(platforms, context),
         duration=f" (the video is {context['duration_sec']:.0f} seconds long)"
         if isinstance(context.get("duration_sec"), (int, float)) else "",
     )
 
-    items: list[dict] = [{"type": "text", "text": prompt + HOOK_PROMPT}]
+    items: list[dict] = [{"type": "text", "text": prompt + HOOK_PROMPT + FOCUS_PROMPT}]
     uploaded = None
     if media:
         kind = "video" if mime_type.startswith("video/") else "image"
@@ -451,18 +527,20 @@ def analyze(
             response_format={
                 "type": "text",
                 "mime_type": "application/json",
-                "schema": _inline_refs(GeminiAnalysis.model_json_schema()),
+                "schema": _review_schema(),
             },
         )
         try:
             return GeminiAnalysis.model_validate_json(interaction.output_text)
         except ValidationError as exc:
-            # A malformed optional opening review must not discard the teammate's
+            # A malformed optional review (opening, clarity, pacing) must not discard the
             # valid whole-video review/moments. All other validation errors propagate.
-            if not all(error['loc'] and error['loc'][0] == 'hook_analysis' for error in exc.errors()):
+            optional = {'hook_analysis', 'clarity_analysis', 'pacing_analysis'}
+            if not all(error['loc'] and error['loc'][0] in optional for error in exc.errors()):
                 raise
             payload = json.loads(interaction.output_text)
-            payload['hook_analysis'] = None
+            for key in {error['loc'][0] for error in exc.errors()}:
+                payload[key] = None
             return GeminiAnalysis.model_validate(payload)
     finally:
         if uploaded is not None:

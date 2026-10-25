@@ -62,6 +62,35 @@ export const hookAnalysisSchema = z
     });
   });
 export type HookAnalysis = z.infer<typeof hookAnalysisSchema>;
+// Whole-video clarity / pacing reviews (api/focus_schemas.py)
+export const focusAnalysisSchema = z.object({
+  method: z.literal("ai_review"),
+  kind: z.enum(["clarity", "pacing"]),
+  score: score.nullable(),
+  summary: z.string().min(1).max(700),
+  topFix: z.string().min(1).max(700),
+  criteria: z
+    .array(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        score: score.nullable(),
+        evidence: z.string().min(1).max(700),
+      }),
+    )
+    .length(4),
+  evidence: z
+    .array(
+      z.object({
+        start: z.number().nonnegative(),
+        end: z.number().positive(),
+        observation: z.string().min(1).max(700),
+        edit: z.string().min(1).max(700),
+      }),
+    )
+    .max(4),
+});
+export type FocusAnalysis = z.infer<typeof focusAnalysisSchema>;
 export const resultSchema = z
   .object({
     id: z.string().min(1),
@@ -118,6 +147,8 @@ export const resultSchema = z
     ),
     overallSuggestions: z.array(z.string()).optional(),
     hookAnalysis: hookAnalysisSchema.nullable().optional(),
+    clarityAnalysis: focusAnalysisSchema.nullable().optional(),
+    pacingAnalysis: focusAnalysisSchema.nullable().optional(),
     thumbnails: z
       .object({
         summary: z.string(),

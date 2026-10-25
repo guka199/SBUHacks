@@ -151,7 +151,14 @@ export interface ContentAnalysis {
   visual_quality: number;
   clarity: number;
   trend_fit: number;
-  platform_scores: { platform: Platform; score: number; reason: string }[];
+  platform_scores: {
+    platform: Platform;
+    score: number;
+    reason: string;
+    hook?: number | null; // judged by this platform's norms
+    visual_quality?: number | null;
+    clarity?: number | null;
+  }[];
   strengths: string[];
   moments?: VideoMoment[];
   hook_analysis?: HookAnalysis | null;

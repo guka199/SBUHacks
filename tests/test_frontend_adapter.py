@@ -463,3 +463,73 @@ class DashboardTests(unittest.TestCase):
         self.base.query.side_effect = lambda sql, params=(): []
         data = self.base.client.get("/api/dashboard").json()
         self.assertEqual((data["platforms"], data["takeaways"], data["strongest"]), ([], [], None))
+
+
+class PerPlatformMetricTests(unittest.TestCase):
+    def test_hook_visual_clarity_come_from_each_platforms_review(self):
+        from api.schemas import ContentAnalysis, ContentScore
+        base = AdapterTests("test_live_model_fallback_is_honest_and_saved_to_signed_owner")
+        base.setUp()
+        self.addCleanup(base.doCleanups)
+
+        async def score(**kwargs):
+            context = json.loads(kwargs["context"])
+            self.assertEqual((context["width"], context["height"]), (720, 1280))  # Gemini learns the orientation
+            return ScoreResponse(
+                scores=[CombinedScore(platform=p, score=50, model_score=50, content_score=50, top_factors=[])
+                        for p in kwargs["platforms"].split(",")],
+                suggestions=["a"], model_weight=0.6, gemini_used=True,
+                content=ContentAnalysis(summary="s", hook=40, visual_quality=41, clarity=42, trend_fit=50, strengths=[],
+                                        platform_scores=[
+                                            ContentScore(platform="tiktok", score=50, reason="r", hook=30,
+                                                         visual_quality=60, clarity=55),
+                                            ContentScore(platform="instagram", score=50, reason="r")]))  # older shape
+        base.scorer.side_effect = score
+        report = base.create(["tiktok", "instagram"]).json()["result"]
+        metrics = {p["id"]: (p["hook"], p["visualQuality"], p["clarity"]) for p in report["platforms"]}
+        self.assertEqual(metrics, {"tiktok": (30, 60, 55), "instagram": (40, 41, 42)})
+
+
+class FocusReviewTests(unittest.TestCase):
+    def review(self, ids=("subject", "message", "text_audio", "structure"), scores=(80, None, 40, 60)):
+        from api.services.focus import GeminiFocusCriterion, GeminiFocusMoment, GeminiFocusReview
+        return GeminiFocusReview(summary="s", top_fix="Cut the pause.", criteria=[
+            GeminiFocusCriterion(id=i, score=sc, evidence="seen") for i, sc in zip(ids, scores)], evidence=[
+            GeminiFocusMoment(start="0:03", end="0:08", observation="blank", edit="cut"),
+            GeminiFocusMoment(start="0:30", end="0:35", observation="past the end", edit="x"),
+            GeminiFocusMoment(start="0:05", end="0:02", observation="backwards", edit="x")])
+
+    def test_spans_are_kept_inside_the_video_and_unscored_criteria_are_not_averaged(self):
+        from api.services.focus import clean_focus_review
+        result = clean_focus_review(self.review(), "clarity", 20, True)
+        self.assertEqual(result.score, 60.0)  # mean of 80, 40, 60 - the null criterion is not a zero
+        self.assertEqual([(e.start, e.end) for e in result.evidence], [(3.0, 8.0)])
+        self.assertEqual([c.label for c in result.criteria],
+                         ["Subject", "Message & payoff", "Works with sound off", "Structure"])
+
+    def test_wrong_criteria_or_non_video_give_no_review(self):
+        from api.services.focus import clean_focus_review
+        self.assertIsNone(clean_focus_review(self.review(), "pacing", 20, True))  # clarity ids for a pacing review
+        self.assertIsNone(clean_focus_review(self.review(), "clarity", 20, False))
+
+    def test_report_carries_clarity_and_pacing_reviews(self):
+        from api.schemas import ContentAnalysis
+        from api.services.focus import clean_focus_review
+        base = AdapterTests("test_live_model_fallback_is_honest_and_saved_to_signed_owner")
+        base.setUp()
+        self.addCleanup(base.doCleanups)
+        clarity = clean_focus_review(self.review(), "clarity", 20, True)
+        pacing = clean_focus_review(self.review(("start", "rhythm", "dead_air", "ending")), "pacing", 20, True)
+
+        async def score(**kwargs):
+            return ScoreResponse(
+                scores=[CombinedScore(platform=p, score=50, model_score=50, content_score=None, top_factors=[])
+                        for p in kwargs["platforms"].split(",")],
+                suggestions=["a"], model_weight=0.6, gemini_used=True,
+                content=ContentAnalysis(summary="s", hook=50, visual_quality=50, clarity=50, trend_fit=50,
+                                        platform_scores=[], strengths=[], clarity_analysis=clarity,
+                                        pacing_analysis=pacing))
+        base.scorer.side_effect = score
+        report = base.create(["tiktok", "shorts"]).json()["result"]
+        self.assertEqual((report["clarityAnalysis"]["kind"], report["pacingAnalysis"]["kind"]), ("clarity", "pacing"))
+        self.assertEqual(report["pacingAnalysis"]["topFix"], "Cut the pause.")

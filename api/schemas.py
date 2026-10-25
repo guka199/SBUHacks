@@ -4,6 +4,7 @@ from datetime import date, datetime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, StringConstraints
+from api.focus_schemas import FocusAnalysis
 from api.hook_schemas import HookAnalysis
 
 Platform = Literal["youtube", "tiktok", "instagram", "linkedin"]
@@ -156,6 +157,10 @@ class ContentScore(BaseModel):
     platform: Platform
     score: float  # Gemini's content score, same 0-100 scale
     reason: str
+    # The draft's hook / visual quality / clarity judged by this platform's norms (None in older reviews)
+    hook: int | None = None
+    visual_quality: int | None = None
+    clarity: int | None = None
 
 
 class VideoMoment(BaseModel):
@@ -177,6 +182,8 @@ class ContentAnalysis(BaseModel):
     strengths: list[str]
     moments: list[VideoMoment] = []  # timestamped problem stretches (videos only), checked against the duration
     hook_analysis: HookAnalysis | None = None
+    clarity_analysis: FocusAnalysis | None = None  # whole-video clarity review (videos only)
+    pacing_analysis: FocusAnalysis | None = None  # whole-video pacing review (videos only)
 
 
 class CombinedScore(BaseModel):

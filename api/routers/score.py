@@ -22,6 +22,7 @@ from api.routers.predict import CONTEXT_FIELDS, FEATURE_HINTS, score_with_model
 from api.schemas import CombinedScore, ContentAnalysis, ContentScore, PredictRequest, ScoreResponse, UserId
 from api.services import accounts, drafts, gemini
 from api.services.auth import current_user_id
+from api.services.focus import clean_focus_review
 from api.services.hooks import clean_hook_review
 from api.services.predictions import persist
 from shared.features import PLATFORMS
@@ -54,9 +55,12 @@ async def score_post(
     if not chosen or unknown:
         raise HTTPException(422, f"platforms must be a comma-separated subset of {PLATFORMS}; got {unknown or 'none'}")
     try:
-        ctx = {k: v for k, v in json.loads(context or "{}").items() if k in CONTEXT_FIELDS}
+        raw = json.loads(context or "{}")
+        ctx = {k: v for k, v in raw.items() if k in CONTEXT_FIELDS}
     except (json.JSONDecodeError, AttributeError):
         raise HTTPException(422, "context must be a JSON object") from None
+    # The media's pixel size is not a model input, but Gemini uses it to judge fit per platform
+    media_size = {k: raw[k] for k in ("width", "height") if isinstance(raw.get(k), (int, float)) and raw[k] > 0}
 
     media, mime_type = None, None
     if file is not None and file.filename:
@@ -82,13 +86,18 @@ async def score_post(
     else:
         try:
             analysis = await run_in_threadpool(
-                gemini.analyze, chosen, caption, planned_time.isoformat() if planned_time else None, ctx,
+                gemini.analyze, chosen, caption, planned_time.isoformat() if planned_time else None, {**ctx, **media_size},
                 model_scores, [FEATURE_HINTS[f] for f in hurting], media, mime_type,
             )
         except Exception as e:
             log.exception("Gemini review failed")
             warning = f"Gemini review failed ({type(e).__name__}) - showing the model score only."
 
+    is_video = bool(media and mime_type and mime_type.startswith('video/'))
+    clarity_review = clean_focus_review(analysis.clarity_analysis if analysis else None, "clarity",
+                                        ctx.get('duration_sec'), is_video)
+    pacing_review = clean_focus_review(analysis.pacing_analysis if analysis else None, "pacing",
+                                       ctx.get('duration_sec'), is_video)
     hook_review = clean_hook_review(analysis.hook_analysis if analysis else None, ctx.get('duration_sec'),
                                    bool(media and mime_type and mime_type.startswith('video/')))
     if analysis and media and mime_type and mime_type.startswith('video/') and hook_review is None:
@@ -101,7 +110,10 @@ async def score_post(
         for item in analysis.platform_scores:
             p = item.platform.strip().lower()
             if p in chosen:
-                content_by_platform[p] = ContentScore(platform=p, score=float(min(max(item.score, 0), 100)), reason=item.reason)
+                clamp = lambda v: None if v is None else int(min(max(v, 0), 100))
+                content_by_platform[p] = ContentScore(
+                    platform=p, score=float(min(max(item.score, 0), 100)), reason=item.reason,
+                    hook=clamp(item.hook), visual_quality=clamp(item.visual_quality), clarity=clamp(item.clarity))
 
     scores = []
     for s in model_result.scores:
@@ -124,6 +136,8 @@ async def score_post(
             strengths=analysis.strengths[:3],
             moments=gemini.clean_moments(analysis.moments, ctx.get("duration_sec")) if media else [],
             hook_analysis=hook_review,
+            clarity_analysis=clarity_review,
+            pacing_analysis=pacing_review,
         ),
         model_weight=weight,
         gemini_used=analysis is not None,
