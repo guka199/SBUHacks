@@ -1,8 +1,16 @@
-import { Loader2, Save } from "lucide-react";
 import {
-  creatorGoals,
+  Check,
+  ChevronDown,
+  Compass,
+  Loader2,
+  MessageCircle,
+  PanelsTopLeft,
+  Save,
+  ShoppingBag,
+  TrendingUp,
+} from "lucide-react";
+import {
   creatorPreferencesSchema,
-  goalNames,
   localDate,
   type CreatorPreferences,
 } from "@/lib/ideas";
@@ -55,6 +63,39 @@ export function parseDirection(draft: DirectionDraft) {
   return { preferences: null, error };
 }
 
+const goalChoices = [
+  {
+    value: null,
+    title: "Explore",
+    description: "Find a fresh angle",
+    icon: Compass,
+  },
+  {
+    value: "growth",
+    title: "Grow",
+    description: "Reach new people",
+    icon: TrendingUp,
+  },
+  {
+    value: "engagement",
+    title: "Engage",
+    description: "Start conversations",
+    icon: MessageCircle,
+  },
+  {
+    value: "sales",
+    title: "Sell",
+    description: "Support your offer",
+    icon: ShoppingBag,
+  },
+  {
+    value: "series",
+    title: "Build a series",
+    description: "Keep a story going",
+    icon: PanelsTopLeft,
+  },
+] as const;
+
 export function DirectionEditor({
   draft,
   dirty,
@@ -75,6 +116,12 @@ export function DirectionEditor({
   onReset: () => void;
 }) {
   const validation = parseDirection(draft);
+  const noteCount = [
+    draft.goal_details,
+    draft.style_notes,
+    draft.audience_notes,
+    draft.topics_to_avoid,
+  ].filter((note) => note.trim()).length;
   function change<K extends keyof DirectionDraft>(
     key: K,
     value: DirectionDraft[K],
@@ -85,20 +132,20 @@ export function DirectionEditor({
     <section className={styles.direction} aria-labelledby="direction-heading">
       <div className={styles.sectionHeading}>
         <div>
-          <span className={styles.eyebrow}>You set the direction</span>
-          <h2 id="direction-heading">What are you working toward?</h2>
+          <span className={styles.eyebrow}>01 / Make it yours</span>
+          <h2 id="direction-heading">What do you want your next post to do?</h2>
         </div>
         <span className={styles.badge}>
           {dirty
             ? "Unsaved changes"
             : updatedAt
-              ? "Saved to your account"
+              ? "Preferences saved"
               : "Optional"}
         </span>
       </div>
       <p className={styles.subtle}>
-        These preferences apply across platforms. Your notes take priority over
-        inferred style and audience details in channel memory.
+        Pick a goal, or explore freely. Everything here is optional and can be
+        changed later.
       </p>
       <form
         onSubmit={(event) => {
@@ -108,88 +155,147 @@ export function DirectionEditor({
       >
         <fieldset className={styles.directionFields} disabled={disabled}>
           <legend className={styles.srOnly}>Creator preferences</legend>
-          <label>
-            Main goal
-            <select
-              value={draft.goal ?? ""}
-              onChange={(event) =>
-                change(
-                  "goal",
-                  (event.target.value as CreatorPreferences["goal"]) || null,
-                )
-              }
-            >
-              <option value="">Explore ideas without a specific goal</option>
-              {creatorGoals.map((goal) => (
-                <option key={goal} value={goal}>
-                  {goalNames[goal]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Time available to film one idea
-            <span className={styles.timeInput}>
-              <input
-                type="number"
-                min={5}
-                max={480}
-                step={1}
-                value={draft.filming_minutes}
-                placeholder="Not specified"
-                onChange={(event) =>
-                  change("filming_minutes", event.target.value)
-                }
-              />
-              <span>minutes</span>
-            </span>
-          </label>
-          <label className={styles.fullWidth}>
-            What would success look like?{" "}
-            <span className={styles.optional}>Optional</span>
-            <textarea
-              value={draft.goal_details}
-              rows={2}
-              maxLength={500}
-              placeholder="For example, reach beginner pianists with a weekly practice series."
-              onChange={(event) => change("goal_details", event.target.value)}
-            />
-          </label>
-          <label>
-            Your style
-            <textarea
-              value={draft.style_notes}
-              rows={3}
-              maxLength={500}
-              placeholder="Tone, language, presentation, or corrections to the inferred style."
-              onChange={(event) => change("style_notes", event.target.value)}
-            />
-          </label>
-          <label>
-            Who are you creating for?
-            <textarea
-              value={draft.audience_notes}
-              rows={3}
-              maxLength={500}
-              placeholder="Your intended audience, their interests, or corrections to saved audience details."
-              onChange={(event) => change("audience_notes", event.target.value)}
-            />
-          </label>
-          <label className={styles.fullWidth}>
-            Topics to avoid{" "}
-            <span className={styles.optional}>
-              Optional · one per line, up to 10
-            </span>
-            <textarea
-              value={draft.topics_to_avoid}
-              rows={2}
-              maxLength={1100}
-              placeholder="Topics you do not want suggested."
-              onChange={(event) =>
-                change("topics_to_avoid", event.target.value)
-              }
-            />
-          </label>
+          <div
+            className={styles.goalOptions}
+            role="group"
+            aria-label="Your main goal"
+          >
+            {goalChoices.map(({ value, title, description, icon: Icon }) => (
+              <label className={styles.goalOption} key={value ?? "explore"}>
+                <input
+                  type="radio"
+                  name="creator-goal"
+                  aria-label={`${title}: ${description}`}
+                  value={value ?? ""}
+                  checked={draft.goal === value}
+                  onChange={() => change("goal", value)}
+                />
+                <span className={styles.goalContent}>
+                  <span className={styles.goalIcon}>
+                    <Icon size={19} aria-hidden="true" />
+                    {draft.goal === value && (
+                      <Check size={14} aria-hidden="true" />
+                    )}
+                  </span>
+                  <strong>{title}</strong>
+                  <small>{description}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+          <div className={styles.fullWidth}>
+            <label htmlFor="filming-minutes">
+              How much time can you spend filming?{" "}
+              <span className={styles.optional}>Optional</span>
+            </label>
+            <div className={styles.filmingControls}>
+              <div
+                className={styles.timePresets}
+                role="group"
+                aria-label="Quick filming time choices"
+              >
+                {["", "15", "30", "60"].map((minutes) => (
+                  <button
+                    key={minutes || "flexible"}
+                    type="button"
+                    aria-pressed={draft.filming_minutes === minutes}
+                    onClick={() => change("filming_minutes", minutes)}
+                  >
+                    {minutes ? `${minutes} min` : "Flexible"}
+                  </button>
+                ))}
+              </div>
+              <span className={styles.timeInput}>
+                <input
+                  id="filming-minutes"
+                  type="number"
+                  min={5}
+                  max={480}
+                  step={1}
+                  value={draft.filming_minutes}
+                  placeholder="Custom"
+                  onChange={(event) =>
+                    change("filming_minutes", event.target.value)
+                  }
+                />
+                <span>min</span>
+              </span>
+            </div>
+            <p className={styles.fieldHint}>
+              Time to make one idea, not the length of the video.
+            </p>
+          </div>
+          <details className={styles.preferenceDetails}>
+            <summary>
+              <span>
+                {noteCount
+                  ? `Style, audience & other preferences · ${noteCount} added`
+                  : "Add your style, audience, or topics to avoid"}
+              </span>
+              <ChevronDown size={16} aria-hidden="true" />
+            </summary>
+            <p className={styles.fieldHint}>
+              Your notes take priority over patterns inferred from your history.
+            </p>
+            <div className={styles.advancedFields}>
+              <label className={styles.fullWidth}>
+                What would success look like?{" "}
+                <span className={styles.optional}>Optional</span>
+                <textarea
+                  value={draft.goal_details}
+                  rows={2}
+                  maxLength={500}
+                  placeholder={
+                    draft.goal === "sales"
+                      ? "What product or service do you offer, and who does it help?"
+                      : "For example, reach beginners with a weekly practice series."
+                  }
+                  onChange={(event) =>
+                    change("goal_details", event.target.value)
+                  }
+                />
+              </label>
+              <label>
+                Your style
+                <textarea
+                  value={draft.style_notes}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Tone, language, presentation, or corrections to the inferred style."
+                  onChange={(event) =>
+                    change("style_notes", event.target.value)
+                  }
+                />
+              </label>
+              <label>
+                Who are you creating for?
+                <textarea
+                  value={draft.audience_notes}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Your intended audience, their interests, or corrections to saved audience details."
+                  onChange={(event) =>
+                    change("audience_notes", event.target.value)
+                  }
+                />
+              </label>
+              <label className={styles.fullWidth}>
+                Topics to avoid{" "}
+                <span className={styles.optional}>
+                  Optional · one per line, up to 10
+                </span>
+                <textarea
+                  value={draft.topics_to_avoid}
+                  rows={2}
+                  maxLength={1100}
+                  placeholder="Topics you do not want suggested."
+                  onChange={(event) =>
+                    change("topics_to_avoid", event.target.value)
+                  }
+                />
+              </label>
+            </div>
+          </details>
         </fieldset>
         {dirty && validation.error && (
           <p className="error-message" role="alert">
@@ -207,7 +313,7 @@ export function DirectionEditor({
             ) : (
               <Save size={16} />
             )}
-            {saving ? "Saving direction…" : "Save direction"}
+            {saving ? "Saving…" : "Save preferences"}
           </button>
           {dirty ? (
             <>
@@ -220,14 +326,14 @@ export function DirectionEditor({
                 Discard changes
               </button>
               <p className={styles.subtle}>
-                Save your changes before generating ideas or refreshing memory.
+                Generate ideas to save and use these changes in one step.
               </p>
             </>
           ) : (
             <p className={styles.subtle}>
               {updatedAt
                 ? `Last saved ${localDate(updatedAt)}.`
-                : "You can generate ideas without choosing a goal."}
+                : "Happy to explore? Skip ahead and generate ideas."}
             </p>
           )}
         </div>

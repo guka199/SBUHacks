@@ -1,15 +1,15 @@
 .page {
   max-width: 1280px;
   margin-inline: auto;
-  padding-top: 140px;
+  padding-top: 42px;
   padding-bottom: 80px;
 }
 .heading {
-  margin-bottom: 38px;
+  margin-bottom: 26px;
   max-width: 800px;
 }
 .heading h1 {
-  font: 400 clamp(42px, 6vw, 76px)/1.05 var(--font-display);
+  font: 400 clamp(38px, 5vw, 62px)/1.05 var(--font-display);
   letter-spacing: -0.04em;
   margin: 14px 0 18px;
 }
@@ -32,7 +32,7 @@
   align-items: end;
   flex-wrap: wrap;
   gap: 20px;
-  margin-bottom: 26px;
+  margin: 22px 0 12px;
 }
 .controls label {
   display: grid;
@@ -53,11 +53,42 @@
   cursor: not-allowed;
 }
 .notice {
+  position: fixed;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 0;
+  gap: 12px;
+  padding: 16px 22px;
+  background: var(--ink);
+  color: var(--ground);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px #17171724;
+  width: max-content;
+  max-width: calc(100vw - 32px);
   font-size: 14px;
+}
+.notice svg {
+  flex-shrink: 0;
+}
+.notice button {
+  color: inherit;
+  text-decoration: underline;
+}
+.notice button:hover {
+  color: inherit;
+  opacity: 0.8;
+}
+.notice button:focus-visible {
+  outline-color: var(--ground);
+}
+.notice > button:last-child {
+  min-width: 28px;
+  min-height: 28px;
+  display: grid;
+  place-items: center;
 }
 .context {
   border: 1px solid var(--line);
@@ -160,7 +191,7 @@
 .tabs {
   display: flex;
   gap: 10px;
-  margin-block: 30px 24px;
+  margin-block: 18px 24px;
 }
 .tabs button {
   display: flex;
@@ -278,7 +309,8 @@
   margin-top: 40px;
 }
 .direction,
-.memory {
+.memory,
+.generator {
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 24px;
@@ -286,7 +318,11 @@
   overflow-wrap: anywhere;
 }
 .direction {
+  background: var(--surface);
+}
+.generator {
   background: var(--raised);
+  scroll-margin-top: 110px;
 }
 .sectionHeading {
   display: flex;
@@ -366,6 +402,13 @@
   flex-wrap: wrap;
   gap: 16px;
   margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.directionActions > button:first-child {
+  font-size: 13px;
+  min-height: 40px;
+  padding: 9px 14px;
 }
 .directionActions p {
   flex: 1 1 240px;
@@ -421,16 +464,286 @@
   white-space: nowrap;
   border: 0;
 }
+.historyStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.historyStatus p {
+  font-size: 13px;
+  line-height: 1.6;
+  margin-top: 5px;
+  opacity: 0.75;
+}
+.ready,
+.needsHistory {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.historyActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.historyActions button {
+  font-size: 12px;
+}
+.goalOptions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  grid-column: 1 / -1;
+}
+.directionFields .goalOption {
+  display: block;
+  position: relative;
+  cursor: pointer;
+}
+.goalOption input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  opacity: 0;
+}
+.goalContent {
+  display: grid;
+  gap: 8px;
+  padding: 15px;
+  height: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.goalContent strong {
+  font-size: 15px;
+}
+.goalContent small {
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.75;
+}
+.goalIcon {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 20px;
+}
+.goalOption input:checked + .goalContent {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ground);
+}
+.goalOption input:focus-visible + .goalContent {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+}
+.goalOption:hover .goalContent {
+  border-color: var(--ink);
+}
+.goalOption input:disabled + .goalContent {
+  cursor: not-allowed;
+}
+.filmingControls,
+.timePresets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.filmingControls {
+  gap: 16px;
+  margin-top: 10px;
+}
+.timePresets button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 15px;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.timePresets button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--ground);
+  border-color: var(--ink);
+}
+.timeInput {
+  gap: 8px;
+  flex: 0 0 145px;
+}
+.timeInput span {
+  white-space: nowrap;
+}
+.timeInput input {
+  max-width: 110px;
+  min-height: 44px;
+}
+.fieldHint {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+  opacity: 0.7;
+  margin-top: 8px;
+}
+.directionFields > .fullWidth > label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.preferenceDetails {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.preferenceDetails > summary,
+.knowledge > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+  list-style: none;
+  min-height: 44px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.preferenceDetails > summary::-webkit-details-marker,
+.knowledge > summary::-webkit-details-marker {
+  display: none;
+}
+.preferenceDetails[open] > summary > svg,
+.knowledge[open] > summary > svg {
+  transform: rotate(180deg);
+}
+.preferenceDetails summary svg,
+.knowledge summary svg {
+  flex-shrink: 0;
+}
+.advancedFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+.knowledge {
+  border-bottom: 1px solid var(--line);
+  margin-block: 18px 30px;
+  padding: 0 2px 8px;
+}
+.knowledge > summary {
+  font-size: 13px;
+}
+.knowledge .context,
+.knowledge .memory {
+  margin-block: 12px;
+}
+.resultsHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  scroll-margin-top: 110px;
+  margin-top: 32px;
+}
+.resultsHeading h2 {
+  font: 400 clamp(28px, 4vw, 40px)/1.15 var(--font-display);
+  letter-spacing: -0.025em;
+  margin-top: 8px;
+  scroll-margin-top: 110px;
+}
+.resultsHeading h2:focus {
+  outline: none;
+}
+.resultsEmpty {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 44px 24px;
+  gap: 14px;
+}
+.resultsEmpty h3 {
+  font-size: 22px;
+  font-weight: 600;
+}
+.resultsEmpty p {
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 440px;
+  opacity: 0.75;
+}
+.generationStatus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-block: 18px;
+}
+.generationStatus svg {
+  flex-shrink: 0;
+}
+.errorPanel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  border: 1px solid var(--muted);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-block: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.errorPanel p {
+  flex: 1 1 280px;
+}
+.page :is(button, a, summary):focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+}
+.page .notice button:focus-visible {
+  outline-color: var(--ground);
+}
+@media (prefers-reduced-motion: reduce) {
+  .goalContent {
+    transition: none;
+  }
+}
 @media (max-width: 760px) {
   .page {
-    padding-top: 110px;
+    padding-top: 30px;
   }
   .grid,
   .sourceGrid {
     grid-template-columns: 1fr;
   }
   .directionFields,
-  .memoryColumns {
+  .memoryColumns,
+  .advancedFields {
     grid-template-columns: 1fr;
   }
   .controls {
@@ -447,7 +760,44 @@
   }
   .context,
   .direction,
-  .memory {
+  .memory,
+  .generator {
     padding: 20px;
+  }
+  .historyStatus {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .historyActions {
+    justify-content: flex-start;
+    flex-shrink: 1;
+  }
+  .goalOptions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .goalOption:last-child {
+    grid-column: 1 / -1;
+  }
+  .goalOption:last-child .goalContent {
+    grid-template-columns: 24px 1fr;
+    align-items: center;
+  }
+  .goalOption:last-child .goalIcon {
+    grid-row: 1 / 3;
+  }
+  .goalOption:last-child .goalIcon svg:last-child:not(:first-child) {
+    display: none;
+  }
+  .goalContent {
+    padding: 13px;
+    gap: 6px;
+  }
+  .controls > button {
+    width: 100%;
+  }
+  .notice {
+    font-size: 13px;
+    padding: 14px 16px;
   }
 }

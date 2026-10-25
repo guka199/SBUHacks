@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   Bookmark,
   Check,
+  ChevronDown,
   Lightbulb,
   Loader2,
   RefreshCw,
@@ -227,6 +228,9 @@ export default function IdeasPage() {
     updatedAt: string | null;
   } | null>(null);
   const [notice, setNotice] = useState("");
+  const [dismissedIdea, setDismissedIdea] = useState<ContentIdea | null>(null);
+  const [generatedBatch, setGeneratedBatch] = useState("");
+  const resultsHeading = useRef<HTMLHeadingElement | null>(null);
   const active = useRef<AbortController | null>(null);
   const reading = useRef<AbortController | null>(null);
   const requestActive = useRef(false);
@@ -239,6 +243,7 @@ export default function IdeasPage() {
   const controlsDisabled = working || isLoadingContext;
   const dirty =
     !!direction && directionIsDirty(direction.draft, direction.saved);
+  const directionError = direction ? parseDirection(direction.draft).error : "";
 
   useEffect(() => {
     if (!user) return;
@@ -289,6 +294,19 @@ export default function IdeasPage() {
     },
     [],
   );
+  useEffect(() => {
+    if (!generatedBatch) return;
+    const frame = requestAnimationFrame(() => {
+      resultsHeading.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "start",
+      });
+      resultsHeading.current?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [generatedBatch]);
 
   function beginRequest() {
     if (requestActive.current || isLoadingContext) return null;
@@ -312,36 +330,43 @@ export default function IdeasPage() {
     }
   }
 
+  async function persistDirection(controller: AbortController) {
+    if (!direction)
+      throw new Error("Your preferences are still loading. Please try again.");
+    const parsed = parseDirection(direction.draft);
+    if (!parsed.preferences) throw new Error(parsed.error);
+    const result = await ideasApi.savePreferences(
+      parsed.preferences,
+      controller.signal,
+    );
+    if (controller.signal.aborted) return;
+    setDirection({
+      draft: directionDraft(result.preferences),
+      saved: result.preferences,
+      updatedAt: result.updated_at,
+    });
+    setData((previous) =>
+      previous
+        ? {
+            ...previous,
+            context: {
+              ...previous.context,
+              creator_preferences: result.preferences,
+              preferences_updated_at: result.updated_at,
+            },
+          }
+        : null,
+    );
+  }
+
   async function saveDirection() {
     if (!direction || !dirty || !current) return;
-    const parsed = parseDirection(direction.draft);
-    if (!parsed.preferences) return;
     const controller = beginRequest();
     if (!controller) return;
     setOperation("preferences");
     try {
-      const result = await ideasApi.savePreferences(
-        parsed.preferences,
-        controller.signal,
-      );
+      await persistDirection(controller);
       if (controller.signal.aborted) return;
-      setDirection({
-        draft: directionDraft(result.preferences),
-        saved: result.preferences,
-        updatedAt: result.updated_at,
-      });
-      setData((previous) =>
-        previous
-          ? {
-              ...previous,
-              context: {
-                ...previous.context,
-                creator_preferences: result.preferences,
-                preferences_updated_at: result.updated_at,
-              },
-            }
-          : null,
-      );
       setNotice(
         "Your direction is saved. New ideas will use these preferences.",
       );
@@ -388,11 +413,13 @@ export default function IdeasPage() {
   }
 
   async function generate() {
-    if (dirty || !current?.context.can_generate) return;
+    if (!current?.context.can_generate || (dirty && directionError)) return;
     const controller = beginRequest();
     if (!controller) return;
     setOperation("generate");
     try {
+      if (dirty) await persistDirection(controller);
+      if (controller.signal.aborted) return;
       const result = await ideasApi.generate(
         platform === "all" ? null : platform,
         count,
@@ -410,6 +437,8 @@ export default function IdeasPage() {
       setNotice(
         `${result.ideas.length} ideas generated and stored in your account.`,
       );
+      setGeneratedBatch(result.ideas[0]?.batch_id ?? "");
+      setDismissedIdea(null);
     } catch (error) {
       if (!controller.signal.aborted)
         setFailure({
@@ -433,22 +462,29 @@ export default function IdeasPage() {
         previous
           ? {
               ...previous,
-              ideas: previous.ideas
-                .map((item) => (item.id === updated.id ? updated : item))
-                .filter(
-                  (item) =>
-                    item.status !== "dismissed" &&
-                    (!savedOnly || item.status === "saved"),
-                ),
+              ideas: (previous.ideas.some((item) => item.id === updated.id)
+                ? previous.ideas.map((item) =>
+                    item.id === updated.id ? updated : item,
+                  )
+                : [updated, ...previous.ideas]
+              ).filter(
+                (item) =>
+                  item.status !== "dismissed" &&
+                  (!savedOnly || item.status === "saved"),
+              ),
             }
           : null,
       );
+      const restored = dismissedIdea?.id === idea.id && status !== "dismissed";
+      setDismissedIdea(status === "dismissed" ? idea : null);
       setNotice(
-        status === "saved"
-          ? "Idea saved for later."
-          : status === "dismissed"
-            ? "Idea dismissed."
-            : "Idea removed from saved.",
+        restored
+          ? "Idea restored."
+          : status === "saved"
+            ? "Idea saved for later."
+            : status === "dismissed"
+              ? "Idea dismissed."
+              : "Idea removed from saved.",
       );
     } catch (error) {
       if (!controller.signal.aborted)
@@ -468,10 +504,9 @@ export default function IdeasPage() {
         <span className={styles.eyebrow}>
           <Lightbulb size={16} /> Your next chapter
         </span>
-        <h1>What comes next?</h1>
+        <h1>Your next post starts here.</h1>
         <p>
-          Follow-up ideas shaped by your channel, previous posts, and saved
-          video reviews.
+          Choose a direction. Get practical ideas inspired by your own content.
         </p>
       </header>
       {loading ? (
@@ -491,91 +526,85 @@ export default function IdeasPage() {
         </section>
       ) : (
         <>
-          <section
-            className={styles.controls}
-            aria-label="Idea generation controls"
-          >
-            <label>
-              Target platform
-              <select
-                value={platform}
-                disabled={controlsDisabled}
-                onChange={(event) => {
-                  setPlatform(event.target.value as IdeaPlatform | "all");
-                  setNotice("");
-                }}
-              >
-                <option value="all">Explore platforms</option>
-                {ideaPlatforms.map((id) => (
-                  <option key={id} value={id}>
-                    {platformNames[id]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              How many ideas?
-              <select
-                value={count}
-                disabled={controlsDisabled}
-                onChange={(event) => setCount(Number(event.target.value))}
-              >
-                {[3, 4, 5].map((value) => (
-                  <option key={value} value={value}>
-                    {value} ideas
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              className="button button-accent"
-              onClick={generate}
-              disabled={
-                controlsDisabled || dirty || !current?.context.can_generate
-              }
-              title={
-                dirty
-                  ? "Save your direction before generating ideas"
-                  : undefined
-              }
-            >
-              {busy ? (
-                <Loader2 className="spin" size={18} />
-              ) : (
-                <Lightbulb size={18} />
-              )}
-              {busy ? "Finding your next ideas…" : "Generate ideas"}
-            </button>
-            <button
-              className="text-link"
-              disabled={controlsDisabled}
-              onClick={() => {
-                setFailure(null);
-                setRefresh((value) => value + 1);
-              }}
-            >
-              <RefreshCw size={15} /> Refresh context
-            </button>
-          </section>
-          {error && (
-            <p className="error-message" role="alert">
-              {error}
-            </p>
-          )}
           {notice && (
             <p className={styles.notice} role="status">
               <Check size={16} />
               {notice}
+              {dismissedIdea && (
+                <button
+                  className="text-link"
+                  disabled={controlsDisabled}
+                  onClick={() => update(dismissedIdea, dismissedIdea.status)}
+                >
+                  Undo
+                </button>
+              )}
+              <button
+                aria-label="Dismiss notification"
+                onClick={() => setNotice("")}
+              >
+                <X size={15} />
+              </button>
             </p>
           )}
-          {(busy || operation === "memory") && (
-            <p className={styles.subtle} role="status">
-              {operation === "memory"
-                ? "Building channel memory from saved text and reviews."
-                : "Building or refreshing channel memory as needed, then finding ideas for your direction."}{" "}
-              Your videos are not being uploaded again. Leaving this page may
-              not stop accepted generation.
-            </p>
+          {current && (
+            <section
+              className={styles.historyStatus}
+              aria-label="Content readiness"
+            >
+              <div>
+                <span
+                  className={
+                    current.context.can_generate
+                      ? styles.ready
+                      : styles.needsHistory
+                  }
+                >
+                  {current.context.can_generate ? (
+                    <Check size={15} />
+                  ) : (
+                    <Lightbulb size={15} />
+                  )}
+                  {current.context.can_generate
+                    ? "Your channel history is ready"
+                    : "Start with a little content history"}
+                </span>
+                <p>
+                  {current.context.published_posts} posts ·{" "}
+                  {current.context.draft_reviews} video reviews ·{" "}
+                  {current.context.accounts.length} connected accounts
+                </p>
+                {!current.context.can_generate && (
+                  <p>
+                    Add at least two different posts or video reviews. You have{" "}
+                    {current.context.distinct_content} so far.
+                  </p>
+                )}
+              </div>
+              <div className={styles.historyActions}>
+                {!current.context.can_generate && (
+                  <>
+                    <Link href="/accounts" className="button button-light">
+                      Connect a channel
+                    </Link>
+                    <Link href="/analyze" className="text-link">
+                      Analyze a video <ArrowUpRight size={14} />
+                    </Link>
+                  </>
+                )}
+                <button
+                  className="text-link"
+                  disabled={controlsDisabled}
+                  onClick={() => {
+                    setFailure(null);
+                    setRefresh((value) => value + 1);
+                  }}
+                  title="Reload saved history. Refresh platform statistics on Accounts."
+                >
+                  <RefreshCw size={14} /> Reload history
+                </button>
+              </div>
+            </section>
           )}
           {direction && (
             <DirectionEditor
@@ -599,74 +628,190 @@ export default function IdeasPage() {
               }
             />
           )}
+          <section
+            className={styles.generator}
+            id="generate-ideas"
+            aria-labelledby="generate-heading"
+          >
+            <div className={styles.sectionHeading}>
+              <div>
+                <span className={styles.eyebrow}>02 / Find your next idea</span>
+                <h2 id="generate-heading">Where are you posting?</h2>
+              </div>
+            </div>
+            <div className={styles.controls}>
+              <label>
+                Platform
+                <select
+                  value={platform}
+                  disabled={controlsDisabled}
+                  onChange={(event) => {
+                    setPlatform(event.target.value as IdeaPlatform | "all");
+                    setNotice("");
+                  }}
+                >
+                  <option value="all">Choose for me</option>
+                  {ideaPlatforms.map((id) => (
+                    <option key={id} value={id}>
+                      {platformNames[id]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Number of ideas
+                <select
+                  value={count}
+                  disabled={controlsDisabled}
+                  onChange={(event) => setCount(Number(event.target.value))}
+                >
+                  {[3, 4, 5].map((value) => (
+                    <option key={value} value={value}>
+                      {value} ideas
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                className="button button-accent"
+                onClick={generate}
+                disabled={
+                  controlsDisabled ||
+                  (dirty && !!directionError) ||
+                  !current?.context.can_generate
+                }
+                title={
+                  dirty
+                    ? "Your preferences will be saved before generating"
+                    : undefined
+                }
+              >
+                {busy ? (
+                  <Loader2 className="spin" size={18} />
+                ) : (
+                  <Lightbulb size={18} />
+                )}
+                {busy
+                  ? "Creating your ideas…"
+                  : dirty
+                    ? "Save & generate ideas"
+                    : "Generate ideas"}
+              </button>
+            </div>
+            <p className={styles.fieldHint}>
+              {isLoadingContext
+                ? "Loading your channel history…"
+                : !current?.context.can_generate
+                  ? "Add two different posts or video reviews to get started."
+                  : dirty && directionError
+                    ? "Check the highlighted preferences above before continuing."
+                    : dirty
+                      ? "One click saves your preferences, then creates ideas tailored to them."
+                      : "We’ll use your saved channel history and preferences. Memory builds automatically when needed."}
+            </p>
+          </section>
+          {(busy || operation === "memory") && (
+            <p className={styles.generationStatus} role="status">
+              <Loader2 size={18} className="spin" aria-hidden="true" />
+              {operation === "memory"
+                ? "Building channel memory from saved text and reviews."
+                : "Building or refreshing channel memory as needed, then finding ideas for your direction."}{" "}
+              This can take a moment. Your videos are not uploaded again.
+            </p>
+          )}
+          {error && (
+            <div className={styles.errorPanel} role="alert">
+              <p>{error}</p>
+              <button
+                className="text-link"
+                disabled={working}
+                onClick={() => {
+                  setFailure(null);
+                  setRefresh((value) => value + 1);
+                }}
+              >
+                Reload data
+              </button>
+            </div>
+          )}
           {!current && !error ? (
             <p role="status">Loading your channel history…</p>
           ) : (
             current && (
               <>
-                <section
-                  className={styles.context}
-                  aria-label="Channel context"
-                >
+                <details className={styles.knowledge}>
+                  <summary>
+                    <span>View channel memory &amp; sources</span>
+                    <ChevronDown size={17} aria-hidden="true" />
+                  </summary>
+                  <section
+                    className={styles.context}
+                    aria-label="Channel context"
+                  >
+                    <div>
+                      <span className={styles.eyebrow}>
+                        Built from your history
+                      </span>
+                      <h2>
+                        {current.context.creator.niche ||
+                          current.context.creator.display_name ||
+                          "Your channel"}
+                      </h2>
+                      <p>
+                        {current.context.published_posts} published posts ·{" "}
+                        {current.context.draft_reviews} draft reviews ·{" "}
+                        {current.context.accounts.length} linked accounts
+                      </p>
+                      <small>
+                        Latest stored context:{" "}
+                        {localDate(current.context.last_updated)}. Refresh
+                        account statistics on{" "}
+                        <Link href="/accounts">Accounts</Link>.
+                      </small>
+                    </div>
+                    <details className={styles.contextDetails}>
+                      <summary>See sources and limitations</summary>
+                      <ul>
+                        {current.context.warnings.map((warning) => (
+                          <li key={warning}>{warning}</li>
+                        ))}
+                      </ul>
+                      <div className={styles.sourceGrid}>
+                        {current.context.sources.map((source) => (
+                          <Evidence key={source.id} source={source} />
+                        ))}
+                      </div>
+                    </details>
+                  </section>
+                  <MemoryPanel
+                    memory={current.context.memory}
+                    canGenerate={current.context.can_generate}
+                    disabled={controlsDisabled || dirty}
+                    refreshing={operation === "memory"}
+                    onRefresh={refreshMemory}
+                  />
+                  {dirty && (
+                    <p className={styles.fieldHint}>
+                      Save your preferences or generate ideas before refreshing
+                      memory.
+                    </p>
+                  )}
+                </details>
+                <div className={styles.resultsHeading} id="ideas-results">
                   <div>
                     <span className={styles.eyebrow}>
-                      Built from your history
+                      03 / Review your ideas
                     </span>
-                    <h2>
-                      {current.context.creator.niche ||
-                        current.context.creator.display_name ||
-                        "Your channel"}
+                    <h2 ref={resultsHeading} tabIndex={-1}>
+                      {savedOnly ? "Saved for later" : "Your ideas"}
                     </h2>
-                    <p>
-                      {current.context.published_posts} published posts ·{" "}
-                      {current.context.draft_reviews} draft reviews ·{" "}
-                      {current.context.accounts.length} linked accounts
-                    </p>
-                    <small>
-                      Latest stored context:{" "}
-                      {localDate(current.context.last_updated)}. Refresh account
-                      statistics on <Link href="/accounts">Accounts</Link>.
-                    </small>
                   </div>
-                  <details className={styles.contextDetails}>
-                    <summary>See sources and limitations</summary>
-                    <ul>
-                      {current.context.warnings.map((warning) => (
-                        <li key={warning}>{warning}</li>
-                      ))}
-                    </ul>
-                    <div className={styles.sourceGrid}>
-                      {current.context.sources.map((source) => (
-                        <Evidence key={source.id} source={source} />
-                      ))}
-                    </div>
-                  </details>
-                </section>
-                <MemoryPanel
-                  memory={current.context.memory}
-                  canGenerate={current.context.can_generate}
-                  disabled={controlsDisabled || dirty}
-                  refreshing={operation === "memory"}
-                  onRefresh={refreshMemory}
-                />
-                {!current.context.can_generate && (
-                  <section className={styles.empty}>
-                    <h2>Give your next idea a starting point.</h2>
-                    <p>
-                      Connect a channel with recent posts, or analyze at least
-                      two videos with different captions. We need some content
-                      history to make useful follow-ups.
-                    </p>
-                    <div className="button-row">
-                      <Link href="/accounts" className="button button-light">
-                        Connect a channel
-                      </Link>
-                      <Link href="/analyze" className="button button-outline">
-                        Analyze a video
-                      </Link>
-                    </div>
-                  </section>
-                )}
+                  <span className={styles.subtle}>
+                    {current.ideas.length}{" "}
+                    {current.ideas.length === 1 ? "idea" : "ideas"}
+                    {current.ideas.length === 50 ? " shown" : ""}
+                  </span>
+                </div>
                 <div
                   className={styles.tabs}
                   role="group"
@@ -688,13 +833,40 @@ export default function IdeasPage() {
                   </button>
                 </div>
                 {!current.ideas.length ? (
-                  <p className={styles.subtle}>
-                    {savedOnly
-                      ? "No saved ideas yet. Save an idea to keep it here."
-                      : current.context.can_generate
-                        ? "Your history is ready. Generate your first follow-up ideas."
-                        : "Your ideas will appear here once you have enough context."}
-                  </p>
+                  <section className={styles.resultsEmpty}>
+                    {savedOnly ? (
+                      <Bookmark size={24} />
+                    ) : (
+                      <Lightbulb size={24} />
+                    )}
+                    <h3>
+                      {savedOnly
+                        ? "Keep your favorites here."
+                        : "A new idea is one click away."}
+                    </h3>
+                    <p>
+                      {savedOnly
+                        ? "Use Save idea on any suggestion, and you can come back to it here."
+                        : current.context.can_generate
+                          ? "Choose a goal and platform above, then generate your first ideas."
+                          : "Connect a channel or analyze two videos. Your follow-up ideas will appear here."}
+                    </p>
+                    {savedOnly ? (
+                      <button
+                        className="text-link"
+                        disabled={controlsDisabled}
+                        onClick={() => setSavedOnly(false)}
+                      >
+                        Browse all ideas <ArrowUpRight size={14} />
+                      </button>
+                    ) : (
+                      current.context.can_generate && (
+                        <a href="#generate-ideas" className="text-link">
+                          Go to generator ↑
+                        </a>
+                      )
+                    )}
+                  </section>
                 ) : (
                   <div className={styles.grid}>
                     {current.ideas.map((idea) => (
@@ -783,13 +955,13 @@ export default function IdeasPage() {
                             {idea.status === "saved" ? "Saved" : "Save idea"}
                           </button>
                           <button
-                            className="icon-button"
+                            className="text-link"
                             aria-label={`Dismiss ${idea.title}`}
                             title="Dismiss idea"
                             disabled={controlsDisabled}
                             onClick={() => update(idea, "dismissed")}
                           >
-                            <X size={16} />
+                            <X size={14} /> Dismiss
                           </button>
                         </footer>
                       </article>

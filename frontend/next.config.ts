@@ -12,7 +12,15 @@ const config: NextConfig = {
     return [{ source: "/backend/:path*", destination: `${backend}/:path*` }];
   },
   turbopack: {
-    rules: { "*.css": { loaders: ["@tailwindcss/turbopack"], as: "*.css" } },
+    rules: {
+      "*.css": {
+        // Preserve native CSS Module exports. Renaming modules through the
+        // Tailwind loader makes imports resolve to an empty class-name map.
+        condition: { not: { path: /\.module\.css$/ } },
+        loaders: ["@tailwindcss/turbopack"],
+        as: "*.css",
+      },
+    },
   },
 };
 export default config;
