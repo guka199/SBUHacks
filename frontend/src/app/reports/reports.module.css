@@ -1,0 +1,83 @@
+.row:global(.saved-report) {
+  padding: 0;
+  flex-direction: row;
+  gap: 8px;
+}
+.reportLink {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 12px;
+}
+.reportLink > div {
+  min-width: 0;
+}
+.date {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.deleteButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  margin-right: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    color 150ms,
+    background-color 150ms;
+}
+.deleteButton:hover:not(:disabled) {
+  color: var(--red);
+  background: var(--yellow);
+}
+.deleteButton:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.notice {
+  margin-top: 16px;
+  font-size: 14px;
+}
+.spinning {
+  animation: report-delete-spin 1s linear infinite;
+}
+@keyframes report-delete-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 700px) {
+  .reportLink {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 18px;
+  }
+  .deleteButton {
+    align-self: flex-start;
+    margin-top: 8px;
+    margin-right: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .deleteButton {
+    transition: none;
+  }
+  .spinning {
+    animation: none;
+  }
+}

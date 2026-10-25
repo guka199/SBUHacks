@@ -133,6 +133,33 @@ export const analysisApi = {
   async list(signal: AbortSignal): Promise<SavedReport[]> {
     return (await jsonRequest("/api/analyses", signal)) as SavedReport[];
   },
+  async remove(id: string, signal: AbortSignal): Promise<{ warning?: string }> {
+    const response = await fetch(
+      `${API_BASE}/api/analyses/${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+        signal,
+        credentials: "include",
+        cache: "no-store",
+      },
+    );
+    // Another tab may already have removed a report from this stale list.
+    if (response.status === 404) return {};
+    const result = await response.json().catch(() => null);
+    if (!response.ok)
+      throw new Error(
+        typeof result?.detail === "string"
+          ? result.detail
+          : "Could not delete the report. Please try again.",
+      );
+    if (result?.ok !== true)
+      throw new Error(
+        "The service did not confirm report deletion. Please refresh and try again.",
+      );
+    return typeof result.warning === "string"
+      ? { warning: result.warning }
+      : {};
+  },
   videoUrl(id: string) {
     return `${API_BASE}/api/analyses/${encodeURIComponent(id)}/video`;
   },

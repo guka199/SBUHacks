@@ -5,7 +5,13 @@ Read this before making changes. It is the single source of truth for every team
 
 Frontend UI work must follow `frontend/UI_UX_GUIDELINES.md` and `frontend/AGENTS.md`: preserve the approved red/yellow identity, typography, homepage animations and existing backend behavior; reuse current tokens/components, keep one primary page scrollbar and verify desktop/mobile layouts. The guidelines include the current dated audit of requested skills, separate from historical usage claims.
 
-Landing navigation is How it works / Features / Platforms. Start creating retains the original `/analyze` destination for signed-in users and uses `/login?next=/analyze` otherwise. The user explicitly excluded studio changes: do not redirect this CTA to `/studio` or modify studio/analysis layouts, controls, auth forms or shared product styling as part of landing navigation work.
+Landing navigation is How it works / Features / Platforms. How it works appears only on the landing page; omit it from internal desktop and mobile navigation. Omit the Live mode indicator; retain explicit Demo mode labeling. Start creating retains the original `/analyze` destination for signed-in users and uses `/login?next=/analyze` otherwise. The user explicitly excluded studio changes: do not redirect this CTA to `/studio` or modify studio/analysis layouts, controls, auth forms or shared product styling as part of landing navigation work.
+
+The internal account-name link uses a red profile icon and an accessible profile label, and keeps its existing `/settings` destination. Long names truncate inside the existing account-link width; the full name is available in its tooltip.
+
+## Report deletion (October 25, 2026)
+
+- Reports have a separate 44px cross button beside each existing report link, a native confirmation, pending/error feedback and removal only after server confirmation. `DELETE /api/analyses/{id}` handles both report kinds, authenticates ownership inside a transaction and invalidates the owner's regenerable channel memory. UUID-prefixed media cleanup is limited to the owner/report; a cleanup failure returns a warning after successful DB deletion. Independent drafts, published posts and saved ideas are preserved. Destructive tests use temporary SQLite and mocked Snowflake commands; never test deletion on live saved reports without the user's action-time confirmation.
 
 ## Dashboard analytics (October 25, 2026)
 
