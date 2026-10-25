@@ -11,6 +11,7 @@ import json
 import logging
 import re
 import uuid
+from datetime import timezone
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Response, UploadFile
@@ -18,10 +19,11 @@ from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
-from api.analysis_schemas import (AnalysisJob, AnalysisReport, Observation, PublishingCopy, ReportPlatform, RewriteIn,
+from api.analysis_schemas import (AnalysisJob, AnalysisReport, Observation, PostingIn, PublishingCopy, ReportPlatform,
+                                  RewriteIn,
                                   ThumbnailComparison, ThumbnailPick, ThumbnailReview, VideoInfo)
 from api.routers.score import MAX_UPLOAD_BYTES, score_post
-from api.services import db, gemini, model
+from api.services import db, gemini, model, posting
 from api.services.auth import require_user_id
 
 def private_response(response: Response):
@@ -122,6 +124,7 @@ async def create_analysis(
     metadata: str = Form(...),
     caption: str = Form(..., min_length=1, max_length=10000),
     thumbnails: list[UploadFile] = File(default=[]),
+    posting_plan: str = Form("{}", alias="posting", max_length=2000),
     user_id: str = Depends(require_user_id),
 ) -> AnalysisJob:
     try:
@@ -133,6 +136,10 @@ async def create_analysis(
             raise ValueError
     except (ValueError, TypeError, ValidationError):
         raise HTTPException(422, "Choose unique supported platforms and valid video metadata") from None
+    try:
+        plan = posting.validate(PostingIn.model_validate_json(posting_plan or "{}"))
+    except (ValueError, ValidationError):
+        raise HTTPException(422, "Choose a valid country and posting time") from None
     caption = caption.strip()
     if not caption:
         raise HTTPException(422, "Add a caption or title for your video")
@@ -159,6 +166,13 @@ async def create_analysis(
         thumbnail_task = asyncio.create_task(run_in_threadpool(gemini.compare_thumbnails, chosen, caption, images))
     elif images:
         warnings.append("Thumbnail feedback needs Gemini (GEMINI_API_KEY), which is not configured.")
+    posting_task = None
+    if gemini.is_configured():
+        posting_task = asyncio.create_task(run_in_threadpool(posting.advise, user_id, chosen, caption, plan))
+    elif plan.country or plan.plannedTime:
+        warnings.append("Posting-time advice needs Gemini (GEMINI_API_KEY), which is not configured.")
+    # The model's timing features were learned from UTC timestamps
+    planned_utc = plan.plannedTime.astimezone(timezone.utc) if plan.plannedTime else None
     summaries = []
     overall: list[str] = []
     observations: list[Observation] = []
@@ -173,7 +187,7 @@ async def create_analysis(
         response = await score_post(
             background=BackgroundTasks(), caption=caption,
             platforms=",".join("youtube" if p == "shorts" else p for p in formats),
-            planned_time=None, context=json.dumps({"duration_sec": info.durationSeconds, "format": format_name}),
+            planned_time=planned_utc, context=json.dumps({"duration_sec": info.durationSeconds, "format": format_name}),
             file=UploadFile(io.BytesIO(media), filename=video.filename,
                             headers=video.headers), user_id=user_id, session_user_id=None,
         )
@@ -208,11 +222,20 @@ async def create_analysis(
         except Exception as exc:
             log.warning("Thumbnail comparison failed: %s", type(exc).__name__)
             warnings.append("Gemini could not compare your thumbnails this time. Try again to get thumbnail feedback.")
+    posting_advice = None
+    if posting_task:
+        try:
+            posting_advice = await posting_task
+        except Exception as exc:
+            log.warning("Posting advice failed: %s", type(exc).__name__)
+            if plan.country or plan.plannedTime:
+                warnings.append("Gemini could not plan your posting time this time. Try again to get timing advice.")
     report = AnalysisReport(
         id=uuid.uuid4().hex, video=info, platforms=[results[p] for p in chosen],
         summary=" ".join(dict.fromkeys(summaries)) or "Model-only report. Gemini did not review this video.",
         warnings=list(dict.fromkeys(warnings)), observations=observations,
         overallSuggestions=overall[:5], thumbnails=thumbnail_report,
+        posting=posting_advice,
     )
     safe_name = f"{report.id}{Path(video.filename or 'video.mp4').suffix.lower()}"
     try:
