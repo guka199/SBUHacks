@@ -78,3 +78,21 @@ physical-device GPU profiling and calibrated FPS measurements were not performed
 
 The production build is verified; no deployment is included. Review with the
 existing frontend/API startup instructions in README and FRONTEND_HANDOFF.txt.
+
+## Main integration
+
+The delivery merges team main 870bfd9. It preserves the team's newer sectioned
+results report and navigation timeline, automatic Instagram/TikTok import with
+readiness/ownership gates, photo-post analyses and caption-based report titles.
+Report search covers captions, photo captions and video filenames; photo reports
+keep their /posts/{id} links. The earlier two-column/tab screenshots describe the
+audited starting version; the latest team report structure is retained. The
+shared product polish, accessible thumbnail reasoning and reduced-motion guards
+are applied to this combined implementation. No paid import is launched during
+integration verification.
+
+Combined delivery verification: frontend lint/TypeScript, 23 tests and the
+production build pass after conflict resolution. Browser smoke checks loaded
+the combined Accounts UI and the sectioned demo report. Backend code from the
+team is preserved; backend/provider regression tests were not rerun in this UI
+delivery.

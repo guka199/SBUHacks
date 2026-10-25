@@ -60,11 +60,16 @@ def get_preferences(user_id: str) -> CreatorPreferencesResponse:
     row = _read("IDEA_PREFERENCES", user_id)
     if not row:
         return CreatorPreferencesResponse(preferences=CreatorPreferences())
-    return CreatorPreferencesResponse(preferences=CreatorPreferences.model_validate_json(row["payload"]),
+    preferences = CreatorPreferences.model_validate_json(row["payload"])
+    # Goals were removed from the product. Older stored values must not become
+    # hidden controls over future generation; historical snapshots stay intact.
+    preferences = preferences.model_copy(update={"goal": None, "goal_details": ""})
+    return CreatorPreferencesResponse(preferences=preferences,
                                       updated_at=str(row["updated_at"]) if row.get("updated_at") else None)
 
 
 def save_preferences(user_id: str, preferences: CreatorPreferences) -> CreatorPreferencesResponse:
+    preferences = preferences.model_copy(update={"goal": None, "goal_details": ""})
     updated_at = db.now()
     _upsert("IDEA_PREFERENCES", user_id, preferences.model_dump_json(), updated_at)
     return CreatorPreferencesResponse(preferences=preferences, updated_at=updated_at)

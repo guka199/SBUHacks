@@ -11,3 +11,6 @@ shap
 scikit-learn
 google-genai
 catboost
+pillow
+pytz
+tzdata  # time zones in slim containers (zoneinfo)

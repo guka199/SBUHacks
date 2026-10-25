@@ -327,3 +327,82 @@ export const platforms: {
     note: "Give the idea room. Deliver on the promise of your title.",
   },
 ];
+
+// --- Photo posts (single image or carousel), up to 3 variants. Mirrors PostReport in api/analysis_schemas.py ---
+export const postPlatformIds = ["instagram", "linkedin", "tiktok"] as const;
+export const postPlatformSchema = z.enum(postPlatformIds);
+export type PostPlatformId = z.infer<typeof postPlatformSchema>;
+export const postPlatforms: {
+  id: PostPlatformId;
+  name: string;
+  note: string;
+}[] = [
+  { id: "instagram", name: "Instagram", note: "Feed post or carousel · 4:5" },
+  { id: "linkedin", name: "LinkedIn", note: "Feed post or document carousel" },
+  { id: "tiktok", name: "TikTok", note: "Photo mode · 9:16" },
+];
+export const MAX_POST_VARIANTS = 3;
+export const MAX_POST_IMAGES = 10;
+export const postReportSchema = z.object({
+  id: z.string().min(1),
+  kind: z.literal("post"),
+  mode: z.literal("live"),
+  platforms: z.array(postPlatformSchema).min(1),
+  summary: z.string(),
+  modelWeight: z.number().min(0).max(1),
+  geminiUsed: z.boolean(),
+  warnings: z.array(z.string()),
+  picks: z.array(
+    z.object({
+      platform: postPlatformSchema,
+      variant: z.number().int().min(0).max(2),
+      reason: z.string(),
+    }),
+  ),
+  variants: z
+    .array(
+      z.object({
+        index: z.number().int().min(0).max(2),
+        caption: z.string(),
+        images: z
+          .array(
+            z.object({
+              index: z.number().int().min(0),
+              name: z.string(),
+              mimeType: z.string(),
+              width: z.number().positive(),
+              height: z.number().positive(),
+            }),
+          )
+          .min(1),
+        summary: z.string(),
+        hook: score.nullable(),
+        visualQuality: score.nullable(),
+        clarity: score.nullable(),
+        platforms: z.array(
+          z.object({
+            id: postPlatformSchema,
+            score,
+            modelScore: score,
+            contentScore: score.nullable(),
+            reason: z.string(),
+          }),
+        ),
+        strengths: z.array(z.string()),
+        suggestions: z.array(z.string()),
+        slides: z.array(
+          z.object({
+            index: z.number().int().min(0),
+            verdict: z.enum(["keep", "improve", "cut"]),
+            feedback: z.string(),
+          }),
+        ),
+        suggestedOrder: z.array(z.number().int().min(0)).nullable(),
+        orderReason: z.string(),
+      }),
+    )
+    .min(1)
+    .max(3),
+});
+export type PostReport = z.infer<typeof postReportSchema>;
+export type PostVariantResult = PostReport["variants"][number];

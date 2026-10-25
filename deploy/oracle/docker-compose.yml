@@ -1,0 +1,22 @@
+# Backend on the Oracle Cloud free VM: the API container behind Caddy (automatic HTTPS for api.viralpilot.us).
+# Run from the repo root on the VM:  docker compose -f deploy/oracle/docker-compose.yml up -d --build
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    env_file: ../../.secrets/backend.env   # copied to the VM separately; never committed
+    restart: unless-stopped
+    expose: ["8000"]
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [api]
+volumes:
+  caddy_data:
+  caddy_config:

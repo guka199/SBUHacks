@@ -4,11 +4,8 @@ import { timecode } from "@/lib/video";
 import { formatReportDate } from "@/lib/report-date";
 import { ArrowUpRight, FileVideo } from "lucide-react";
 import { useEffect, useState } from "react";
-import { analysisApi } from "@/lib/api";
+import { analysisApi, type SavedReport } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { VideoMetadata } from "@/lib/contracts";
-
-type SavedReport = { id: string; video: VideoMetadata; createdAt: string };
 export default function ReportsPage() {
   const { user, loading } = useAuth();
   const [reports, setReports] = useState<SavedReport[] | null>(null);
@@ -31,7 +28,9 @@ export default function ReportsPage() {
     return () => controller.abort();
   }, [user, reload]);
   const filtered = reports?.filter((report) =>
-    report.video.name
+    [report.caption, report.post?.caption, report.video?.name]
+      .filter(Boolean)
+      .join(" ")
       .toLocaleLowerCase()
       .includes(query.toLocaleLowerCase().trim()),
   );
@@ -39,9 +38,17 @@ export default function ReportsPage() {
     <section className="account-page page-gutter">
       <div className="product-page-heading">
         <h1>Your reports.</h1>
-        <Link className="button button-accent button-small" href="/analyze">
-          New video
-        </Link>
+        <div className="button-row">
+          <Link className="button button-accent button-small" href="/analyze">
+            New video
+          </Link>
+          <Link
+            className="button button-light button-small"
+            href="/upload/post"
+          >
+            New post
+          </Link>
+        </div>
       </div>
       <p>Saved analyses and publishing copy, available when you come back.</p>
       {loading ? (
@@ -73,7 +80,7 @@ export default function ReportsPage() {
           <FileVideo size={28} aria-hidden="true" />
           <h2>Your next edit starts here.</h2>
           <p>
-            Analyze a video to save its feedback, thumbnail comparison, and
+            Analyze a video or photo post to save its feedback, comparison, and
             publishing copy.
           </p>
           <Link href="/analyze" className="product-button product-primary">
@@ -96,14 +103,26 @@ export default function ReportsPage() {
             {filtered?.map((report) => (
               <Link
                 className="saved-report"
-                href={`/analysis/${report.id}`}
+                href={
+                  report.kind === "post"
+                    ? `/posts/${report.id}`
+                    : `/analysis/${report.id}`
+                }
                 key={report.id}
               >
                 <div>
-                  <strong>{report.video.name}</strong>
+                  <strong>
+                    {report.caption ||
+                      report.post?.caption ||
+                      report.video?.name ||
+                      "Untitled"}
+                  </strong>
                   <small>
-                    {timecode(report.video.durationSeconds)} ·{" "}
-                    {report.video.width} × {report.video.height}
+                    {report.kind === "post"
+                      ? `Post / ${report.post?.images ?? 0} photos / ${report.post?.variants ?? 1} variants`
+                      : report.video
+                        ? `Video / ${report.video.name} / ${timecode(report.video.durationSeconds)} / ${report.video.width} x ${report.video.height}`
+                        : "Video"}
                   </small>
                 </div>
                 <span>{formatReportDate(report.createdAt)}</span>

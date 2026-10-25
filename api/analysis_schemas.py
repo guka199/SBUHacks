@@ -139,3 +139,64 @@ class AnalysisJob(BaseModel):
 class RewriteIn(BaseModel):
     platform: FormatId
     tone: Literal["direct", "playful", "educational"]
+
+
+# --- Photo posts (single image or carousel), stored in ANALYSES with kind "post"; mirrored in contracts.ts ---
+PostFormatId = Literal["instagram", "linkedin", "tiktok"]
+
+
+class PostImage(BaseModel):
+    index: int = Field(ge=0)
+    name: str
+    mimeType: Literal["image/jpeg", "image/png", "image/webp"]
+    width: int = Field(gt=0)
+    height: int = Field(gt=0)
+
+
+class SlideNote(BaseModel):
+    index: int = Field(ge=0)  # position in the uploaded order
+    verdict: Literal["keep", "improve", "cut"]
+    feedback: str
+
+
+class PostPlatformScore(BaseModel):
+    id: PostFormatId
+    score: float = Field(ge=0, le=100)  # combined, same blend as videos
+    modelScore: float = Field(ge=0, le=100)
+    contentScore: float | None = Field(default=None, ge=0, le=100)
+    reason: str = ""
+
+
+class PostVariant(BaseModel):
+    index: int = Field(ge=0, le=2)
+    caption: str
+    images: list[PostImage]
+    summary: str = ""
+    hook: float | None = Field(default=None, ge=0, le=100)
+    visualQuality: float | None = Field(default=None, ge=0, le=100)
+    clarity: float | None = Field(default=None, ge=0, le=100)
+    platforms: list[PostPlatformScore]
+    strengths: list[str] = Field(default_factory=list)
+    suggestions: list[str] = Field(default_factory=list)
+    slides: list[SlideNote] = Field(default_factory=list)
+    suggestedOrder: list[int] | None = None  # image indices; None when the uploaded order is already best
+    orderReason: str = ""
+
+
+class PostPick(BaseModel):
+    platform: PostFormatId
+    variant: int = Field(ge=0, le=2)
+    reason: str
+
+
+class PostReport(BaseModel):
+    id: str
+    kind: Literal["post"] = "post"
+    mode: Literal["live"] = "live"
+    platforms: list[PostFormatId]
+    summary: str
+    variants: list[PostVariant]
+    picks: list[PostPick]
+    modelWeight: float = Field(ge=0, le=1)
+    geminiUsed: bool
+    warnings: list[str] = Field(default_factory=list)

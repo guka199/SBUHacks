@@ -141,9 +141,11 @@ export function SearchSuggestions({ widgets }: { widgets: string[] }) {
 export function ResearchSummary({
   research,
   viewedAt,
+  crossPlatform = false,
 }: {
   research: TrendResearch;
   viewedAt: string;
+  crossPlatform?: boolean;
 }) {
   const checked = research.checked_at
     ? new Date(research.checked_at).toLocaleString()
@@ -161,6 +163,14 @@ export function ResearchSummary({
           Recent trends unavailable. These ideas use your channel history.
         </p>
       )}
+      {crossPlatform &&
+        research.status === "available" &&
+        research.platform && (
+          <p>
+            Recent inspiration: {platformNames[research.platform]} only. Other
+            platform versions are adaptations.
+          </p>
+        )}
       <details>
         <summary>
           <Globe2 size={15} aria-hidden="true" />

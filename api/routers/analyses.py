@@ -40,19 +40,24 @@ THUMBNAIL_TYPES = {"image/jpeg": ("JPEG", ".jpg"), "image/png": ("PNG", ".png"),
 
 async def _read_thumbnails(files: list[UploadFile]) -> list[dict]:
     """Validate 0-3 thumbnail images (type, size, real decodable image) and read their pixel size."""
+    return await read_images(files, MAX_THUMBNAILS, "thumbnails")
+
+
+async def read_images(files: list[UploadFile], limit: int, label: str) -> list[dict]:
+    """Validate up to `limit` JPEG/PNG/WebP images (type, 10 MB each, really decodable) and read their pixel size."""
     from PIL import Image
 
     files = [f for f in files if f.filename]
-    if len(files) > MAX_THUMBNAILS:
-        raise HTTPException(422, f"Upload at most {MAX_THUMBNAILS} thumbnails")
+    if len(files) > limit:
+        raise HTTPException(422, f"Upload at most {limit} {label}")
     images = []
     for file in files:
         mime = file.content_type or ""
         if mime not in THUMBNAIL_TYPES:
-            raise HTTPException(415, "Thumbnails must be JPEG, PNG or WebP images")
+            raise HTTPException(415, f"{label.capitalize()} must be JPEG, PNG or WebP images")
         data = await file.read(MAX_THUMBNAIL_BYTES + 1)
         if len(data) > MAX_THUMBNAIL_BYTES:
-            raise HTTPException(413, "Each thumbnail must be 10 MB or smaller")
+            raise HTTPException(413, "Each image must be 10 MB or smaller")
         try:
             with Image.open(io.BytesIO(data)) as image:
                 if image.format != THUMBNAIL_TYPES[mime][0]:
@@ -106,15 +111,28 @@ def _row(analysis_id: str, user_id: str) -> dict:
 
 
 def _job(row: dict) -> AnalysisJob:
+    if json.loads(row["report"]).get("kind") == "post":  # photo posts have their own router
+        raise HTTPException(404, "Report not found")
     return AnalysisJob(id=row["id"], result=AnalysisReport.model_validate_json(row["report"]))
 
 
 @router.get("")
 def list_analyses(user_id: str = Depends(require_user_id)) -> list[dict]:
-    rows = db.query("SELECT id, report, created_at FROM ANALYSES WHERE user_id = %s "
+    rows = db.query("SELECT id, caption, report, created_at FROM ANALYSES WHERE user_id = %s "
                     "ORDER BY created_at DESC LIMIT 50", (user_id,))
-    return [{"id": r["id"], "video": json.loads(r["report"])["video"], "createdAt": str(r["created_at"])}
-            for r in rows]
+    items = []
+    for r in rows:
+        report = json.loads(r["report"])
+        caption = " ".join((r.get("caption") or "").split())[:140]  # one line for the list
+        if report.get("kind") == "post":
+            first = report["variants"][0]
+            items.append({"id": r["id"], "kind": "post", "caption": caption, "createdAt": str(r["created_at"]),
+                          "post": {"caption": first["caption"][:120], "variants": len(report["variants"]),
+                                   "images": len(first["images"])}})
+        else:
+            items.append({"id": r["id"], "kind": "video", "caption": caption, "video": report["video"],
+                          "createdAt": str(r["created_at"])})
+    return items
 
 
 @router.post("", response_model=AnalysisJob)

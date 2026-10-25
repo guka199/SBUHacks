@@ -10,12 +10,15 @@ export const ideaPlatforms = [
 ] as const;
 export const ideaPlatformSchema = z.enum(ideaPlatforms);
 export type IdeaPlatform = z.infer<typeof ideaPlatformSchema>;
+export const ideaTargetSchema = z.enum([...ideaPlatforms, "all_platforms"]);
+export type IdeaTarget = z.infer<typeof ideaTargetSchema>;
 export const platformNames: Record<string, string> = {
   youtube: "YouTube",
   shorts: "YouTube Shorts",
   tiktok: "TikTok",
   instagram: "Instagram Reels",
   linkedin: "LinkedIn",
+  all_platforms: "All platforms",
 };
 const sourceSchema = z.object({
   id: z.string(),
@@ -111,12 +114,6 @@ export const creatorGoals = [
   "sales",
   "series",
 ] as const;
-export const goalNames: Record<(typeof creatorGoals)[number], string> = {
-  growth: "Grow my audience",
-  engagement: "Start more conversations",
-  sales: "Support sales",
-  series: "Build a continuing series",
-};
 export const creatorPreferencesSchema = z.object({
   goal: z.enum(creatorGoals).nullable(),
   goal_details: z.string().max(500),
@@ -158,7 +155,7 @@ export const channelContextSchema = z.object({
     account_type: z.string().nullable(),
     niche: z.string().nullable(),
   }),
-  target_platform: ideaPlatformSchema.nullable(),
+  target_platform: ideaTargetSchema.nullable(),
   accounts: z.array(
     z.object({
       platform: z.string(),
@@ -191,7 +188,7 @@ export const contentIdeaSchema = z.object({
   title: z.string(),
   hook: z.string(),
   outline: z.array(z.string()),
-  platform: ideaPlatformSchema,
+  platform: ideaTargetSchema,
   approach: z.string(),
   rationale: z.string(),
   sources: z.array(sourceSchema),
@@ -207,6 +204,17 @@ export const contentIdeaSchema = z.object({
   trend_sources: z.array(trendEvidenceSchema).default([]),
   trend_research: trendResearchSchema.nullable().default(null),
   feedback: z.enum(["useful", "not_useful"]).nullable().default(null),
+  adaptations: z
+    .array(
+      z.object({
+        platform: ideaPlatformSchema,
+        format: z.string().min(3).max(80),
+        hook: z.string().min(5).max(180),
+        execution: z.string().min(10).max(300),
+      }),
+    )
+    .max(5)
+    .default([]),
 });
 export type ContentIdea = z.infer<typeof contentIdeaSchema>;
 const generatedSchema = z.object({
@@ -260,7 +268,7 @@ export const ideasApi = {
       await request("/memory/refresh", signal, {}),
     );
   },
-  async context(platform: IdeaPlatform | null, signal: AbortSignal) {
+  async context(platform: IdeaTarget | null, signal: AbortSignal) {
     return channelContextSchema.parse(
       await request(
         `/context${platform ? `?platform=${platform}` : ""}`,
@@ -268,18 +276,14 @@ export const ideasApi = {
       ),
     );
   },
-  async list(
-    platform: IdeaPlatform | null,
-    saved: boolean,
-    signal: AbortSignal,
-  ) {
+  async list(platform: IdeaTarget | null, saved: boolean, signal: AbortSignal) {
     const query = new URLSearchParams();
     if (platform) query.set("platform", platform);
     if (saved) query.set("status", "saved");
     return z.array(contentIdeaSchema).parse(await request(`?${query}`, signal));
   },
   async generate(
-    platform: IdeaPlatform | null,
+    platform: IdeaTarget | null,
     count: number,
     signal: AbortSignal,
     trends?: TrendOptions,
