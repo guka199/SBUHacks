@@ -62,6 +62,8 @@ def delete_user(user_id: str) -> None:
                         raise
         db.remove_folder(user_id)
         db.execute("DELETE FROM USERS WHERE id = %s", (user_id,))
+        from api.services.idea_trends import clear_user_cache
+        clear_user_cache(user_id)
 
 
 def get_user_by_email(email: str) -> dict | None:

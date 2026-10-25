@@ -33,7 +33,7 @@ def report(index="b", caption="Piano left-hand exercises", gemini=True):
 
 def generated(channel, count=3):
     return GeneratedIdeas(channel_summary="Piano tutorials for beginner musicians, based on saved history.", ideas=[
-        GeneratedIdea(title=f"Practice plan for skill {index}", hook=f"Try this specific piano exercise {index}.",
+        GeneratedIdea(idea_kind="follow_up" if index == 0 else "evergreen", title=f"Practice plan for skill {index}", hook=f"Try this specific piano exercise {index}.",
                       outline=[f"Demonstrate skill {index}", "Explain one fingering choice", "Offer a short practice challenge"],
                       platform="youtube", approach="sequel" if index == 0 else "new_angle",
                       rationale="Extends the piano lessons with a focused practical exercise.",

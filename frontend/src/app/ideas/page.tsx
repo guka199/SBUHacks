@@ -10,12 +10,15 @@ import {
   Lightbulb,
   Loader2,
   RefreshCw,
+  ThumbsDown,
+  ThumbsUp,
   X,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { CopyButton } from "@/components/ui";
 import {
   ideasApi,
+  ideaKindNames,
   goalNames,
   ideaPlatforms,
   localDate,
@@ -36,6 +39,13 @@ import {
   type DirectionDraft,
 } from "./direction-editor";
 import styles from "./ideas.module.css";
+import {
+  FeedbackSummary,
+  ResearchSummary,
+  SearchSuggestions,
+  TrendControls,
+  TrendSources,
+} from "./trend-context";
 
 function Evidence({ source }: { source: IdeaSource }) {
   const href = sourceLink(source);
@@ -206,6 +216,9 @@ export default function IdeasPage() {
   const { user, loading } = useAuth();
   const [platform, setPlatform] = useState<IdeaPlatform | "all">("all");
   const [count, setCount] = useState(3);
+  const [useTrends, setUseTrends] = useState(true);
+  const [region, setRegion] = useState("US");
+  const [trendTopic, setTrendTopic] = useState("");
   const [savedOnly, setSavedOnly] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [data, setData] = useState<{
@@ -244,6 +257,11 @@ export default function IdeasPage() {
   const dirty =
     !!direction && directionIsDirty(direction.draft, direction.saved);
   const directionError = direction ? parseDirection(direction.draft).error : "";
+  const trendTopicError =
+    useTrends && !!trendTopic.trim() && trendTopic.trim().length < 2;
+  const latestResearch =
+    current?.context.trend_research ??
+    current?.ideas.find((idea) => idea.trend_research)?.trend_research;
 
   useEffect(() => {
     if (!user) return;
@@ -413,7 +431,12 @@ export default function IdeasPage() {
   }
 
   async function generate() {
-    if (!current?.context.can_generate || (dirty && directionError)) return;
+    if (
+      !current?.context.can_generate ||
+      (dirty && directionError) ||
+      trendTopicError
+    )
+      return;
     const controller = beginRequest();
     if (!controller) return;
     setOperation("generate");
@@ -424,6 +447,11 @@ export default function IdeasPage() {
         platform === "all" ? null : platform,
         count,
         controller.signal,
+        {
+          use_trends: useTrends,
+          region_code: region,
+          trend_topic: trendTopic.trim() || null,
+        },
       );
       if (controller.signal.aborted) return;
       const nextKey = `${user?.id}:${platform}:false`;
@@ -492,6 +520,47 @@ export default function IdeasPage() {
           key,
           message:
             error instanceof Error ? error.message : "Could not update idea",
+        });
+    } finally {
+      endRequest(controller);
+    }
+  }
+
+  async function rateIdea(
+    idea: ContentIdea,
+    feedback: ContentIdea["feedback"],
+  ) {
+    const controller = beginRequest();
+    if (!controller) return;
+    setActionId(idea.id);
+    try {
+      const updated = await ideasApi.feedback(
+        idea.id,
+        feedback,
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+      setData((previous) =>
+        previous
+          ? {
+              ...previous,
+              ideas: previous.ideas.map((item) =>
+                item.id === updated.id ? updated : item,
+              ),
+            }
+          : null,
+      );
+      setNotice(
+        feedback
+          ? "Feedback saved. Compare usefulness across idea types below."
+          : "Feedback removed.",
+      );
+    } catch (error) {
+      if (!controller.signal.aborted)
+        setFailure({
+          key,
+          message:
+            error instanceof Error ? error.message : "Could not save feedback",
         });
     } finally {
       endRequest(controller);
@@ -672,12 +741,35 @@ export default function IdeasPage() {
                   ))}
                 </select>
               </label>
+            </div>
+            <TrendControls
+              enabled={useTrends}
+              region={region}
+              topic={trendTopic}
+              suggestedTopic={
+                current?.context.creator.niche ??
+                current?.context.memory?.themes[0]?.label ??
+                ""
+              }
+              disabled={controlsDisabled}
+              onEnabled={setUseTrends}
+              onRegion={setRegion}
+              onTopic={setTrendTopic}
+            />
+            {trendTopicError && (
+              <p className="error-message" role="alert">
+                Use at least two characters for the research topic, or leave it
+                blank.
+              </p>
+            )}
+            <div className={styles.generationAction}>
               <button
                 className="button button-accent"
                 onClick={generate}
                 disabled={
                   controlsDisabled ||
                   (dirty && !!directionError) ||
+                  trendTopicError ||
                   !current?.context.can_generate
                 }
                 title={
@@ -697,25 +789,27 @@ export default function IdeasPage() {
                     ? "Save & generate ideas"
                     : "Generate ideas"}
               </button>
+              <p className={styles.fieldHint}>
+                {isLoadingContext
+                  ? "Loading your channel history…"
+                  : !current?.context.can_generate
+                    ? "Add two different posts or video reviews to get started."
+                    : dirty && directionError
+                      ? "Check the highlighted preferences above before continuing."
+                      : dirty
+                        ? "One click saves your preferences, then creates ideas tailored to them."
+                        : "We’ll use your saved channel history and preferences. Memory builds automatically when needed."}
+              </p>
             </div>
-            <p className={styles.fieldHint}>
-              {isLoadingContext
-                ? "Loading your channel history…"
-                : !current?.context.can_generate
-                  ? "Add two different posts or video reviews to get started."
-                  : dirty && directionError
-                    ? "Check the highlighted preferences above before continuing."
-                    : dirty
-                      ? "One click saves your preferences, then creates ideas tailored to them."
-                      : "We’ll use your saved channel history and preferences. Memory builds automatically when needed."}
-            </p>
           </section>
           {(busy || operation === "memory") && (
             <p className={styles.generationStatus} role="status">
               <Loader2 size={18} className="spin" aria-hidden="true" />
               {operation === "memory"
                 ? "Building channel memory from saved text and reviews."
-                : "Building or refreshing channel memory as needed, then finding ideas for your direction."}{" "}
+                : useTrends
+                  ? "Researching recent signals and building ideas from your channel history. If no fresh evidence fits, we’ll say so."
+                  : "Building or refreshing channel memory as needed, then finding ideas for your direction."}{" "}
               This can take a moment. Your videos are not uploaded again.
             </p>
           )}
@@ -739,6 +833,12 @@ export default function IdeasPage() {
           ) : (
             current && (
               <>
+                {latestResearch && (
+                  <ResearchSummary
+                    research={latestResearch}
+                    viewedAt={current.context.collected_at}
+                  />
+                )}
                 <details className={styles.knowledge}>
                   <summary>
                     <span>View channel memory &amp; sources</span>
@@ -832,6 +932,7 @@ export default function IdeasPage() {
                     <Bookmark size={15} /> Saved for later
                   </button>
                 </div>
+                <FeedbackSummary ideas={current.ideas} />
                 {!current.ideas.length ? (
                   <section className={styles.resultsEmpty}>
                     {savedOnly ? (
@@ -876,7 +977,9 @@ export default function IdeasPage() {
                             {platformNames[idea.platform]}
                           </span>
                           <span className={styles.eyebrow}>
-                            {idea.approach.replace("_", " ")}
+                            {idea.idea_kind
+                              ? ideaKindNames[idea.idea_kind]
+                              : idea.approach.replace("_", " ")}
                           </span>
                           <CopyButton
                             text={`${idea.title}\n\n${idea.hook}\n\n${idea.outline.map((line, index) => `${index + 1}. ${line}`).join("\n")}`}
@@ -894,6 +997,23 @@ export default function IdeasPage() {
                           <h3>Why it fits your channel</h3>
                           <p>{idea.rationale}</p>
                         </section>
+                        {!!idea.trend_sources.length && (
+                          <details className={styles.evidence}>
+                            <summary>
+                              Recent signals behind this idea (
+                              {idea.trend_sources.length})
+                            </summary>
+                            <TrendSources sources={idea.trend_sources} />
+                            {idea.trend_research?.notes.map((note) => (
+                              <p key={note}>{note}</p>
+                            ))}
+                            {idea.trend_research && (
+                              <SearchSuggestions
+                                widgets={idea.trend_research.search_suggestions}
+                              />
+                            )}
+                          </details>
+                        )}
                         <details className={styles.evidence}>
                           <summary>
                             Inspired by {idea.sources.length} of your posts /
@@ -928,6 +1048,39 @@ export default function IdeasPage() {
                             ))}
                           </ul>
                         </details>
+                        <div
+                          className={styles.ideaFeedback}
+                          role="group"
+                          aria-label={`Was ${idea.title} useful?`}
+                        >
+                          <span>Useful idea?</span>
+                          <button
+                            disabled={controlsDisabled}
+                            aria-pressed={idea.feedback === "useful"}
+                            onClick={() =>
+                              rateIdea(
+                                idea,
+                                idea.feedback === "useful" ? null : "useful",
+                              )
+                            }
+                          >
+                            <ThumbsUp size={14} /> Yes
+                          </button>
+                          <button
+                            disabled={controlsDisabled}
+                            aria-pressed={idea.feedback === "not_useful"}
+                            onClick={() =>
+                              rateIdea(
+                                idea,
+                                idea.feedback === "not_useful"
+                                  ? null
+                                  : "not_useful",
+                              )
+                            }
+                          >
+                            <ThumbsDown size={14} /> Not for me
+                          </button>
+                        </div>
                         <footer>
                           <span>{localDate(idea.created_at)}</span>
                           <button

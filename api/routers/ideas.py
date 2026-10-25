@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 
 from api.idea_schemas import (ChannelContext, ContentIdea, CreatorPreferences, CreatorPreferencesResponse,
                               GeneratedIdeasResponse, GenerateIdeasRequest, IdeaPlatform, IdeaStatus,
-                              IdeaStatusRequest, RefreshMemoryRequest)
-from api.services import channel_context, creator_memory, gemini, ideas
+                              IdeaStatusRequest, RefreshMemoryRequest, IdeaFeedbackRequest)
+from api.services import channel_context, creator_memory, gemini, ideas, idea_trends
 from api.services.auth import require_user_id
 
 log = logging.getLogger(__name__)
@@ -90,6 +90,8 @@ def generate(request: GenerateIdeasRequest, user_id: str = Depends(require_user_
             if context.memory is None or context.memory.is_stale:
                 raise creator_memory.InvalidMemory("Channel history changed during memory refresh; retry")
             _require_history_and_gemini(context)
+        context.trend_research = idea_trends.research(user_id, context, request)
+        context.warnings.extend(context.trend_research.notes)
         generated = ideas.generate_ideas(user_id, context, request.count)
     except HTTPException:
         raise
@@ -104,6 +106,16 @@ def status(idea_id: str, request: IdeaStatusRequest, user_id: str = Depends(requ
     if not re.fullmatch(r"[0-9a-f]{32}", idea_id):
         raise HTTPException(404, "Idea not found")
     result = ideas.change_status(user_id, idea_id, request.status)
+    if result is None:
+        raise HTTPException(404, "Idea not found")
+    return result
+
+
+@router.patch("/{idea_id}/feedback", response_model=ContentIdea)
+def feedback(idea_id: str, request: IdeaFeedbackRequest, user_id: str = Depends(require_user_id)):
+    if not re.fullmatch(r"[0-9a-f]{32}", idea_id):
+        raise HTTPException(404, "Idea not found")
+    result = ideas.change_feedback(user_id, idea_id, request.feedback)
     if result is None:
         raise HTTPException(404, "Idea not found")
     return result

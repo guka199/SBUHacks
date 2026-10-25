@@ -42,6 +42,69 @@ const sourceSchema = z.object({
   url: z.string().nullable(),
 });
 export type IdeaSource = z.infer<typeof sourceSchema>;
+export const ideaKindNames = {
+  follow_up: "Follow-up",
+  trend_inspired: "Trend-inspired",
+  evergreen: "Evergreen",
+} as const;
+export const trendRegions: Record<string, string> = {
+  US: "United States",
+  GB: "United Kingdom",
+  CA: "Canada",
+  AU: "Australia",
+  IN: "India",
+  DE: "Germany",
+  FR: "France",
+  BR: "Brazil",
+  MX: "Mexico",
+  JP: "Japan",
+  KR: "South Korea",
+  UA: "Ukraine",
+  GE: "Georgia",
+  ES: "Spain",
+  IT: "Italy",
+  NL: "Netherlands",
+  PL: "Poland",
+};
+const ideaKindSchema = z.enum(["follow_up", "trend_inspired", "evergreen"]);
+const trendEvidenceSchema = z.object({
+  id: z.string(),
+  platform: ideaPlatformSchema,
+  region_code: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  url: z.string(),
+  published_at: z.string(),
+  date_status: z.enum(["api_verified", "source_reported"]),
+  observed_at: z.string(),
+  provider: z.enum(["youtube_data", "google_search"]),
+  views: z.number().nullable(),
+});
+export type TrendEvidence = z.infer<typeof trendEvidenceSchema>;
+export const trendResearchSchema = z.object({
+  status: z.enum([
+    "available",
+    "unavailable",
+    "disabled",
+    "needs_topic",
+    "needs_platform",
+  ]),
+  platform: ideaPlatformSchema.nullable(),
+  region_code: z.string(),
+  topic: z.string(),
+  checked_at: z.string().nullable(),
+  expires_at: z.string().nullable(),
+  cached: z.boolean(),
+  sources: z.array(trendEvidenceSchema),
+  search_suggestions: z.array(z.string()),
+  notes: z.array(z.string()),
+});
+export type TrendResearch = z.infer<typeof trendResearchSchema>;
+export type TrendOptions = {
+  use_trends: boolean;
+  region_code: string;
+  trend_topic: string | null;
+};
 export const creatorGoals = [
   "growth",
   "engagement",
@@ -119,6 +182,7 @@ export const channelContextSchema = z.object({
   ),
   preferences_updated_at: z.string().nullable().default(null),
   memory: channelMemorySchema.nullable().default(null),
+  trend_research: trendResearchSchema.nullable().default(null),
 });
 export type ChannelContext = z.infer<typeof channelContextSchema>;
 export const contentIdeaSchema = z.object({
@@ -139,6 +203,10 @@ export const contentIdeaSchema = z.object({
     emptyCreatorPreferences,
   ),
   memory_generated_at: z.string().nullable().default(null),
+  idea_kind: ideaKindSchema.nullable().default(null),
+  trend_sources: z.array(trendEvidenceSchema).default([]),
+  trend_research: trendResearchSchema.nullable().default(null),
+  feedback: z.enum(["useful", "not_useful"]).nullable().default(null),
 });
 export type ContentIdea = z.infer<typeof contentIdeaSchema>;
 const generatedSchema = z.object({
@@ -214,9 +282,10 @@ export const ideasApi = {
     platform: IdeaPlatform | null,
     count: number,
     signal: AbortSignal,
+    trends?: TrendOptions,
   ) {
     return generatedSchema.parse(
-      await request("/generate", signal, { platform, count }),
+      await request("/generate", signal, { platform, count, ...trends }),
     );
   },
   async status(id: string, status: ContentIdea["status"], signal: AbortSignal) {
@@ -224,7 +293,35 @@ export const ideasApi = {
       await request(`/${encodeURIComponent(id)}`, signal, { status }, "PATCH"),
     );
   },
+  async feedback(
+    id: string,
+    feedback: ContentIdea["feedback"],
+    signal: AbortSignal,
+  ) {
+    return contentIdeaSchema.parse(
+      await request(
+        `/${encodeURIComponent(id)}/feedback`,
+        signal,
+        { feedback },
+        "PATCH",
+      ),
+    );
+  },
 };
+
+export function trendLink(value: string): string | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      !/[\u0000-\u0020\\]/.test(value)
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 export function sourceLink(source: IdeaSource): string | null {
   const url = source.url ?? "";

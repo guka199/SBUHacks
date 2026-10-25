@@ -6,6 +6,12 @@ time, style/audience notes and avoided topics; channel memory summarizes themes,
 style and covered topics with evidence. Missing/stale memory rebuilds during
 generation; explicit creator direction takes priority. docs/content-ideas.md
 covers the API, storage, checks and limits.
+Ideas generation also offers recent external signals: YouTube API examples or
+dated Google Search-grounded reports for the chosen platform/market/topic.
+Follow-up, trend-inspired (when evidence fits), and evergreen types show dated
+sources and coverage limits. Useful/not-useful feedback persists per idea;
+comparisons cover only the visible list. These are not native cross-platform
+trend feeds or measured popularity-growth predictions. See docs/content-ideas.md.
 The live /api/analyses adapter, cookie authentication, accounts/settings,
 saved reports/video playback and Gemini rewrites are now implemented.
 docs/frontend-backend.md supersedes the original API/demo/unfinished-status
