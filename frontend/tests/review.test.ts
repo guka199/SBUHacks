@@ -66,3 +66,50 @@ test("thumbnail leaders preserve ties and ignore unknown scores", () => {
     [1, 2],
   );
 });
+
+test("opening evidence overlapping a finding and timed whole-video edits are not repeated", () => {
+  const result = makeDemoResult();
+  result.observations = [
+    {
+      id: "dead-air",
+      time: 3,
+      end: 8,
+      kind: "pacing",
+      title: "Dead air",
+      detail: "Blank screen.",
+      fix: "",
+    },
+  ];
+  result.hookAnalysis = {
+    ...(result.hookAnalysis ?? {}),
+    evidence: [
+      {
+        start: 3,
+        end: 5,
+        observation: "Cuts to an empty screen.",
+        edit: "Cut the dead space.",
+      },
+      {
+        start: 0,
+        end: 1,
+        observation: "Static title card.",
+        edit: "Open on motion.",
+      },
+    ],
+  } as NonNullable<typeof result.hookAnalysis>;
+  result.overallSuggestions = [
+    "Cut the blank screen between 00:03 and 00:08 entirely.",
+    "Add background music.",
+  ];
+  const review = collectReview(result);
+  assert.deepEqual(
+    review.moments.map((m) => [m.time, m.end]),
+    [
+      [0, 1],
+      [3, 8],
+    ],
+  );
+  assert.equal(review.moments[1].fix, "Cut the dead space."); // folded in
+  assert.equal(result.observations[0].fix, ""); // input untouched
+  assert.deepEqual(review.overall, ["Add background music."]);
+});
