@@ -41,13 +41,24 @@ class ReportPlatform(BaseModel):
     suggestions: PublishingCopy
 
 
+class Observation(BaseModel):
+    id: str
+    time: float = Field(ge=0)
+    end: float = Field(ge=0)
+    kind: Literal["strength", "opportunity", "unclear", "pacing", "improve"]
+    title: str
+    detail: str
+    fix: str = ""
+
+
 class AnalysisReport(BaseModel):
     id: str
     mode: Literal["live"] = "live"
     video: VideoInfo
     summary: str
     platforms: list[ReportPlatform]
-    observations: list[dict] = Field(default_factory=list)
+    observations: list[Observation] = Field(default_factory=list)
+    overallSuggestions: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
 
 

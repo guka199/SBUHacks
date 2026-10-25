@@ -157,6 +157,15 @@ class ContentScore(BaseModel):
     reason: str
 
 
+class VideoMoment(BaseModel):
+    start: float  # seconds into the uploaded video
+    end: float
+    issue: Literal["unclear", "pacing", "improve"]
+    title: str
+    problem: str
+    fix: str
+
+
 class ContentAnalysis(BaseModel):
     summary: str
     hook: int
@@ -165,6 +174,7 @@ class ContentAnalysis(BaseModel):
     trend_fit: int
     platform_scores: list[ContentScore]
     strengths: list[str]
+    moments: list[VideoMoment] = []  # timestamped problem stretches (videos only), checked against the duration
 
 
 class CombinedScore(BaseModel):

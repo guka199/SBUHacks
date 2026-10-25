@@ -875,3 +875,28 @@ meter::-webkit-meter-optimum-value {
   .saved-report { flex-direction: column; }
   .account-nav { display: none; }
 }
+
+/* Overall suggestions: whole-video edits plus Gemini's timestamped clips. */
+.moment-kind { font-style: normal; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-right: 8px; padding: 2px 7px; border-radius: 999px; background: var(--raised); }
+.moment-kind.unclear { background: #171717; color: #f8ebab; }
+.moment-kind.pacing { background: #be1a1a; color: #f8ebab; }
+.timeline-observations button.unclear::after { background: #171717; }
+.timeline-observations button.improve::after { background: #d99a1e; }
+.overall-suggestions { background: #f8ebab; border: 1px solid #f7d87f; border-radius: 20px; padding: 30px; margin: 32px 0 48px; }
+.overall-grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 36px; margin-top: 20px; }
+.overall-grid h3 { font-size: 17px; font-weight: 500; margin: 0 0 14px; }
+.overall-list { list-style: decimal; margin: 0; padding-left: 20px; display: grid; gap: 14px; font-size: 15px; line-height: 1.6; }
+.overall-empty { font-size: 14px; color: #be1a1a; }
+.clip-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.clip-list li { display: flex; gap: 16px; align-items: flex-start; padding: 14px; border: 1px solid #f7d87f; border-radius: 12px; }
+.clip-list li.active { background: #f7d87f; }
+.clip-list strong { font-size: 14px; font-weight: 500; }
+.clip-list p { margin: 6px 0 0; font-size: 13px; line-height: 1.6; }
+.clip-fix { display: flex; gap: 6px; font-weight: 500; }
+.clip-fix svg { flex-shrink: 0; margin-top: 3px; color: #be1a1a; }
+.clip-play { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 7px 12px; border-radius: 999px; border: 0; background: #171717; color: #f8ebab; font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer; }
+@media (max-width: 800px) {
+  .overall-suggestions { padding: 22px; }
+  .overall-grid { grid-template-columns: 1fr; gap: 24px; }
+  .clip-list li { flex-direction: column; gap: 10px; }
+}

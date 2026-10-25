@@ -11,7 +11,9 @@ import base64
 import copy
 import io
 import os
+import re
 import time
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -27,6 +29,17 @@ class GeminiPlatformScore(BaseModel):
     reason: str = Field(description="one sentence: why this score on this platform")
 
 
+class GeminiMoment(BaseModel):
+    start: str = Field(description="MM:SS where the problem starts in the attached video")
+    end: str = Field(description="MM:SS where it ends (after start; usually 1-8 seconds later)")
+    issue: Literal["unclear", "pacing", "improve"] = Field(
+        description="unclear = viewer can't tell what is happening/said; pacing = slow, dead air, drags or rushes; "
+                    "improve = works but a specific change would make it stronger")
+    title: str = Field(description="3-6 words naming the problem")
+    problem: str = Field(description="one sentence: what you see/hear in this exact stretch and why it hurts")
+    fix: str = Field(description="one sentence: the concrete edit for this stretch (cut, reorder, caption, reshoot...)")
+
+
 class GeminiAnalysis(BaseModel):
     summary: str = Field(description="one sentence describing what the post shows and says")
     hook: int = Field(description="0-100: how strongly the first second / first line grabs attention")
@@ -36,6 +49,9 @@ class GeminiAnalysis(BaseModel):
     platform_scores: list[GeminiPlatformScore]
     strengths: list[str] = Field(description="up to 3 short things the post does well")
     suggestions: list[str] = Field(description="exactly 3 specific, actionable edits, most impactful first")
+    moments: list[GeminiMoment] = Field(
+        description="for a VIDEO only: up to 5 timestamped stretches that are unclear, hurt pacing or need improving, "
+                    "in time order; empty list for images or caption-only posts")
 
 
 PROMPT = """You are an expert social media strategist reviewing a DRAFT post before it is published.
@@ -57,7 +73,42 @@ Score the CONTENT itself for each platform on the same scale: 50 = a typical pos
 what currently performs on each platform. Be calibrated and honest: most drafts land between 30 and 70.
 
 Then write exactly 3 suggestions, most impactful first. Each must be a concrete edit to THIS post (what to cut, what
-to show first, what to say, when to post), merging in the model's factors where they matter. No generic advice."""
+to show first, what to say, when to post), merging in the model's factors where they matter. No generic advice.
+
+If a video is attached, also list up to 5 MOMENTS: specific stretches of the clip that are unclear, hurt the pacing
+(slow start, dead air, a section that drags or rushes) or need improving. Give exact MM:SS start and end times taken
+from the video itself{duration}, describe only what actually happens in that stretch, and give a concrete fix. Report
+only real problems - fewer moments is better than invented ones. For images or caption-only posts, return no moments."""
+
+
+def seconds(stamp: str) -> float | None:
+    """'MM:SS', 'H:MM:SS' or plain seconds -> seconds; None if unparseable."""
+    stamp = stamp.strip()
+    if re.fullmatch(r"\d+(\.\d+)?", stamp):
+        return float(stamp)
+    if not re.fullmatch(r"\d{1,2}(:\d{1,2}){1,2}(\.\d+)?", stamp):
+        return None
+    total = 0.0
+    for part in stamp.split(":"):
+        total = total * 60 + float(part)
+    return total
+
+
+def clean_moments(moments: list[GeminiMoment], duration: float | None) -> list[dict]:
+    """Keep only moments with valid times inside the video; clamp ends, sort, drop overlapping duplicates."""
+    kept = []
+    for m in moments:
+        start, end = seconds(m.start), seconds(m.end)
+        if start is None or (duration and start >= duration):
+            continue
+        end = start + 3 if end is None or end <= start else end
+        if duration:
+            end = min(end, duration)
+        if any(abs(start - k["start"]) < 0.5 and k["issue"] == m.issue for k in kept):
+            continue
+        kept.append({"start": round(start, 1), "end": round(end, 1), "issue": m.issue,
+                     "title": m.title.strip(), "problem": m.problem.strip(), "fix": m.fix.strip()})
+    return sorted(kept, key=lambda k: k["start"])[:5]
 
 
 def is_configured() -> bool:
@@ -148,6 +199,8 @@ def analyze(
         media=f"yes ({mime_type})" if media else "none - judge the caption only",
         model_scores="\n".join(f"- {p}: {s:.0f}" for p, s in model_scores.items()),
         factors="\n".join(f"- {f}" for f in model_factors) or "- none stood out",
+        duration=f" (the video is {context['duration_sec']:.0f} seconds long)"
+        if isinstance(context.get("duration_sec"), (int, float)) else "",
     )
 
     items: list[dict] = [{"type": "text", "text": prompt}]

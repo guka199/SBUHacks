@@ -149,3 +149,36 @@ class AdapterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VideoMomentTests(unittest.TestCase):
+    def test_gemini_moments_are_parsed_clamped_and_sorted(self):
+        from api.services.gemini import GeminiMoment, clean_moments
+        def moment(start, end, issue="pacing"):
+            return GeminiMoment(start=start, end=end, issue=issue, title="Slow intro", problem="p", fix="f")
+        kept = clean_moments([moment("00:12", "00:30"), moment("0:03", "0:01", "unclear"),
+                              moment("01:00", "01:05"), moment("soon", "later"), moment("00:12.2", "00:14")], 24)
+        self.assertEqual([(k["start"], k["end"], k["issue"]) for k in kept],
+                         [(3.0, 6.0, "unclear"), (12.0, 24.0, "pacing")])
+
+    def test_report_carries_moments_and_overall_suggestions(self):
+        from api.schemas import ContentAnalysis, VideoMoment
+        tests = AdapterTests("test_live_model_fallback_is_honest_and_saved_to_signed_owner")
+        tests.setUp()
+        self.addCleanup(tests.doCleanups)
+
+        async def score(**kwargs):
+            return ScoreResponse(
+                scores=[CombinedScore(platform="youtube", score=60, model_score=50, content_score=75, top_factors=[])],
+                suggestions=["Open on the result.", "Cut the pause at 0:08."], model_weight=0.6, gemini_used=True,
+                content=ContentAnalysis(summary="A recipe video.", hook=60, visual_quality=70, clarity=55, trend_fit=50,
+                                        platform_scores=[], strengths=["Bright lighting"],
+                                        moments=[VideoMoment(start=8, end=11, issue="pacing", title="Dead air",
+                                                             problem="Nothing happens.", fix="Cut 3 s.")]),
+            )
+        tests.scorer.side_effect = score
+        report = tests.create(["shorts", "youtube"]).json()["result"]
+        self.assertEqual(report["overallSuggestions"], ["Open on the result.", "Cut the pause at 0:08."])
+        self.assertEqual(len(report["observations"]), 1)  # the Shorts review of the same video doesn't duplicate it
+        self.assertEqual(report["observations"][0] | {}, {"id": "m0", "time": 8.0, "end": 11.0, "kind": "pacing",
+                         "title": "Dead air", "detail": "Nothing happens.", "fix": "Cut 3 s."})

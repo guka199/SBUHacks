@@ -60,11 +60,19 @@ export const resultSchema = z
         id: z.string(),
         time: z.number().nonnegative(),
         end: z.number().nonnegative(),
-        kind: z.enum(["strength", "opportunity"]),
+        kind: z.enum([
+          "strength",
+          "opportunity",
+          "unclear",
+          "pacing",
+          "improve",
+        ]),
         title: z.string(),
         detail: z.string(),
+        fix: z.string().optional(),
       }),
     ),
+    overallSuggestions: z.array(z.string()).optional(),
   })
   .superRefine((result, ctx) => {
     result.observations.forEach((o, i) => {

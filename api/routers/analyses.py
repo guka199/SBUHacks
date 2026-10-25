@@ -1,7 +1,8 @@
 """Authenticated adapter from ViralPilot's report contract to the existing scorer.
 
 Creation returns a complete job synchronously; the frontend also accepts this shape.
-No synthetic pacing/format scores or timestamps are manufactured from /score.
+No synthetic pacing/format scores are manufactured; timestamped observations are Gemini's own
+moments, validated against the video's duration.
 """
 
 import io
@@ -16,7 +17,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
-from api.analysis_schemas import AnalysisJob, AnalysisReport, PublishingCopy, ReportPlatform, RewriteIn, VideoInfo
+from api.analysis_schemas import AnalysisJob, AnalysisReport, Observation, PublishingCopy, ReportPlatform, RewriteIn, VideoInfo
 from api.routers.score import MAX_UPLOAD_BYTES, score_post
 from api.services import db, gemini, model
 from api.services.auth import require_user_id
@@ -88,6 +89,8 @@ async def create_analysis(
     results = {}
     warnings = []
     summaries = []
+    overall: list[str] = []
+    observations: list[Observation] = []
     # Shorts is a format of YouTube, with the same trained model and the real duration.
     # Review it separately so Gemini receives the requested short-form context.
     groups = [([p for p in chosen if p != "shorts"], "video")]
@@ -108,6 +111,12 @@ async def create_analysis(
             warnings.append(response.warning)
         if content:
             summaries.append(content.summary)
+            # The Shorts review watches the same video; keep the first review's moments to avoid duplicates
+            if not observations:
+                observations = [Observation(id=f"m{i}", time=m.start, end=m.end, kind=m.issue, title=m.title,
+                                            detail=m.problem, fix=m.fix) for i, m in enumerate(content.moments)]
+        if not overall:  # the second (Shorts) review repeats much of the first in other words
+            overall = response.suggestions
         for target in formats:
             source = "youtube" if target == "shorts" else target
             score = next(s for s in response.scores if s.platform == source)
@@ -124,7 +133,8 @@ async def create_analysis(
     report = AnalysisReport(
         id=uuid.uuid4().hex, video=info, platforms=[results[p] for p in chosen],
         summary=" ".join(dict.fromkeys(summaries)) or "Model-only report. Gemini did not review this video.",
-        warnings=list(dict.fromkeys(warnings)),
+        warnings=list(dict.fromkeys(warnings)), observations=observations,
+        overallSuggestions=overall[:5],
     )
     safe_name = f"{report.id}{Path(video.filename or 'video.mp4').suffix.lower()}"
     try:

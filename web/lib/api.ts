@@ -125,6 +125,15 @@ export interface CombinedScore {
   vs_account: AccountComparison | null;
 }
 
+export interface VideoMoment {
+  start: number; // seconds into the uploaded video
+  end: number;
+  issue: "unclear" | "pacing" | "improve";
+  title: string;
+  problem: string;
+  fix: string;
+}
+
 export interface ContentAnalysis {
   summary: string;
   hook: number;
@@ -133,6 +142,7 @@ export interface ContentAnalysis {
   trend_fit: number;
   platform_scores: { platform: Platform; score: number; reason: string }[];
   strengths: string[];
+  moments?: VideoMoment[];
 }
 
 export interface ScoreResponse {

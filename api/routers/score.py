@@ -116,6 +116,7 @@ async def score_post(
             clarity=analysis.clarity, trend_fit=analysis.trend_fit,
             platform_scores=list(content_by_platform.values()),
             strengths=analysis.strengths[:3],
+            moments=gemini.clean_moments(analysis.moments, ctx.get("duration_sec")) if media else [],
         ),
         model_weight=weight,
         gemini_used=analysis is not None,
