@@ -3,14 +3,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { Component, type ReactNode, useEffect, useRef, useState } from "react";
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUpRight,
-  Pause,
-  Play,
-} from "lucide-react";
+import { ArrowDown, ArrowUpRight, Pause, Play } from "lucide-react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { initialMotion, storyStages } from "@/lib/experience";
@@ -20,6 +13,8 @@ import { MonitorExperience } from "./MonitorExperience";
 import { choreograph } from "./choreography";
 import { createMonitorLoop } from "./monitor-loop";
 import { StudioGateway } from "./StudioGateway";
+import { LandingSections } from "./LandingSections";
+import landingStyles from "./landing-sections.module.css";
 const Scene = dynamic(() => import("../three/WorkspaceScene"), { ssr: false });
 function measureOpeningFloor(scope: HTMLElement) {
   const caption = scope.querySelector<HTMLElement>(".caption-opening");
@@ -348,60 +343,10 @@ export function ScrollExperience() {
           {mode !== "reduced" && (
             <>
               <button
-                className="hero-loop-control"
-                aria-label={
-                  paused ? "Play monitor animation" : "Pause monitor animation"
-                }
-                aria-pressed={paused}
-                onClick={() => setPaused(!paused)}
-              >
-                <span className={paused ? "" : "live-indicator"} />
-                <span>CREATOR DESKTOP / {paused ? "PAUSED" : "LIVE"}</span>
-                {paused ? <Play size={15} /> : <Pause size={15} />}
-              </button>
-              <button
                 className="experience-scroll"
                 onClick={() => jump(storyStages[Math.min(active + 1, 5)].at)}
               >
                 See what happens next <ArrowDown size={18} />
-              </button>
-              <div
-                className="experience-controls"
-                aria-label="Product story controls"
-              >
-                <button
-                  aria-label="Previous story scene"
-                  disabled={active === 0}
-                  onClick={() => jump(storyStages[Math.max(0, active - 1)].at)}
-                >
-                  <ArrowLeft size={16} />
-                </button>
-                <div>
-                  <span>
-                    {String(active + 1).padStart(2, "0")} /{" "}
-                    {storyStages[active].name}
-                  </span>
-                  <div className="experience-dots">
-                    {storyStages.map((item, i) => (
-                      <button
-                        className={i === active ? "active" : ""}
-                        key={item.at}
-                        aria-label={`Story: ${item.detail}`}
-                        aria-current={i === active ? "step" : undefined}
-                        onClick={() => jump(item.at)}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <button
-                  aria-label="Next story scene"
-                  onClick={() => jump(storyStages[Math.min(5, active + 1)].at)}
-                >
-                  <ArrowRight size={16} />
-                </button>
-              </div>
-              <button className="skip-experience" onClick={() => jump(1)}>
-                Open the dashboard <ArrowUpRight size={14} />
               </button>
             </>
           )}
@@ -438,8 +383,23 @@ export function ScrollExperience() {
           </Link>
         </div>
       </section>
+      <LandingSections />
       <footer className="natural-footer">
         <span>ViralPilot® · Built for creators. Made at SBUHacks.</span>
+        {mode !== "reduced" && (
+          <button
+            className={landingStyles.motionToggle}
+            aria-pressed={paused}
+            onClick={() => setPaused(!paused)}
+          >
+            {paused ? (
+              <Play size={14} aria-hidden="true" />
+            ) : (
+              <Pause size={14} aria-hidden="true" />
+            )}
+            {paused ? "Play animation" : "Pause animation"}
+          </button>
+        )}
         <span>
           <Link href="/credits">Scene artists &amp; licenses</Link> · Link
           interaction by <a href="https://skiper-ui.com/">Skiper UI</a>

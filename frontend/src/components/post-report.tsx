@@ -179,14 +179,6 @@ function PostStudio({ report }: { report: PostReport }) {
                   </div>
                 ))}
               </dl>
-              <p className="score-source">
-                {v.platforms
-                  .map(
-                    (p) =>
-                      `${platformName(p.id)}: model ${Math.round(p.modelScore)}${p.contentScore == null ? "" : ` · Gemini ${Math.round(p.contentScore)}`}`,
-                  )
-                  .join("  |  ")}
-              </p>
             </button>
           ))}
         </div>
@@ -248,11 +240,6 @@ function VariantDetail({
           const slide = note(image.index);
           return (
             <li key={image.index}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- private, presigned image */}
-              <img
-                src={src(variant.index, image.index)}
-                alt={`Photo ${image.index + 1}: ${image.name}`}
-              />
               <div>
                 <strong>
                   {image.index === 0 ? "1 · Cover" : `Photo ${image.index + 1}`}
