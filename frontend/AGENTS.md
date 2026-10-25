@@ -1,3 +1,9 @@
+# ViralPilot frontend direction
+
+Read [UI_UX_GUIDELINES.md](UI_UX_GUIDELINES.md), [DESIGN.md](DESIGN.md) and the relevant existing components before frontend implementation. Extend the approved red/yellow identity; reuse `src/app/identity.css` tokens and shared controls. Preserve the homepage, independent monitor/story timelines, accessible responsive behavior and a single primary page scrollbar. Keep UI tasks scoped to frontend behavior; backend changes require their own task scope. Verify requested UI changes on desktop/mobile.
+
+The guidelines include a dated audit of the nine requested design/motion/copy skills. Historical handoff claims do not establish current installation; read the actual applicable installed `SKILL.md` before claiming to use a skill.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

@@ -1,27 +1,18 @@
-import {
-  Check,
-  ChevronDown,
-  Compass,
-  Loader2,
-  MessageCircle,
-  PanelsTopLeft,
-  Save,
-  ShoppingBag,
-  TrendingUp,
-} from "lucide-react";
+import { ChevronDown, Loader2, Save } from "lucide-react";
 import { creatorPreferencesSchema, type CreatorPreferences } from "@/lib/ideas";
 import styles from "./ideas.module.css";
 
 export type DirectionDraft = Omit<
   CreatorPreferences,
-  "filming_minutes" | "topics_to_avoid"
+  "filming_minutes" | "topics_to_avoid" | "goal" | "goal_details"
 > & { filming_minutes: string; topics_to_avoid: string };
 
 export function directionDraft(
   preferences: CreatorPreferences,
 ): DirectionDraft {
   return {
-    ...preferences,
+    style_notes: preferences.style_notes,
+    audience_notes: preferences.audience_notes,
     filming_minutes: preferences.filming_minutes?.toString() ?? "",
     topics_to_avoid: preferences.topics_to_avoid.join("\n"),
   };
@@ -31,13 +22,21 @@ export function directionIsDirty(
   draft: DirectionDraft,
   saved: CreatorPreferences,
 ) {
-  return JSON.stringify(draft) !== JSON.stringify(directionDraft(saved));
+  // Ignore legacy fields in an in-memory draft after a client refresh.
+  const activeDraft = {
+    style_notes: draft.style_notes,
+    audience_notes: draft.audience_notes,
+    filming_minutes: draft.filming_minutes,
+    topics_to_avoid: draft.topics_to_avoid,
+  };
+  return JSON.stringify(activeDraft) !== JSON.stringify(directionDraft(saved));
 }
 
 export function parseDirection(draft: DirectionDraft) {
   const result = creatorPreferencesSchema.safeParse({
     ...draft,
-    goal_details: draft.goal_details.trim(),
+    goal: null,
+    goal_details: "",
     filming_minutes: draft.filming_minutes.trim()
       ? Number(draft.filming_minutes)
       : null,
@@ -59,39 +58,6 @@ export function parseDirection(draft: DirectionDraft) {
   return { preferences: null, error };
 }
 
-const goalChoices = [
-  {
-    value: null,
-    title: "Explore",
-    description: "Find a fresh angle",
-    icon: Compass,
-  },
-  {
-    value: "growth",
-    title: "Grow",
-    description: "Reach new people",
-    icon: TrendingUp,
-  },
-  {
-    value: "engagement",
-    title: "Engage",
-    description: "Start conversations",
-    icon: MessageCircle,
-  },
-  {
-    value: "sales",
-    title: "Sell",
-    description: "Support your offer",
-    icon: ShoppingBag,
-  },
-  {
-    value: "series",
-    title: "Build a series",
-    description: "Keep a story going",
-    icon: PanelsTopLeft,
-  },
-] as const;
-
 export function DirectionEditor({
   draft,
   dirty,
@@ -111,7 +77,6 @@ export function DirectionEditor({
 }) {
   const validation = parseDirection(draft);
   const noteCount = [
-    draft.goal_details,
     draft.style_notes,
     draft.audience_notes,
     draft.topics_to_avoid,
@@ -124,7 +89,6 @@ export function DirectionEditor({
   }
   return (
     <div className={styles.direction}>
-      <h3 id="direction-heading">Goal</h3>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -133,33 +97,6 @@ export function DirectionEditor({
       >
         <fieldset className={styles.directionFields} disabled={disabled}>
           <legend className={styles.srOnly}>Creator preferences</legend>
-          <div
-            className={styles.goalOptions}
-            role="group"
-            aria-label="Your main goal"
-          >
-            {goalChoices.map(({ value, title, description, icon: Icon }) => (
-              <label className={styles.goalOption} key={value ?? "explore"}>
-                <input
-                  type="radio"
-                  name="creator-goal"
-                  aria-label={`${title}: ${description}`}
-                  value={value ?? ""}
-                  checked={draft.goal === value}
-                  onChange={() => change("goal", value)}
-                />
-                <span className={styles.goalContent}>
-                  <span className={styles.goalIcon}>
-                    <Icon size={19} aria-hidden="true" />
-                    {draft.goal === value && (
-                      <Check size={14} aria-hidden="true" />
-                    )}
-                  </span>
-                  <strong>{title}</strong>
-                </span>
-              </label>
-            ))}
-          </div>
           <details
             className={styles.preferenceDetails}
             open={validation.error ? true : undefined}
@@ -216,23 +153,6 @@ export function DirectionEditor({
               </p>
             </div>
             <div className={styles.advancedFields}>
-              <label className={styles.fullWidth}>
-                What would success look like?{" "}
-                <span className={styles.optional}>Optional</span>
-                <textarea
-                  value={draft.goal_details}
-                  rows={2}
-                  maxLength={500}
-                  placeholder={
-                    draft.goal === "sales"
-                      ? "What product or service do you offer, and who does it help?"
-                      : "For example, reach beginners with a weekly practice series."
-                  }
-                  onChange={(event) =>
-                    change("goal_details", event.target.value)
-                  }
-                />
-              </label>
               <label>
                 Your style
                 <textarea

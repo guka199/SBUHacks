@@ -74,7 +74,7 @@ def _topic(context, override):
 
 
 def _platform(context):
-    if context.target_platform:
+    if context.target_platform in PLATFORMS:
         return context.target_platform
     for candidate in [a.platform for a in context.accounts] + [s.platform for s in context.sources]:
         if candidate in PLATFORMS:

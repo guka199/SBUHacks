@@ -6,7 +6,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from api.idea_schemas import (ChannelContext, ContentIdea, CreatorPreferences, CreatorPreferencesResponse,
-                              GeneratedIdeasResponse, GenerateIdeasRequest, IdeaPlatform, IdeaStatus,
+                              GeneratedIdeasResponse, GenerateIdeasRequest, IdeaTarget, IdeaStatus,
                               IdeaStatusRequest, RefreshMemoryRequest, IdeaFeedbackRequest)
 from api.services import channel_context, creator_memory, gemini, ideas, idea_trends
 from api.services.auth import require_user_id
@@ -30,7 +30,7 @@ def _context(user_id, platform):
 
 
 @router.get("/context", response_model=ChannelContext)
-def context(platform: IdeaPlatform | None = None, user_id: str = Depends(require_user_id)):
+def context(platform: IdeaTarget | None = None, user_id: str = Depends(require_user_id)):
     return _context(user_id, platform)
 
 
@@ -73,7 +73,7 @@ def refresh_memory(request: RefreshMemoryRequest, user_id: str = Depends(require
 
 
 @router.get("", response_model=list[ContentIdea])
-def list_ideas(platform: IdeaPlatform | None = None, status: IdeaStatus | None = None,
+def list_ideas(platform: IdeaTarget | None = None, status: IdeaStatus | None = None,
                user_id: str = Depends(require_user_id)):
     return ideas.list_ideas(user_id, platform, status)
 
@@ -91,6 +91,10 @@ def generate(request: GenerateIdeasRequest, user_id: str = Depends(require_user_
                 raise creator_memory.InvalidMemory("Channel history changed during memory refresh; retry")
             _require_history_and_gemini(context)
         context.trend_research = idea_trends.research(user_id, context, request)
+        if request.platform == "all_platforms" and context.trend_research.platform and request.use_trends:
+            context.trend_research.notes.append(
+                "Research covers " + context.trend_research.platform + " only; it does not establish trends on every platform."
+            )
         context.warnings.extend(context.trend_research.notes)
         generated = ideas.generate_ideas(user_id, context, request.count)
     except HTTPException:

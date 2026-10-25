@@ -4,6 +4,8 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, StringConstraints, field_validator
 
 IdeaPlatform = Literal["youtube", "shorts", "tiktok", "instagram", "linkedin"]
+IDEA_PLATFORMS = ("youtube", "shorts", "tiktok", "instagram", "linkedin")
+IdeaTarget = Literal["youtube", "shorts", "tiktok", "instagram", "linkedin", "all_platforms"]
 IdeaStatus = Literal["suggested", "saved", "dismissed"]
 IdeaKind = Literal["follow_up", "trend_inspired", "evergreen"]
 IdeaFeedback = Literal["useful", "not_useful"]
@@ -13,8 +15,10 @@ ShortTopic = Annotated[str, StringConstraints(strip_whitespace=True, min_length=
 
 class CreatorPreferences(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    goal: CreatorGoal | None = None
-    goal_details: str = Field(default="", max_length=500)
+    # Retained so older clients and stored idea snapshots remain readable.
+    # Active preferences ignore these fields after removal of the Goals UI.
+    goal: CreatorGoal | None = Field(default=None, deprecated=True)
+    goal_details: str = Field(default="", max_length=500, deprecated=True)
     filming_minutes: int | None = Field(default=None, ge=5, le=480, strict=True)
     style_notes: str = Field(default="", max_length=500)
     audience_notes: str = Field(default="", max_length=500)
@@ -119,7 +123,7 @@ class TrendResearch(BaseModel):
 class ChannelContext(BaseModel):
     _memory_fingerprint: str = PrivateAttr(default="")
     creator: CreatorProfile
-    target_platform: IdeaPlatform | None = None
+    target_platform: IdeaTarget | None = None
     accounts: list[ChannelAccount]
     sources: list[ChannelSource]
     published_posts: int
@@ -138,7 +142,7 @@ class ChannelContext(BaseModel):
 
 class GenerateIdeasRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    platform: IdeaPlatform | None = None
+    platform: IdeaTarget | None = None
     count: Literal[3, 4, 5] = 3
     use_trends: bool = True
     region_code: str = Field(default="US", pattern=r"^[A-Z]{2}$")
@@ -154,16 +158,25 @@ class GenerateIdeasRequest(BaseModel):
         return value
 
 
+class PlatformAdaptation(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    platform: IdeaPlatform
+    format: str = Field(min_length=3, max_length=80)
+    hook: str = Field(min_length=5, max_length=180)
+    execution: str = Field(min_length=10, max_length=300)
+
+
 class GeneratedIdea(BaseModel):
     idea_kind: IdeaKind
     title: str = Field(min_length=5, max_length=160)
     hook: str = Field(min_length=5, max_length=300)
     outline: list[str] = Field(min_length=3, max_length=5)
-    platform: IdeaPlatform
+    platform: IdeaTarget
     approach: Literal["sequel", "new_angle", "repurpose"]
     rationale: str = Field(min_length=10, max_length=700)
     source_ids: list[str] = Field(min_length=1, max_length=4)
     trend_source_ids: list[str] = Field(default_factory=list, max_length=3)
+    adaptations: list[PlatformAdaptation] = Field(default_factory=list, max_length=5)
 
 
 class GeneratedIdeas(BaseModel):
@@ -177,7 +190,7 @@ class ContentIdea(BaseModel):
     title: str
     hook: str
     outline: list[str]
-    platform: IdeaPlatform
+    platform: IdeaTarget
     approach: str
     rationale: str
     sources: list[ChannelSource]
@@ -191,6 +204,7 @@ class ContentIdea(BaseModel):
     trend_sources: list[TrendEvidence] = Field(default_factory=list)
     trend_research: TrendResearch | None = None
     feedback: IdeaFeedback | None = None
+    adaptations: list[PlatformAdaptation] = Field(default_factory=list, max_length=5)
 
 
 class GeneratedIdeasResponse(BaseModel):
