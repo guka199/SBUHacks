@@ -200,3 +200,54 @@ class PostReport(BaseModel):
     modelWeight: float = Field(ge=0, le=1)
     geminiUsed: bool
     warnings: list[str] = Field(default_factory=list)
+
+
+# --- Signed-in dashboard (GET /api/dashboard); mirrored in frontend/src/lib/dashboard.ts ---
+class DashboardPlatform(BaseModel):
+    platform: str
+    handle: str | None = None
+    displayName: str | None = None
+    profileUrl: str | None = None
+    connection: str
+    followers: int | None = None
+    typicalViews: float | None = None
+    postsPerWeek: float | None = None
+    avgLikes: float | None = None
+    avgComments: float | None = None
+    avgShares: float | None = None
+    reachPerFollower: float | None = None  # typical views / followers
+    engagementRate: float | None = None  # (likes + comments + shares) / views, or / followers when views are unknown
+    engagementBasis: Literal["view", "follower"] | None = None
+    updatedAt: str | None = None
+
+
+class DashboardWeek(BaseModel):
+    platform: str
+    week: str  # Monday, ISO date
+    posts: int
+    medianViews: int
+
+
+class DashboardPost(BaseModel):
+    platform: str
+    caption: str
+    views: int
+    likes: int | None = None
+    comments: int | None = None
+    postedAt: str | None = None
+    url: str | None = None
+
+
+class DraftScore(BaseModel):
+    platform: str
+    average: float
+    reports: int
+
+
+class DashboardOut(BaseModel):
+    platforms: list[DashboardPlatform]
+    weekly: list[DashboardWeek]
+    topPosts: list[DashboardPost]
+    draftScores: list[DraftScore]
+    takeaways: list[str]
+    strongest: str | None = None  # highest reach per follower

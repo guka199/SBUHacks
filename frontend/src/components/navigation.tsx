@@ -30,6 +30,7 @@ export function Navigation() {
         </Link>
         <div className="desktop-nav">
           <AnimatedLink href="/#story">How it works</AnimatedLink>
+          <AnimatedLink href="/dashboard">Dashboard</AnimatedLink>
           <AnimatedLink href="/reports">My reports</AnimatedLink>
           <AnimatedLink href="/ideas">Ideas</AnimatedLink>
           <AnimatedLink href="/accounts">Accounts</AnimatedLink>
@@ -76,6 +77,9 @@ export function Navigation() {
           </Link>
           <Link href="/upload" onClick={close}>
             Analyze your video
+          </Link>
+          <Link href="/dashboard" onClick={close}>
+            Dashboard
           </Link>
           <Link href="/reports" onClick={close}>
             My reports

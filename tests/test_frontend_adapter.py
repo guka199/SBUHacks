@@ -410,3 +410,56 @@ class PostAnalysisTests(unittest.TestCase):
         self.assertEqual(listed[0]["post"], {"caption": "Hello", "variants": 1, "images": 2})
         self.assertEqual([item["caption"] for item in listed], ["Hello", "Cold brew in 3 steps"])  # one line
         self.assertEqual(listed[1]["video"]["name"], "clip_final_v3.mp4")
+
+
+class DashboardTests(unittest.TestCase):
+    def setUp(self):
+        self.base = AdapterTests("test_live_model_fallback_is_honest_and_saved_to_signed_owner")
+        self.base.setUp()
+        self.addCleanup(self.base.doCleanups)
+        from api.routers import overview
+        self.overview = overview
+        self.accounts = self.base.mock(overview.accounts, "list_accounts", return_value=[
+            {"platform": "tiktok", "handle": "a", "followers": 1000, "typical_views": 5000, "avg_likes": 100,
+             "avg_comments": 0, "avg_shares": 0, "posts_per_week": 7, "connection": "api"},
+            {"platform": "instagram", "handle": "a", "followers": 2000, "typical_views": None, "avg_views": None,
+             "avg_likes": 200, "avg_comments": 0, "avg_shares": 0, "posts_per_week": 2, "connection": "manual"},
+            {"platform": "youtube", "handle": "a", "followers": 1000, "typical_views": 1000, "avg_likes": 50,
+             "avg_comments": 0, "avg_shares": 0, "posts_per_week": 1, "connection": "api"},
+        ])
+        post = json.dumps({"kind": "post", "variants": [
+            {"platforms": [{"id": "instagram", "score": 40}]}, {"platforms": [{"id": "instagram", "score": 70}]}]})
+        video = json.dumps({"platforms": [{"id": "tiktok", "score": 50}, {"id": "instagram", "score": 60}]})
+
+        def query(sql, params=()):
+            self.assertEqual(params[0], OWNER)  # every query is scoped to the signed-in user
+            if "FROM POSTS" in sql:
+                return [{"platform": "youtube", "external_id": "abc", "caption": "  big\nvideo ", "views": 900,
+                         "posted_at": "2026-10-20 12:00:00", "likes": 9, "comments": 1, "shares": None},
+                        {"platform": "tiktok", "external_id": "t1", "caption": "", "views": 5000,
+                         "posted_at": None, "likes": None, "comments": None, "shares": None}]
+            if "FROM ANALYSES" in sql:
+                return [{"report": post}, {"report": video}]
+            return []
+        self.base.query.side_effect = query
+
+    def test_dashboard_compares_like_with_like_and_scores_drafts(self):
+        data = self.base.client.get("/api/dashboard").json()
+        by = {p["platform"]: p for p in data["platforms"]}
+        self.assertEqual((by["tiktok"]["reachPerFollower"], by["tiktok"]["engagementBasis"]), (5.0, "view"))
+        self.assertEqual((by["instagram"]["reachPerFollower"], by["instagram"]["engagementBasis"]), (None, "follower"))
+        self.assertEqual(data["strongest"], "tiktok")
+        self.assertIn("TikTok reaches 5.0x more people per follower than YouTube.", data["takeaways"])
+        # Instagram's per-follower rate is never compared with per-view rates
+        self.assertFalse(any("Instagram" in t and "per view" in t for t in data["takeaways"]))
+        self.assertEqual([(t["platform"], t["url"]) for t in data["topPosts"]],
+                         [("tiktok", None), ("youtube", "https://www.youtube.com/watch?v=abc")])
+        self.assertEqual(data["topPosts"][1]["caption"], "big video")
+        drafts = {d["platform"]: (d["average"], d["reports"]) for d in data["draftScores"]}
+        self.assertEqual(drafts, {"instagram": (65.0, 2), "tiktok": (50.0, 1)})  # post report counts its best variant
+
+    def test_empty_account_has_no_takeaways(self):
+        self.accounts.return_value = []
+        self.base.query.side_effect = lambda sql, params=(): []
+        data = self.base.client.get("/api/dashboard").json()
+        self.assertEqual((data["platforms"], data["takeaways"], data["strongest"]), ([], [], None))
