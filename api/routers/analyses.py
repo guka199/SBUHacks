@@ -5,6 +5,7 @@ No synthetic pacing/format scores are manufactured; timestamped observations are
 moments, validated against the video's duration.
 """
 
+import asyncio
 import io
 import json
 import logging
@@ -17,7 +18,8 @@ from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
-from api.analysis_schemas import AnalysisJob, AnalysisReport, Observation, PublishingCopy, ReportPlatform, RewriteIn, VideoInfo
+from api.analysis_schemas import (AnalysisJob, AnalysisReport, Observation, PublishingCopy, ReportPlatform, RewriteIn,
+                                  ThumbnailComparison, ThumbnailPick, ThumbnailReview, VideoInfo)
 from api.routers.score import MAX_UPLOAD_BYTES, score_post
 from api.services import db, gemini, model
 from api.services.auth import require_user_id
@@ -29,6 +31,67 @@ def private_response(response: Response):
 router = APIRouter(prefix="/api/analyses", tags=["analyses"], dependencies=[Depends(private_response)])
 log = logging.getLogger(__name__)
 FORMATS = {"tiktok", "instagram", "shorts", "youtube"}
+MAX_THUMBNAILS = 3
+MAX_THUMBNAIL_BYTES = 10 * 1024 * 1024
+THUMBNAIL_TYPES = {"image/jpeg": ("JPEG", ".jpg"), "image/png": ("PNG", ".png"), "image/webp": ("WEBP", ".webp")}
+
+
+async def _read_thumbnails(files: list[UploadFile]) -> list[dict]:
+    """Validate 0-3 thumbnail images (type, size, real decodable image) and read their pixel size."""
+    from PIL import Image
+
+    files = [f for f in files if f.filename]
+    if len(files) > MAX_THUMBNAILS:
+        raise HTTPException(422, f"Upload at most {MAX_THUMBNAILS} thumbnails")
+    images = []
+    for file in files:
+        mime = file.content_type or ""
+        if mime not in THUMBNAIL_TYPES:
+            raise HTTPException(415, "Thumbnails must be JPEG, PNG or WebP images")
+        data = await file.read(MAX_THUMBNAIL_BYTES + 1)
+        if len(data) > MAX_THUMBNAIL_BYTES:
+            raise HTTPException(413, "Each thumbnail must be 10 MB or smaller")
+        try:
+            with Image.open(io.BytesIO(data)) as image:
+                if image.format != THUMBNAIL_TYPES[mime][0]:
+                    raise ValueError
+                width, height = image.size
+        except Exception:
+            raise HTTPException(415, f"{file.filename} is not a readable {THUMBNAIL_TYPES[mime][0]} image") from None
+        images.append({"data": data, "mime_type": mime, "name": Path(file.filename).name[:255],
+                       "width": width, "height": height})
+    return images
+
+
+def _thumbnail_report(chosen: list[str], images: list[dict], comparison) -> ThumbnailComparison:
+    """Map Gemini's per-thumbnail scores onto the report; the best per platform is the highest score there."""
+    items = []
+    for index, image in enumerate(images):
+        review = next((t for t in comparison.thumbnails if t.number == index + 1), None)
+        scores, reasons = {}, {}
+        for entry in review.scores if review else []:
+            platform = entry.platform.strip().lower()
+            if platform in chosen:
+                scores[platform] = float(min(max(entry.score, 0), 100))
+                reasons[platform] = entry.reason
+        items.append(ThumbnailReview(
+            index=index, name=image["name"], mimeType=image["mime_type"], width=image["width"],
+            height=image["height"], scores=scores, reasons=reasons,
+            strengths=review.strengths[:2] if review else [], improvements=review.improvements[:2] if review else [],
+        ))
+    picks = []
+    for platform in chosen:
+        scored = [item for item in items if platform in item.scores]
+        if scored:
+            best = max(scored, key=lambda item: item.scores[platform])  # ties keep the earlier thumbnail
+            picks.append(ThumbnailPick(platform=platform, index=best.index, reason=best.reasons[platform]))
+    if not picks:
+        raise ValueError("Gemini returned no thumbnail scores")
+    return ThumbnailComparison(summary=comparison.summary, items=items, picks=picks)
+
+
+def _thumbnail_name(report_id: str, index: int, mime: str) -> str:
+    return f"{report_id}_thumb{index}{THUMBNAIL_TYPES[mime][1]}"
 
 
 def _row(analysis_id: str, user_id: str) -> dict:
@@ -58,6 +121,7 @@ async def create_analysis(
     platforms: str = Form(...),
     metadata: str = Form(...),
     caption: str = Form(..., min_length=1, max_length=10000),
+    thumbnails: list[UploadFile] = File(default=[]),
     user_id: str = Depends(require_user_id),
 ) -> AnalysisJob:
     try:
@@ -82,12 +146,19 @@ async def create_analysis(
                     else len(media) >= 12 and media[4:8] in (b"ftyp", b"moov", b"wide", b"mdat"))
     if not valid_header:
         raise HTTPException(415, "The file does not have a supported video container")
+    images = await _read_thumbnails(thumbnails)
     for platform in {"youtube" if p == "shorts" else p for p in chosen}:
         if await run_in_threadpool(model.load_bundle, platform) is None:
             raise HTTPException(503, f"The {platform} prediction model is not installed")
 
     results = {}
     warnings = []
+    # The thumbnail comparison doesn't need the video review, so it runs alongside it.
+    thumbnail_task = None
+    if images and gemini.is_configured():
+        thumbnail_task = asyncio.create_task(run_in_threadpool(gemini.compare_thumbnails, chosen, caption, images))
+    elif images:
+        warnings.append("Thumbnail feedback needs Gemini (GEMINI_API_KEY), which is not configured.")
     summaries = []
     overall: list[str] = []
     observations: list[Observation] = []
@@ -130,15 +201,26 @@ async def create_analysis(
                 opportunities=response.suggestions, strengths=content.strengths if content else [],
                 suggestions=PublishingCopy(caption=caption, edits=response.suggestions),
             )
+    thumbnail_report = None
+    if thumbnail_task:
+        try:
+            thumbnail_report = _thumbnail_report(chosen, images, await thumbnail_task)
+        except Exception as exc:
+            log.warning("Thumbnail comparison failed: %s", type(exc).__name__)
+            warnings.append("Gemini could not compare your thumbnails this time. Try again to get thumbnail feedback.")
     report = AnalysisReport(
         id=uuid.uuid4().hex, video=info, platforms=[results[p] for p in chosen],
         summary=" ".join(dict.fromkeys(summaries)) or "Model-only report. Gemini did not review this video.",
         warnings=list(dict.fromkeys(warnings)), observations=observations,
-        overallSuggestions=overall[:5],
+        overallSuggestions=overall[:5], thumbnails=thumbnail_report,
     )
     safe_name = f"{report.id}{Path(video.filename or 'video.mp4').suffix.lower()}"
     try:
         media_path = await run_in_threadpool(db.store_file, media, user_id, safe_name, db.ANALYSIS_STAGE)
+        if thumbnail_report:
+            for index, image in enumerate(images):
+                await run_in_threadpool(db.store_file, image["data"], user_id,
+                                        _thumbnail_name(report.id, index, image["mime_type"]), db.ANALYSIS_STAGE)
         await run_in_threadpool(
             db.execute, "INSERT INTO ANALYSES (id, user_id, caption, report, media_path, media_type, created_at) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s)",
@@ -155,24 +237,40 @@ def get_analysis(analysis_id: str, user_id: str = Depends(require_user_id)) -> A
     return _job(_row(analysis_id, user_id))
 
 
-@router.get("/{analysis_id}/video")
-def get_video(analysis_id: str, user_id: str = Depends(require_user_id)):
-    row = _row(analysis_id, user_id)
-    path = row.get("media_path")
+def _serve(path: str | None, media_type: str, user_id: str, label: str):
+    """Serve one of the owner's stored files: locally from data/uploads, else a short-lived presigned stage URL."""
     if not path:
-        raise HTTPException(404, "Video not found")
+        raise HTTPException(404, f"{label} not found")
     if db.backend() == "sqlite":
         local = (db.ROOT / path).resolve()
         if not local.is_relative_to((db.LOCAL_UPLOADS / user_id).resolve()) or not local.is_file():
-            raise HTTPException(404, "Video not found")
-        return FileResponse(local, media_type=row["media_type"], headers={"Cache-Control": "private, no-store"})
+            raise HTTPException(404, f"{label} not found")
+        return FileResponse(local, media_type=media_type, headers={"Cache-Control": "private, no-store"})
     stage = db.ANALYSIS_STAGE if path.startswith(f"@{db.ANALYSIS_STAGE}/") else db.STAGE
     prefix = f"@{stage}/{user_id}/"
     if not path.startswith(prefix):
-        raise HTTPException(404, "Video not found")
+        raise HTTPException(404, f"{label} not found")
     relative = path[len(f"@{stage}/"):]
     rows = db.query(f"SELECT GET_PRESIGNED_URL(@{stage}, %s, 300) AS url", (relative,))
     return RedirectResponse(rows[0]["url"], headers={"Cache-Control": "private, no-store"})
+
+
+@router.get("/{analysis_id}/video")
+def get_video(analysis_id: str, user_id: str = Depends(require_user_id)):
+    row = _row(analysis_id, user_id)
+    return _serve(row.get("media_path"), row["media_type"], user_id, "Video")
+
+
+@router.get("/{analysis_id}/thumbnails/{index}")
+def get_thumbnail(analysis_id: str, index: int, user_id: str = Depends(require_user_id)):
+    report = _job(_row(analysis_id, user_id)).result
+    item = next((t for t in report.thumbnails.items if t.index == index), None) if report.thumbnails else None
+    if item is None:
+        raise HTTPException(404, "Thumbnail not found")
+    name = _thumbnail_name(analysis_id, index, item.mimeType)
+    path = (str((db.LOCAL_UPLOADS / user_id / name).relative_to(db.ROOT)) if db.backend() == "sqlite"
+            else f"@{db.ANALYSIS_STAGE}/{user_id}/{name}")
+    return _serve(path, item.mimeType, user_id, "Thumbnail")
 
 
 @router.post("/{analysis_id}/rewrite")

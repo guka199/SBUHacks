@@ -900,3 +900,42 @@ meter::-webkit-meter-optimum-value {
   .overall-grid { grid-template-columns: 1fr; gap: 24px; }
   .clip-list li { flex-direction: column; gap: 10px; }
 }
+
+/* Thumbnails: picker on the upload page, comparison on the results page. */
+.thumbnail-picker { margin-top: 18px; padding: 18px; border: 1px dashed #f7d87f; border-radius: 14px; }
+.thumbnail-picker-heading .button { white-space: nowrap; flex-shrink: 0; }
+.thumbnail-picker-heading { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+.thumbnail-picker-heading strong { display: block; font-weight: 600; }
+.thumbnail-picker-heading span { font-size: 13px; color: #be1a1a; }
+.thumbnail-previews { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.thumbnail-previews li { position: relative; display: grid; gap: 6px; }
+.thumbnail-previews img { width: 100%; aspect-ratio: 16 / 10; object-fit: contain; background: #171717; border-radius: 8px; }
+.thumbnail-previews span { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.thumbnail-previews .icon-button { position: absolute; top: 6px; right: 6px; background: #f8ebab; border-radius: 999px; padding: 4px; }
+.thumbnail-review { margin: 0 0 48px; }
+.thumbnail-summary { font-size: 15px; line-height: 1.65; max-width: 760px; margin: 10px 0 22px; }
+.thumbnail-picks { list-style: none; padding: 0; margin: 0 0 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.thumbnail-picks li { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border: 1px solid #f7d87f; border-radius: 14px; background: #f8ebab; }
+.thumbnail-picks img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: #171717; }
+.thumbnail-picks strong { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; flex-wrap: wrap; }
+.thumbnail-picks strong span { color: #be1a1a; }
+.thumbnail-picks p { margin: 6px 0 0; font-size: 13px; line-height: 1.55; }
+.thumbnail-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+.thumbnail-card { border: 1px solid #f7d87f; border-radius: 18px; padding: 16px; background: #f8ebab; }
+.thumbnail-card.winner { border-color: #171717; }
+.thumbnail-frame { background: #171717; border-radius: 10px; overflow: hidden; }
+.thumbnail-frame img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: contain; }
+.thumbnail-card h3 { margin: 12px 0 4px; font-size: 16px; font-weight: 500; }
+.thumbnail-card h3 span { display: block; font-size: 12px; color: #be1a1a; font-weight: 400; overflow-wrap: anywhere; }
+.thumbnail-card .best-label { display: inline-block; margin: 6px 0 0; }
+.thumbnail-scores { margin: 12px 0; display: grid; gap: 6px; }
+.thumbnail-scores div { display: grid; grid-template-columns: 70px 1fr; align-items: center; font-size: 12px; }
+.thumbnail-scores dd { margin: 0; display: flex; align-items: center; gap: 8px; }
+.thumbnail-scores meter { flex: 1; min-width: 0; }
+.thumbnail-scores b { width: 26px; text-align: right; font-weight: 600; }
+.thumbnail-card h4 { margin: 12px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+.thumbnail-card ul { margin: 0; padding-left: 18px; list-style: disc; font-size: 13px; line-height: 1.55; display: grid; gap: 4px; }
+@media (max-width: 700px) {
+  .thumbnail-picker-heading { flex-direction: column; align-items: flex-start; }
+  .thumbnail-previews { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

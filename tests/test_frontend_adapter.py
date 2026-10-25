@@ -182,3 +182,68 @@ class VideoMomentTests(unittest.TestCase):
         self.assertEqual(len(report["observations"]), 1)  # the Shorts review of the same video doesn't duplicate it
         self.assertEqual(report["observations"][0] | {}, {"id": "m0", "time": 8.0, "end": 11.0, "kind": "pacing",
                          "title": "Dead air", "detail": "Nothing happens.", "fix": "Cut 3 s."})
+
+
+def _image(fmt="PNG", size=(64, 36)):
+    import io as _io
+    from PIL import Image
+    buffer = _io.BytesIO()
+    Image.new("RGB", size, "#336699").save(buffer, fmt)
+    return buffer.getvalue()
+
+
+class ThumbnailTests(unittest.TestCase):
+    def setUp(self):
+        self.base = AdapterTests("test_live_model_fallback_is_honest_and_saved_to_signed_owner")
+        self.base.setUp()
+        self.addCleanup(self.base.doCleanups)
+        self.configured = self.base.mock(analyses.gemini, "is_configured", return_value=True)
+
+    def post(self, thumbs, selected=("youtube", "tiktok")):
+        return self.base.client.post("/api/analyses", data={
+            "platforms": json.dumps(list(selected)), "caption": "A real draft caption",
+            "metadata": json.dumps({"name": "clip.webm", "durationSeconds": 24, "width": 720, "height": 1280}),
+        }, files=[("video", ("clip.webm", b"\x1aE\xdf\xa3payload", "video/webm"))]
+                 + [("thumbnails", t) for t in thumbs])
+
+    def comparison(self):
+        from api.services.gemini import GeminiThumbnail, GeminiThumbnailComparison, GeminiThumbnailScore
+        def thumb(number, youtube, tiktok):
+            return GeminiThumbnail(number=number, strengths=["Bold text"], improvements=["Crop tighter"], scores=[
+                GeminiThumbnailScore(platform="YouTube", score=youtube, reason=f"yt {number}"),
+                GeminiThumbnailScore(platform="tiktok", score=tiktok, reason=f"tt {number}")])
+        return GeminiThumbnailComparison(summary="Use 1 on YouTube, 2 on TikTok.",
+                                         thumbnails=[thumb(1, 80, 30), thumb(2, 40, 70)])
+
+    def test_best_thumbnail_is_picked_per_platform_and_files_are_saved(self):
+        compare = self.base.mock(analyses.gemini, "compare_thumbnails", return_value=self.comparison())
+        response = self.post([("wide.png", _image(), "image/png"), ("tall.jpg", _image("JPEG", (36, 64)), "image/jpeg")])
+        self.assertEqual(response.status_code, 200, response.text)
+        review = response.json()["result"]["thumbnails"]
+        self.assertEqual({p["platform"]: (p["index"], p["reason"]) for p in review["picks"]},
+                         {"youtube": (0, "yt 1"), "tiktok": (1, "tt 2")})
+        self.assertEqual([(t["name"], t["width"], t["height"]) for t in review["items"]],
+                         [("wide.png", 64, 36), ("tall.jpg", 36, 64)])
+        self.assertEqual(compare.call_args.args[0], ["youtube", "tiktok"])
+        saved = [c.args[2] for c in self.base.store.call_args_list]
+        report_id = response.json()["id"]
+        self.assertEqual(saved[1:], [f"{report_id}_thumb0.png", f"{report_id}_thumb1.jpg"])
+
+    def test_thumbnail_failure_is_a_warning_not_an_error(self):
+        self.base.mock(analyses.gemini, "compare_thumbnails", side_effect=RuntimeError("boom"))
+        response = self.post([("wide.png", _image(), "image/png")])
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["result"]["thumbnails"])
+        self.assertTrue(any("thumbnails" in w for w in response.json()["result"]["warnings"]))
+        self.assertEqual(self.base.store.call_count, 1)  # only the video
+
+    def test_invalid_thumbnails_are_rejected_before_scoring(self):
+        png = ("t.png", _image(), "image/png")
+        self.assertEqual(self.post([png] * 4).status_code, 422)
+        self.assertEqual(self.post([("t.gif", b"GIF89a", "image/gif")]).status_code, 415)
+        self.assertEqual(self.post([("t.jpg", _image(), "image/jpeg")]).status_code, 415)  # PNG bytes labelled JPEG
+        self.base.scorer.assert_not_awaited()
+
+    def test_thumbnail_download_is_owner_scoped(self):
+        self.assertEqual(self.base.client.get(f"/api/analyses/{'a' * 32}/thumbnails/0").status_code, 404)
+        self.assertIn(OWNER, self.base.query.call_args.args[1])

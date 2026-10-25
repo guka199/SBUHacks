@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
   devIndicators: false,
+  // Optional separate build folder, so a second `next dev` (e.g. a test server on another port) can run alongside.
+  ...(process.env.NEXT_DIST_DIR && { distDir: process.env.NEXT_DIST_DIR }),
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   transpilePackages: ["three"],
   experimental: { proxyTimeout: 600000, proxyClientMaxBodySize: "205mb" },

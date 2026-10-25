@@ -50,6 +50,7 @@ export const analysisApi = {
     signal: AbortSignal,
     metadata: VideoMetadata,
     caption: string,
+    thumbnails: File[] = [],
   ): Promise<AnalysisJob> {
     return new Promise((resolve, reject) => {
       if (signal.aborted) {
@@ -114,6 +115,7 @@ export const analysisApi = {
       form.append("platforms", JSON.stringify(selected));
       form.append("metadata", JSON.stringify(metadata));
       form.append("caption", caption);
+      for (const thumbnail of thumbnails) form.append("thumbnails", thumbnail);
       xhr.send(form);
     });
   },
@@ -133,6 +135,9 @@ export const analysisApi = {
   },
   videoUrl(id: string) {
     return `${API_BASE}/api/analyses/${encodeURIComponent(id)}/video`;
+  },
+  thumbnailUrl(id: string, index: number) {
+    return `${API_BASE}/api/analyses/${encodeURIComponent(id)}/thumbnails/${index}`;
   },
   async rewrite(id: string, request: RewriteRequest, signal: AbortSignal) {
     return rewriteSchema.parse(

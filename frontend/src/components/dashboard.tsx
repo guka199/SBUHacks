@@ -167,6 +167,106 @@ export function Dashboard({
     />
   );
 }
+function ThumbnailReview({ result }: { result: AnalysisResult }) {
+  const review = result.thumbnails;
+  if (!review?.items.length) return null;
+  const src = (index: number) => analysisApi.thumbnailUrl(result.id, index);
+  const shortName = (id: PlatformId) =>
+    platforms.find((p) => p.id === id)!.short;
+  return (
+    <section className="thumbnail-review" aria-labelledby="thumbnail-title">
+      <div className="panel-heading">
+        <h2 id="thumbnail-title">Which thumbnail to use.</h2>
+        <span>Gemini thumbnail comparison</span>
+      </div>
+      <p className="thumbnail-summary">{review.summary}</p>
+      <ul className="thumbnail-picks">
+        {review.picks.map((pick) => (
+          <li key={pick.platform}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- private, presigned image */}
+            <img src={src(pick.index)} alt={`Thumbnail ${pick.index + 1}`} />
+            <div>
+              <strong>
+                <PlatformIcon id={pick.platform} /> {nameOf(pick.platform)}
+                <span>→ Thumbnail {pick.index + 1}</span>
+              </strong>
+              <p>{pick.reason}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="thumbnail-cards">
+        {review.items.map((item) => {
+          const wins = review.picks
+            .filter((pick) => pick.index === item.index)
+            .map((pick) => shortName(pick.platform));
+          return (
+            <article
+              key={item.index}
+              className={`thumbnail-card ${wins.length ? "winner" : ""}`}
+            >
+              <div className="thumbnail-frame">
+                {/* eslint-disable-next-line @next/next/no-img-element -- private, presigned image */}
+                <img
+                  src={src(item.index)}
+                  alt={`Thumbnail ${item.index + 1}: ${item.name}`}
+                />
+              </div>
+              <h3>
+                Thumbnail {item.index + 1}
+                <span>
+                  {item.name} · {item.width} × {item.height}
+                </span>
+              </h3>
+              {wins.length > 0 && (
+                <p className="best-label">Best for {wins.join(", ")}</p>
+              )}
+              <dl className="thumbnail-scores">
+                {result.platforms.map((p) => {
+                  const value = item.scores[p.id];
+                  return (
+                    <div key={p.id} title={item.reasons[p.id]}>
+                      <dt>{shortName(p.id)}</dt>
+                      <dd>
+                        <meter
+                          min={0}
+                          max={100}
+                          value={value ?? 0}
+                          aria-label={`${nameOf(p.id)} thumbnail score`}
+                        />
+                        <b>{value ?? "–"}</b>
+                      </dd>
+                    </div>
+                  );
+                })}
+              </dl>
+              {item.strengths.length > 0 && (
+                <>
+                  <h4>Works</h4>
+                  <ul>
+                    {item.strengths.map((text) => (
+                      <li key={text}>{text}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {item.improvements.length > 0 && (
+                <>
+                  <h4>Improve</h4>
+                  <ul>
+                    {item.improvements.map((text) => (
+                      <li key={text}>{text}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 function AnalysisStudio({
   result,
   videoUrl,
@@ -463,6 +563,7 @@ function AnalysisStudio({
                 </button>
               </section>
             </div>
+            <ThumbnailReview result={result} />
           </>
         )}
         {(view === "overview" || view === "insights") && (

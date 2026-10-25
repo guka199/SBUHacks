@@ -73,6 +73,32 @@ export const resultSchema = z
       }),
     ),
     overallSuggestions: z.array(z.string()).optional(),
+    thumbnails: z
+      .object({
+        summary: z.string(),
+        items: z.array(
+          z.object({
+            index: z.number().int().min(0).max(2),
+            name: z.string(),
+            mimeType: z.string(),
+            width: z.number().positive(),
+            height: z.number().positive(),
+            scores: z.partialRecord(platformSchema, score),
+            reasons: z.partialRecord(platformSchema, z.string()),
+            strengths: z.array(z.string()),
+            improvements: z.array(z.string()),
+          }),
+        ),
+        picks: z.array(
+          z.object({
+            platform: platformSchema,
+            index: z.number().int().min(0).max(2),
+            reason: z.string(),
+          }),
+        ),
+      })
+      .nullable()
+      .optional(),
   })
   .superRefine((result, ctx) => {
     result.observations.forEach((o, i) => {

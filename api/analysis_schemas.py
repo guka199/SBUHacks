@@ -51,6 +51,30 @@ class Observation(BaseModel):
     fix: str = ""
 
 
+class ThumbnailReview(BaseModel):
+    index: int = Field(ge=0, le=2)
+    name: str
+    mimeType: Literal["image/jpeg", "image/png", "image/webp"]
+    width: int = Field(gt=0)
+    height: int = Field(gt=0)
+    scores: dict[FormatId, float]
+    reasons: dict[FormatId, str]
+    strengths: list[str] = Field(default_factory=list)
+    improvements: list[str] = Field(default_factory=list)
+
+
+class ThumbnailPick(BaseModel):
+    platform: FormatId
+    index: int = Field(ge=0, le=2)
+    reason: str
+
+
+class ThumbnailComparison(BaseModel):
+    summary: str
+    items: list[ThumbnailReview]
+    picks: list[ThumbnailPick]
+
+
 class AnalysisReport(BaseModel):
     id: str
     mode: Literal["live"] = "live"
@@ -59,6 +83,7 @@ class AnalysisReport(BaseModel):
     platforms: list[ReportPlatform]
     observations: list[Observation] = Field(default_factory=list)
     overallSuggestions: list[str] = Field(default_factory=list)
+    thumbnails: ThumbnailComparison | None = None
     warnings: list[str] = Field(default_factory=list)
 
 

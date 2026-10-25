@@ -7,6 +7,7 @@ import {
   ArrowUpRight,
   Check,
   Film,
+  ImagePlus,
   Loader2,
   UploadCloud,
   X,
@@ -14,7 +15,14 @@ import {
 import { platforms, type PlatformId } from "@/lib/contracts";
 import { API_MODE, analysisApi, delay, waitForAnalysis } from "@/lib/api";
 import { makeDemoResult } from "@/lib/demo";
-import { readVideo, timecode, validateVideo } from "@/lib/video";
+import {
+  MAX_THUMBNAILS,
+  THUMBNAIL_TYPES,
+  readVideo,
+  timecode,
+  validateThumbnail,
+  validateVideo,
+} from "@/lib/video";
 import { useSession } from "./session";
 import { PlatformIcon } from "./ui";
 import { useAuth } from "@/lib/auth";
@@ -42,16 +50,49 @@ export function Upload() {
   const [error, setError] = useState("");
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState("");
+  const [thumbnails, setThumbnails] = useState<{ file: File; url: string }[]>(
+    [],
+  );
+  const [thumbnailError, setThumbnailError] = useState("");
   const input = useRef<HTMLInputElement>(null);
+  const thumbnailInput = useRef<HTMLInputElement>(null);
+  const thumbnailUrls = useRef<string[]>([]);
   const controller = useRef<AbortController | null>(null);
   const selection = useRef(0);
   useEffect(
     () => () => {
       controller.current?.abort();
       selection.current++;
+      thumbnailUrls.current.forEach((url) => URL.revokeObjectURL(url));
     },
     [],
   );
+  function addThumbnails(files: File[]) {
+    setThumbnailError("");
+    const room = MAX_THUMBNAILS - thumbnails.length;
+    if (files.length > room)
+      setThumbnailError(
+        `You can compare up to ${MAX_THUMBNAILS} thumbnails. Remove one to add another.`,
+      );
+    const added: { file: File; url: string }[] = [];
+    for (const file of files.slice(0, Math.max(room, 0))) {
+      const problem = validateThumbnail(file);
+      if (problem) {
+        setThumbnailError(problem);
+        continue;
+      }
+      const url = URL.createObjectURL(file);
+      thumbnailUrls.current.push(url);
+      added.push({ file, url });
+    }
+    setThumbnails((prev) => [...prev, ...added]);
+  }
+  function removeThumbnail(url: string) {
+    URL.revokeObjectURL(url);
+    thumbnailUrls.current = thumbnailUrls.current.filter((u) => u !== url);
+    setThumbnails((prev) => prev.filter((t) => t.url !== url));
+    setThumbnailError("");
+  }
   const demo = API_MODE === "demo" || example;
   async function select(file?: File, isExample = false) {
     if (!file || busy) return;
@@ -148,6 +189,7 @@ export function Upload() {
           active.signal,
           session.metadata,
           caption,
+          thumbnails.map((t) => t.file),
         );
         const result = await waitForAnalysis(job, active.signal, (value) => {
           setStage(value.stage);
@@ -267,6 +309,68 @@ export function Upload() {
                 Browse files
               </button>
               <span className="file-limits">MP4, WebM, MOV · Up to 200 MB</span>
+            </div>
+          )}
+          {!demo && (
+            <div className="thumbnail-picker">
+              <input
+                ref={thumbnailInput}
+                className="sr-only"
+                type="file"
+                multiple
+                accept={THUMBNAIL_TYPES.join(",")}
+                aria-label="Choose thumbnail images"
+                disabled={busy}
+                onChange={(e) => {
+                  addThumbnails(Array.from(e.target.files ?? []));
+                  e.target.value = "";
+                }}
+              />
+              <div className="thumbnail-picker-heading">
+                <div>
+                  <strong>Thumbnails</strong>
+                  <span>
+                    Optional · up to {MAX_THUMBNAILS} · we’ll tell you which
+                    works best on each platform
+                  </span>
+                </div>
+                <button
+                  className="button button-outline button-small"
+                  disabled={busy || thumbnails.length >= MAX_THUMBNAILS}
+                  onClick={() => thumbnailInput.current?.click()}
+                >
+                  <ImagePlus size={16} /> Add thumbnails
+                </button>
+              </div>
+              {thumbnails.length > 0 && (
+                <ul className="thumbnail-previews">
+                  {thumbnails.map((t, i) => (
+                    <li key={t.url}>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview */}
+                      <img
+                        src={t.url}
+                        alt={`Thumbnail ${i + 1}: ${t.file.name}`}
+                      />
+                      <span>
+                        {i + 1}. {t.file.name}
+                      </span>
+                      <button
+                        className="icon-button"
+                        aria-label={`Remove thumbnail ${i + 1}`}
+                        disabled={busy}
+                        onClick={() => removeThumbnail(t.url)}
+                      >
+                        <X size={15} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {thumbnailError && (
+                <p className="error-message" role="alert">
+                  {thumbnailError}
+                </p>
+              )}
             </div>
           )}
           <div className="sample-row">

@@ -83,3 +83,7 @@ The adapter calls `/score`'s existing implementation, so it shares the trained C
 - Live validation found an unbounded malformed Gemini rewrite; generation is now capped at 2,048 output tokens with short-copy instructions, required schema fields and length bounds. The corrected provider request succeeded.
 
 Snowflake presigned media needs server-side stage encryption: [official GET_PRESIGNED_URL documentation](https://docs.snowflake.com/en/sql-reference/functions/get_presigned_url). A separate SSE stage avoids changing the existing draft stage.
+
+## Thumbnails
+
+`POST /api/analyses` also accepts up to 3 `thumbnails` form files (JPEG/PNG/WebP, 10 MB each). Gemini compares them per format; the report's `thumbnails` = `{summary, items[{index, name, mimeType, width, height, scores, reasons, strengths, improvements}], picks[{platform, index, reason}]}` (`null` when none were uploaded or Gemini failed - then a warning explains it). Images: `GET /api/analyses/{id}/thumbnails/{index}` (owner-scoped; Snowflake serves a presigned URL).

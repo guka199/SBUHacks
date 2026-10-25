@@ -1,5 +1,18 @@
 import type { VideoMetadata } from "./contracts";
 export const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
+export const MAX_THUMBNAILS = 3;
+export const MAX_THUMBNAIL_BYTES = 10 * 1024 * 1024;
+export const THUMBNAIL_TYPES = ["image/jpeg", "image/png", "image/webp"];
+export function validateThumbnail(
+  file: Pick<File, "name" | "size" | "type">,
+): string | null {
+  if (!THUMBNAIL_TYPES.includes(file.type))
+    return `${file.name}: thumbnails must be JPEG, PNG or WebP images.`;
+  if (!file.size) return `${file.name} is empty.`;
+  if (file.size > MAX_THUMBNAIL_BYTES)
+    return `${file.name} is over 10 MB. Export a smaller image.`;
+  return null;
+}
 export function validateVideo(
   file: Pick<File, "name" | "size" | "type">,
 ): string | null {
