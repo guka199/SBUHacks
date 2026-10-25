@@ -9,11 +9,7 @@ import {
   ShoppingBag,
   TrendingUp,
 } from "lucide-react";
-import {
-  creatorPreferencesSchema,
-  localDate,
-  type CreatorPreferences,
-} from "@/lib/ideas";
+import { creatorPreferencesSchema, type CreatorPreferences } from "@/lib/ideas";
 import styles from "./ideas.module.css";
 
 export type DirectionDraft = Omit<
@@ -99,7 +95,6 @@ const goalChoices = [
 export function DirectionEditor({
   draft,
   dirty,
-  updatedAt,
   disabled,
   saving,
   onChange,
@@ -108,7 +103,6 @@ export function DirectionEditor({
 }: {
   draft: DirectionDraft;
   dirty: boolean;
-  updatedAt: string | null;
   disabled: boolean;
   saving: boolean;
   onChange: (draft: DirectionDraft) => void;
@@ -129,24 +123,8 @@ export function DirectionEditor({
     onChange({ ...draft, [key]: value });
   }
   return (
-    <section className={styles.direction} aria-labelledby="direction-heading">
-      <div className={styles.sectionHeading}>
-        <div>
-          <span className={styles.eyebrow}>01 / Make it yours</span>
-          <h2 id="direction-heading">What do you want your next post to do?</h2>
-        </div>
-        <span className={styles.badge}>
-          {dirty
-            ? "Unsaved changes"
-            : updatedAt
-              ? "Preferences saved"
-              : "Optional"}
-        </span>
-      </div>
-      <p className={styles.subtle}>
-        Pick a goal, or explore freely. Everything here is optional and can be
-        changed later.
-      </p>
+    <div className={styles.direction}>
+      <h3 id="direction-heading">Goal</h3>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -178,65 +156,65 @@ export function DirectionEditor({
                     )}
                   </span>
                   <strong>{title}</strong>
-                  <small>{description}</small>
                 </span>
               </label>
             ))}
           </div>
-          <div className={styles.fullWidth}>
-            <label htmlFor="filming-minutes">
-              How much time can you spend filming?{" "}
-              <span className={styles.optional}>Optional</span>
-            </label>
-            <div className={styles.filmingControls}>
-              <div
-                className={styles.timePresets}
-                role="group"
-                aria-label="Quick filming time choices"
-              >
-                {["", "15", "30", "60"].map((minutes) => (
-                  <button
-                    key={minutes || "flexible"}
-                    type="button"
-                    aria-pressed={draft.filming_minutes === minutes}
-                    onClick={() => change("filming_minutes", minutes)}
-                  >
-                    {minutes ? `${minutes} min` : "Flexible"}
-                  </button>
-                ))}
-              </div>
-              <span className={styles.timeInput}>
-                <input
-                  id="filming-minutes"
-                  type="number"
-                  min={5}
-                  max={480}
-                  step={1}
-                  value={draft.filming_minutes}
-                  placeholder="Custom"
-                  onChange={(event) =>
-                    change("filming_minutes", event.target.value)
-                  }
-                />
-                <span>min</span>
-              </span>
-            </div>
-            <p className={styles.fieldHint}>
-              Time to make one idea, not the length of the video.
-            </p>
-          </div>
-          <details className={styles.preferenceDetails}>
+          <details
+            className={styles.preferenceDetails}
+            open={validation.error ? true : undefined}
+          >
             <summary>
               <span>
-                {noteCount
-                  ? `Style, audience & other preferences · ${noteCount} added`
-                  : "Add your style, audience, or topics to avoid"}
+                Customize
+                {noteCount || draft.filming_minutes
+                  ? " · preferences added"
+                  : ""}
               </span>
               <ChevronDown size={16} aria-hidden="true" />
             </summary>
-            <p className={styles.fieldHint}>
-              Your notes take priority over patterns inferred from your history.
-            </p>
+            <div className={styles.fullWidth}>
+              <label htmlFor="filming-minutes">
+                How much time can you spend filming?{" "}
+                <span className={styles.optional}>Optional</span>
+              </label>
+              <div className={styles.filmingControls}>
+                <div
+                  className={styles.timePresets}
+                  role="group"
+                  aria-label="Quick filming time choices"
+                >
+                  {["", "15", "30", "60"].map((minutes) => (
+                    <button
+                      key={minutes || "flexible"}
+                      type="button"
+                      aria-pressed={draft.filming_minutes === minutes}
+                      onClick={() => change("filming_minutes", minutes)}
+                    >
+                      {minutes ? `${minutes} min` : "Flexible"}
+                    </button>
+                  ))}
+                </div>
+                <span className={styles.timeInput}>
+                  <input
+                    id="filming-minutes"
+                    type="number"
+                    min={5}
+                    max={480}
+                    step={1}
+                    value={draft.filming_minutes}
+                    placeholder="Custom"
+                    onChange={(event) =>
+                      change("filming_minutes", event.target.value)
+                    }
+                  />
+                  <span>min</span>
+                </span>
+              </div>
+              <p className={styles.fieldHint}>
+                Time to make one idea, not the length of the video.
+              </p>
+            </div>
             <div className={styles.advancedFields}>
               <label className={styles.fullWidth}>
                 What would success look like?{" "}
@@ -302,42 +280,31 @@ export function DirectionEditor({
             {validation.error}
           </p>
         )}
-        <div className={styles.directionActions}>
-          <button
-            className="button button-light"
-            type="submit"
-            disabled={disabled || !dirty || !!validation.error}
-          >
-            {saving ? (
-              <Loader2 size={16} className="spin" />
-            ) : (
-              <Save size={16} />
-            )}
-            {saving ? "Saving…" : "Save preferences"}
-          </button>
-          {dirty ? (
-            <>
-              <button
-                className="text-link"
-                type="button"
-                onClick={onReset}
-                disabled={disabled}
-              >
-                Discard changes
-              </button>
-              <p className={styles.subtle}>
-                Generate ideas to save and use these changes in one step.
-              </p>
-            </>
-          ) : (
-            <p className={styles.subtle}>
-              {updatedAt
-                ? `Last saved ${localDate(updatedAt)}.`
-                : "Happy to explore? Skip ahead and generate ideas."}
-            </p>
-          )}
-        </div>
+        {dirty && (
+          <div className={styles.directionActions}>
+            <button
+              className="text-link"
+              type="submit"
+              disabled={disabled || !!validation.error}
+            >
+              {saving ? (
+                <Loader2 size={16} className="spin" />
+              ) : (
+                <Save size={16} />
+              )}
+              {saving ? "Saving…" : "Save preferences"}
+            </button>
+            <button
+              className="text-link"
+              type="button"
+              onClick={onReset}
+              disabled={disabled}
+            >
+              Discard changes
+            </button>
+          </div>
+        )}
       </form>
-    </section>
+    </div>
   );
 }

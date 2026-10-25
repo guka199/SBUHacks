@@ -1,11 +1,9 @@
 import { ArrowUpRight, ChevronDown, Globe2 } from "lucide-react";
 import {
-  ideaKindNames,
   localDate,
   platformNames,
   trendLink,
   trendRegions,
-  type ContentIdea,
   type TrendEvidence,
   type TrendResearch,
 } from "@/lib/ideas";
@@ -31,7 +29,21 @@ export function TrendControls({
   onTopic: (value: string) => void;
 }) {
   return (
-    <div className={styles.trendControls}>
+    <>
+      <label>
+        Country
+        <select
+          value={region}
+          disabled={disabled || !enabled}
+          onChange={(event) => onRegion(event.target.value)}
+        >
+          {Object.entries(trendRegions).map(([code, name]) => (
+            <option key={code} value={code}>
+              {name}
+            </option>
+          ))}
+        </select>
+      </label>
       <label className={styles.trendToggle}>
         <input
           type="checkbox"
@@ -39,48 +51,33 @@ export function TrendControls({
           disabled={disabled}
           onChange={(event) => onEnabled(event.target.checked)}
         />
-        <span>
-          <strong>Include current trend signals</strong>
-          <small>
-            Mix timely inspiration with follow-ups and evergreen ideas.
-          </small>
-        </span>
+        <span>Include recent trends</span>
       </label>
       {enabled && (
-        <div className={styles.trendFields}>
-          <label>
-            Market
-            <select
-              value={region}
-              disabled={disabled}
-              onChange={(event) => onRegion(event.target.value)}
-            >
-              {Object.entries(trendRegions).map(([code, name]) => (
-                <option key={code} value={code}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Research topic <span className={styles.optional}>Optional</span>
-            <input
-              value={topic}
-              maxLength={100}
-              disabled={disabled}
-              placeholder={suggestedTopic || "Use my channel’s main topic"}
-              onChange={(event) => onTopic(event.target.value)}
-            />
-          </label>
-          <p className={styles.fieldHint}>
-            Uses recent public YouTube examples or cited web reports for your
-            platform. If no fresh evidence fits, we’ll disclose that and use
-            your history. Only a short topic is sent to search—not your videos
-            or private reviews.
-          </p>
-        </div>
+        <details className={styles.trendSettings}>
+          <summary>
+            Trend settings <ChevronDown size={15} aria-hidden="true" />
+          </summary>
+          <div className={styles.trendFields}>
+            <label>
+              Research topic <span className={styles.optional}>Optional</span>
+              <input
+                value={topic}
+                maxLength={100}
+                disabled={disabled}
+                placeholder={suggestedTopic || "Use my channel’s main topic"}
+                onChange={(event) => onTopic(event.target.value)}
+              />
+            </label>
+            <p className={styles.fieldHint}>
+              Search uses a short topic, not your videos or private reviews.
+              Recent examples don’t measure rising popularity or demand in this
+              country.
+            </p>
+          </div>
+        </details>
       )}
-    </div>
+    </>
   );
 }
 
@@ -159,32 +156,30 @@ export function ResearchSummary({
       className={styles.researchSummary}
       aria-label="Research used for this batch"
     >
-      <div className={styles.researchTitle}>
-        <Globe2 size={17} />
-        <strong>
-          {research.status === "available"
-            ? expired
-              ? "Saved research snapshot"
-              : research.sources.length
-                ? "Fresh signals for this batch"
-                : "Saved research snapshot"
-            : research.status === "disabled"
-              ? "Channel history only"
-              : "Fresh signals unavailable for this batch"}
-        </strong>
-      </div>
-      <p>
-        {research.platform && `${platformNames[research.platform]} · `}
-        {trendRegions[research.region_code] ?? research.region_code}
-        {research.topic && ` · ${research.topic}`}
-        {checked && ` · Checked ${checked}`}
-        {research.cached && " · Reused recent research"}
-      </p>
+      {research.status === "unavailable" && (
+        <p role="status">
+          Recent trends unavailable. These ideas use your channel history.
+        </p>
+      )}
       <details>
         <summary>
-          Research sources and coverage{" "}
+          <Globe2 size={15} aria-hidden="true" />
+          {research.status === "available"
+            ? expired
+              ? "Saved research"
+              : "Research sources"
+            : research.status === "disabled"
+              ? "Channel history only"
+              : "Research details"}
           <ChevronDown size={15} aria-hidden="true" />
         </summary>
+        <p className={styles.fieldHint}>
+          {research.platform && `${platformNames[research.platform]} · `}
+          {trendRegions[research.region_code] ?? research.region_code}
+          {research.topic && ` · ${research.topic}`}
+          {checked && ` · Checked ${checked}`}
+          {research.cached && " · Reused recent research"}
+        </p>
         <ul>
           {research.notes.map((note) => (
             <li key={note}>{note}</li>
@@ -193,40 +188,8 @@ export function ResearchSummary({
         {!!research.sources.length && (
           <TrendSources sources={research.sources} />
         )}
+        <SearchSuggestions widgets={research.search_suggestions} />
       </details>
-      <SearchSuggestions widgets={research.search_suggestions} />
     </section>
-  );
-}
-
-export function FeedbackSummary({ ideas }: { ideas: ContentIdea[] }) {
-  const kinds = Object.keys(ideaKindNames) as (keyof typeof ideaKindNames)[];
-  if (!ideas.some((idea) => idea.idea_kind && idea.feedback)) return null;
-  return (
-    <details className={styles.feedbackSummary}>
-      <summary>Compare idea usefulness</summary>
-      <p>
-        Based only on your ratings for the ideas currently shown. This measures
-        usefulness, not post performance.
-      </p>
-      <div>
-        {kinds.map((kind) => {
-          const rated = ideas.filter(
-            (idea) => idea.idea_kind === kind && idea.feedback,
-          );
-          const useful = rated.filter(
-            (idea) => idea.feedback === "useful",
-          ).length;
-          return (
-            <span key={kind}>
-              <strong>{ideaKindNames[kind]}</strong>
-              {rated.length
-                ? `${useful} of ${rated.length} rated useful`
-                : "No ratings yet"}
-            </span>
-          );
-        })}
-      </div>
-    </details>
   );
 }

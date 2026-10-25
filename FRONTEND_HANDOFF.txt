@@ -9,8 +9,10 @@ covers the API, storage, checks and limits.
 Ideas generation also offers recent external signals: YouTube API examples or
 dated Google Search-grounded reports for the chosen platform/market/topic.
 Follow-up, trend-inspired (when evidence fits), and evergreen types show dated
-sources and coverage limits. Useful/not-useful feedback persists per idea;
-comparisons cover only the visible list. These are not native cross-platform
+sources and coverage limits. Useful/not-useful feedback persists per idea under View details.
+The simplified Ideas UI always requests three ideas, hides optional preferences
+under Customize and research options under Trend settings, and collapses card
+outlines/rationale/evidence. The usefulness-comparison UI is removed. These are not native cross-platform
 trend feeds or measured popularity-growth predictions. See docs/content-ideas.md.
 The live /api/analyses adapter, cookie authentication, accounts/settings,
 saved reports/video playback and Gemini rewrites are now implemented.

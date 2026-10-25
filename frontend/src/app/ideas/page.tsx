@@ -40,7 +40,6 @@ import {
 } from "./direction-editor";
 import styles from "./ideas.module.css";
 import {
-  FeedbackSummary,
   ResearchSummary,
   SearchSuggestions,
   TrendControls,
@@ -215,7 +214,6 @@ function MemoryPanel({
 export default function IdeasPage() {
   const { user, loading } = useAuth();
   const [platform, setPlatform] = useState<IdeaPlatform | "all">("all");
-  const [count, setCount] = useState(3);
   const [useTrends, setUseTrends] = useState(true);
   const [region, setRegion] = useState("US");
   const [trendTopic, setTrendTopic] = useState("");
@@ -445,7 +443,7 @@ export default function IdeasPage() {
       if (controller.signal.aborted) return;
       const result = await ideasApi.generate(
         platform === "all" ? null : platform,
-        count,
+        3,
         controller.signal,
         {
           use_trends: useTrends,
@@ -570,13 +568,8 @@ export default function IdeasPage() {
   return (
     <div className={`page-gutter ${styles.page}`}>
       <header className={styles.heading}>
-        <span className={styles.eyebrow}>
-          <Lightbulb size={16} /> Your next chapter
-        </span>
-        <h1>Your next post starts here.</h1>
-        <p>
-          Choose a direction. Get practical ideas inspired by your own content.
-        </p>
+        <h1>What’s your next post?</h1>
+        <p>Fresh ideas, shaped by your channel.</p>
       </header>
       {loading ? (
         <p role="status">Opening your account…</p>
@@ -616,7 +609,7 @@ export default function IdeasPage() {
               </button>
             </p>
           )}
-          {current && (
+          {current && !current.context.can_generate && (
             <section
               className={styles.historyStatus}
               aria-label="Content readiness"
@@ -675,39 +668,35 @@ export default function IdeasPage() {
               </div>
             </section>
           )}
-          {direction && (
-            <DirectionEditor
-              draft={direction.draft}
-              dirty={dirty}
-              updatedAt={direction.updatedAt}
-              disabled={controlsDisabled || !current}
-              saving={operation === "preferences"}
-              onChange={(draft) =>
-                setDirection((previous) =>
-                  previous ? { ...previous, draft } : null,
-                )
-              }
-              onSave={saveDirection}
-              onReset={() =>
-                setDirection((previous) =>
-                  previous
-                    ? { ...previous, draft: directionDraft(previous.saved) }
-                    : null,
-                )
-              }
-            />
-          )}
           <section
             className={styles.generator}
             id="generate-ideas"
             aria-labelledby="generate-heading"
           >
-            <div className={styles.sectionHeading}>
-              <div>
-                <span className={styles.eyebrow}>02 / Find your next idea</span>
-                <h2 id="generate-heading">Where are you posting?</h2>
-              </div>
-            </div>
+            <h2 id="generate-heading" className={styles.srOnly}>
+              Generate ideas
+            </h2>
+            {direction && (
+              <DirectionEditor
+                draft={direction.draft}
+                dirty={dirty}
+                disabled={controlsDisabled || !current}
+                saving={operation === "preferences"}
+                onChange={(draft) =>
+                  setDirection((previous) =>
+                    previous ? { ...previous, draft } : null,
+                  )
+                }
+                onSave={saveDirection}
+                onReset={() =>
+                  setDirection((previous) =>
+                    previous
+                      ? { ...previous, draft: directionDraft(previous.saved) }
+                      : null,
+                  )
+                }
+              />
+            )}
             <div className={styles.controls}>
               <label>
                 Platform
@@ -727,35 +716,21 @@ export default function IdeasPage() {
                   ))}
                 </select>
               </label>
-              <label>
-                Number of ideas
-                <select
-                  value={count}
-                  disabled={controlsDisabled}
-                  onChange={(event) => setCount(Number(event.target.value))}
-                >
-                  {[3, 4, 5].map((value) => (
-                    <option key={value} value={value}>
-                      {value} ideas
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <TrendControls
+                enabled={useTrends}
+                region={region}
+                topic={trendTopic}
+                suggestedTopic={
+                  current?.context.creator.niche ??
+                  current?.context.memory?.themes[0]?.label ??
+                  ""
+                }
+                disabled={controlsDisabled}
+                onEnabled={setUseTrends}
+                onRegion={setRegion}
+                onTopic={setTrendTopic}
+              />
             </div>
-            <TrendControls
-              enabled={useTrends}
-              region={region}
-              topic={trendTopic}
-              suggestedTopic={
-                current?.context.creator.niche ??
-                current?.context.memory?.themes[0]?.label ??
-                ""
-              }
-              disabled={controlsDisabled}
-              onEnabled={setUseTrends}
-              onRegion={setRegion}
-              onTopic={setTrendTopic}
-            />
             {trendTopicError && (
               <p className="error-message" role="alert">
                 Use at least two characters for the research topic, or leave it
@@ -798,7 +773,7 @@ export default function IdeasPage() {
                       ? "Check the highlighted preferences above before continuing."
                       : dirty
                         ? "One click saves your preferences, then creates ideas tailored to them."
-                        : "We’ll use your saved channel history and preferences. Memory builds automatically when needed."}
+                        : ""}
               </p>
             </div>
           </section>
@@ -808,9 +783,8 @@ export default function IdeasPage() {
               {operation === "memory"
                 ? "Building channel memory from saved text and reviews."
                 : useTrends
-                  ? "Researching recent signals and building ideas from your channel history. If no fresh evidence fits, we’ll say so."
-                  : "Building or refreshing channel memory as needed, then finding ideas for your direction."}{" "}
-              This can take a moment. Your videos are not uploaded again.
+                  ? "Finding recent inspiration and creating your ideas…"
+                  : "Creating ideas from your channel history…"}
             </p>
           )}
           {error && (
@@ -841,7 +815,7 @@ export default function IdeasPage() {
                 )}
                 <details className={styles.knowledge}>
                   <summary>
-                    <span>View channel memory &amp; sources</span>
+                    <span>Channel context</span>
                     <ChevronDown size={17} aria-hidden="true" />
                   </summary>
                   <section
@@ -862,6 +836,16 @@ export default function IdeasPage() {
                         {current.context.draft_reviews} draft reviews ·{" "}
                         {current.context.accounts.length} linked accounts
                       </p>
+                      <button
+                        className="text-link"
+                        disabled={controlsDisabled}
+                        onClick={() => {
+                          setFailure(null);
+                          setRefresh((value) => value + 1);
+                        }}
+                      >
+                        <RefreshCw size={14} /> Reload history
+                      </button>
                       <small>
                         Latest stored context:{" "}
                         {localDate(current.context.last_updated)}. Refresh
@@ -899,9 +883,6 @@ export default function IdeasPage() {
                 </details>
                 <div className={styles.resultsHeading} id="ideas-results">
                   <div>
-                    <span className={styles.eyebrow}>
-                      03 / Review your ideas
-                    </span>
                     <h2 ref={resultsHeading} tabIndex={-1}>
                       {savedOnly ? "Saved for later" : "Your ideas"}
                     </h2>
@@ -932,7 +913,6 @@ export default function IdeasPage() {
                     <Bookmark size={15} /> Saved for later
                   </button>
                 </div>
-                <FeedbackSummary ideas={current.ideas} />
                 {!current.ideas.length ? (
                   <section className={styles.resultsEmpty}>
                     {savedOnly ? (
@@ -943,13 +923,13 @@ export default function IdeasPage() {
                     <h3>
                       {savedOnly
                         ? "Keep your favorites here."
-                        : "A new idea is one click away."}
+                        : "Your next ideas will appear here."}
                     </h3>
                     <p>
                       {savedOnly
                         ? "Use Save idea on any suggestion, and you can come back to it here."
                         : current.context.can_generate
-                          ? "Choose a goal and platform above, then generate your first ideas."
+                          ? "Generate three ideas to get started."
                           : "Connect a channel or analyze two videos. Your follow-up ideas will appear here."}
                     </p>
                     {savedOnly ? (
@@ -988,101 +968,110 @@ export default function IdeasPage() {
                         </div>
                         <h2>{idea.title}</h2>
                         <blockquote>{idea.hook}</blockquote>
-                        <ol>
-                          {idea.outline.map((beat, index) => (
-                            <li key={index}>{beat}</li>
-                          ))}
-                        </ol>
-                        <section className={styles.rationale}>
-                          <h3>Why it fits your channel</h3>
-                          <p>{idea.rationale}</p>
-                        </section>
-                        {!!idea.trend_sources.length && (
+                        <details className={styles.ideaDetails}>
+                          <summary>
+                            View details{" "}
+                            <ChevronDown size={15} aria-hidden="true" />
+                          </summary>
+                          <h3 className={styles.detailLabel}>Post outline</h3>
+                          <ol>
+                            {idea.outline.map((beat, index) => (
+                              <li key={index}>{beat}</li>
+                            ))}
+                          </ol>
+                          <section className={styles.rationale}>
+                            <h3>Why it fits your channel</h3>
+                            <p>{idea.rationale}</p>
+                          </section>
+                          {!!idea.trend_sources.length && (
+                            <details className={styles.evidence}>
+                              <summary>
+                                Recent signals behind this idea (
+                                {idea.trend_sources.length})
+                              </summary>
+                              <TrendSources sources={idea.trend_sources} />
+                              {idea.trend_research?.notes.map((note) => (
+                                <p key={note}>{note}</p>
+                              ))}
+                              {idea.trend_research && (
+                                <SearchSuggestions
+                                  widgets={
+                                    idea.trend_research.search_suggestions
+                                  }
+                                />
+                              )}
+                            </details>
+                          )}
                           <details className={styles.evidence}>
                             <summary>
-                              Recent signals behind this idea (
-                              {idea.trend_sources.length})
+                              Inspired by {idea.sources.length} of your posts /
+                              reviews
                             </summary>
-                            <TrendSources sources={idea.trend_sources} />
-                            {idea.trend_research?.notes.map((note) => (
-                              <p key={note}>{note}</p>
-                            ))}
-                            {idea.trend_research && (
-                              <SearchSuggestions
-                                widgets={idea.trend_research.search_suggestions}
-                              />
+                            <p>{idea.channel_summary}</p>
+                            {idea.creator_preferences.goal && (
+                              <p>
+                                Goal when generated:{" "}
+                                {goalNames[idea.creator_preferences.goal]}.
+                              </p>
                             )}
-                          </details>
-                        )}
-                        <details className={styles.evidence}>
-                          <summary>
-                            Inspired by {idea.sources.length} of your posts /
-                            reviews
-                          </summary>
-                          <p>{idea.channel_summary}</p>
-                          {idea.creator_preferences.goal && (
-                            <p>
-                              Goal when generated:{" "}
-                              {goalNames[idea.creator_preferences.goal]}.
-                            </p>
-                          )}
-                          {idea.creator_preferences.filming_minutes != null && (
-                            <p>
-                              Filming time available:{" "}
-                              {idea.creator_preferences.filming_minutes}{" "}
-                              minutes.
-                            </p>
-                          )}
-                          {idea.memory_generated_at && (
-                            <p>
-                              Used channel memory from{" "}
-                              {localDate(idea.memory_generated_at)}.
-                            </p>
-                          )}
-                          {idea.sources.map((source) => (
-                            <Evidence key={source.id} source={source} />
-                          ))}
-                          <ul>
-                            {idea.context_warnings.map((warning) => (
-                              <li key={warning}>{warning}</li>
+                            {idea.creator_preferences.filming_minutes !=
+                              null && (
+                              <p>
+                                Filming time available:{" "}
+                                {idea.creator_preferences.filming_minutes}{" "}
+                                minutes.
+                              </p>
+                            )}
+                            {idea.memory_generated_at && (
+                              <p>
+                                Used channel memory from{" "}
+                                {localDate(idea.memory_generated_at)}.
+                              </p>
+                            )}
+                            {idea.sources.map((source) => (
+                              <Evidence key={source.id} source={source} />
                             ))}
-                          </ul>
+                            <ul>
+                              {idea.context_warnings.map((warning) => (
+                                <li key={warning}>{warning}</li>
+                              ))}
+                            </ul>
+                          </details>
+                          <div
+                            className={styles.ideaFeedback}
+                            role="group"
+                            aria-label={`Was ${idea.title} useful?`}
+                          >
+                            <span>Useful idea?</span>
+                            <button
+                              disabled={controlsDisabled}
+                              aria-pressed={idea.feedback === "useful"}
+                              onClick={() =>
+                                rateIdea(
+                                  idea,
+                                  idea.feedback === "useful" ? null : "useful",
+                                )
+                              }
+                            >
+                              <ThumbsUp size={14} /> Yes
+                            </button>
+                            <button
+                              disabled={controlsDisabled}
+                              aria-pressed={idea.feedback === "not_useful"}
+                              onClick={() =>
+                                rateIdea(
+                                  idea,
+                                  idea.feedback === "not_useful"
+                                    ? null
+                                    : "not_useful",
+                                )
+                              }
+                            >
+                              <ThumbsDown size={14} /> Not for me
+                            </button>
+                          </div>
                         </details>
-                        <div
-                          className={styles.ideaFeedback}
-                          role="group"
-                          aria-label={`Was ${idea.title} useful?`}
-                        >
-                          <span>Useful idea?</span>
-                          <button
-                            disabled={controlsDisabled}
-                            aria-pressed={idea.feedback === "useful"}
-                            onClick={() =>
-                              rateIdea(
-                                idea,
-                                idea.feedback === "useful" ? null : "useful",
-                              )
-                            }
-                          >
-                            <ThumbsUp size={14} /> Yes
-                          </button>
-                          <button
-                            disabled={controlsDisabled}
-                            aria-pressed={idea.feedback === "not_useful"}
-                            onClick={() =>
-                              rateIdea(
-                                idea,
-                                idea.feedback === "not_useful"
-                                  ? null
-                                  : "not_useful",
-                              )
-                            }
-                          >
-                            <ThumbsDown size={14} /> Not for me
-                          </button>
-                        </div>
                         <footer>
-                          <span>{localDate(idea.created_at)}</span>
                           <button
                             className="text-link"
                             disabled={controlsDisabled}
@@ -1125,8 +1114,7 @@ export default function IdeasPage() {
             )
           )}
           <p className={styles.disclaimer}>
-            AI-generated creative suggestions. Source statistics describe
-            previous posts and do not guarantee future results.
+            AI suggestions, not performance guarantees.
           </p>
         </>
       )}
