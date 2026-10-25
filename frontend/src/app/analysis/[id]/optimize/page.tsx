@@ -1,16 +1,10 @@
-import { Dashboard } from "@/components/dashboard";
+import { redirect } from "next/navigation";
+// The content optimizer was removed from reports; keep old links working.
 export default async function OptimizerPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return (
-    <Dashboard
-      key={id}
-      analysisId={id}
-      demo={id === "demo"}
-      initialView="optimizer"
-    />
-  );
+  redirect(`/analysis/${encodeURIComponent(id)}`);
 }

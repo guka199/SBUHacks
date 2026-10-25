@@ -1,33 +1,31 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   ArrowUpRight,
   ArrowLeft,
   Download,
   FileVideo,
   Loader2,
-  RefreshCw,
-  Check,
+  Sparkles,
   Play,
 } from "lucide-react";
 import {
   platforms,
   type AnalysisResult,
   type PlatformId,
-  type RewriteRequest,
-  type Suggestions,
   type PlatformResult,
 } from "@/lib/contracts";
-import { makeDemoResult, makeSuggestions } from "@/lib/demo";
-import { API_MODE, analysisApi, delay, waitForAnalysis } from "@/lib/api";
+import { makeDemoResult } from "@/lib/demo";
+import { API_MODE, analysisApi, waitForAnalysis } from "@/lib/api";
 import { timecode } from "@/lib/video";
 import { collectReview, thumbnailLeaders } from "@/lib/review";
 import { useSession } from "./session";
-import { CopyButton, PlatformIcon } from "./ui";
+import { PlatformIcon } from "./ui";
 import { useAuth } from "@/lib/auth";
 import { HookReview } from "./hook-review";
+import { FocusReview } from "./focus-review";
 
 const exampleResult = makeDemoResult({
   name: "Make something.webm",
@@ -390,10 +388,6 @@ function ThumbnailReview({ result }: { result: AnalysisResult }) {
     </section>
   );
 }
-const sameMetrics = (rows: [string, number | null][][]) =>
-  rows.every((row) => JSON.stringify(row) === JSON.stringify(rows[0]));
-
-/** One scrolling report; every finding appears once. A sticky section timeline jumps between parts. */
 function AnalysisStudio({
   result,
   videoUrl,
@@ -405,92 +399,26 @@ function AnalysisStudio({
   initialView: string;
   embedded: boolean;
 }) {
-  const [report, setReport] = useState(result);
-  const [tone, setTone] = useState<RewriteRequest["tone"]>("direct");
-  const best = result.platforms.reduce((a, b) => (a.score > b.score ? a : b));
-  const [selected, setSelected] = useState(best.id);
+  const [view, setView] = useState(
+    initialView === "insights" ? "insights" : "overview",
+  );
+  const [reviewTab, setReviewTab] = useState("moments");
+  const [momentPage, setMomentPage] = useState(0);
+  const [selected, setSelected] = useState(result.platforms[0].id);
   const [currentTime, setCurrentTime] = useState(0);
   const [selectedRange, setSelectedRange] = useState<{
     time: number;
     end: number;
   } | null>(null);
   const [mediaError, setMediaError] = useState(false);
-  const [activeObservation, setActiveObservation] = useState("");
+  const [activeObservation, setActiveObservation] = useState(
+    result.observations[0]?.id ?? "",
+  );
   const video = useRef<HTMLVideoElement>(null);
   const clipEnd = useRef<number | null>(null);
   const clipStart = useRef<number | null>(null);
-  const live = result.mode === "live";
-  const playable = !!videoUrl && !mediaError;
-  const { moments, overall } = useMemo(() => collectReview(result), [result]);
-  const metricRows = result.platforms.map((p) => metricsOf(p, live));
-  const shared = sameMetrics(metricRows) ? metricRows[0] : null;
-  const strengths = [
-    ...new Set(result.platforms.flatMap((p) => p.strengths ?? [])),
-  ];
-  const activeMoment =
-    selectedRange ?? moments.find((o) => o.id === activeObservation);
-
-  const sections = [
-    { id: "summary", label: "Summary" },
-    { id: "scores", label: "Platform scores" },
-    { id: "moments", label: "Video moments", count: moments.length },
-    { id: "opening", label: "Opening (first 5 s)" },
-    { id: "changes", label: "What to change", count: overall.length },
-    ...(result.posting ? [{ id: "posting", label: "When & where" }] : []),
-    ...(result.thumbnails?.items.length
-      ? [{ id: "thumbnails", label: "Thumbnails" }]
-      : []),
-    { id: "copy", label: "Publishing copy" },
-  ];
-  const [current, setCurrent] = useState("summary");
-  useEffect(() => {
-    // Highlight the section being read: the one crossing the upper third of the window.
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting);
-        if (visible.length)
-          setCurrent(visible[0].target.id.replace("section-", ""));
-      },
-      { rootMargin: "-25% 0px -65% 0px" },
-    );
-    document
-      .querySelectorAll(".report-sections > [id^='section-']")
-      .forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-  const motion_ = () =>
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      ? "instant"
-      : "smooth";
-  // Sections land just below the sticky chip bar on phones, near the top on desktop
-  // (the site-wide scroll padding leaves room for a header this page doesn't pin).
-  useEffect(() => {
-    const root = document.documentElement;
-    const previous = root.style.scrollPaddingTop;
-    const update = () => {
-      const nav = document.querySelector<HTMLElement>(".report-nav");
-      root.style.scrollPaddingTop = `${
-        nav && getComputedStyle(nav).top === "0px" ? nav.offsetHeight + 12 : 24
-      }px`;
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("resize", update);
-      root.style.scrollPaddingTop = previous;
-    };
-  }, []);
-  function jump(id: string) {
-    document
-      .getElementById(`section-${id}`)
-      ?.scrollIntoView({ behavior: motion_(), block: "start" });
-    setCurrent(id);
-  }
-  useEffect(() => {
-    if (initialView === "optimizer")
-      document.getElementById("section-copy")?.scrollIntoView();
-  }, [initialView]);
-
+  const active = result.platforms.find((p) => p.id === selected)!;
+  const best = result.platforms.reduce((a, b) => (a.score > b.score ? a : b));
   function seek(time: number, id?: string) {
     if (!id) {
       clipStart.current = null;
@@ -512,15 +440,40 @@ function AnalysisStudio({
     seek(o.time, o.id);
     const bounds = video.current?.getBoundingClientRect();
     if (bounds && (bounds.top < 0 || bounds.bottom > window.innerHeight))
-      video.current?.scrollIntoView({ behavior: motion_(), block: "center" });
+      video.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "center",
+      });
     void video.current
       ?.play()
       .then(() => (clipEnd.current = o.end))
       .catch(() => undefined);
   }
+  const { moments, overall: overallSuggestions } = useMemo(
+    () => collectReview(result),
+    [result],
+  );
+  const activeMoment =
+    selectedRange ?? moments.find((o) => o.id === activeObservation);
+  const reviewTabs = [
+    ["moments", "Moments that matter"],
+    ["overall", "Overall suggestions"],
+    ["opening", "Opening analysis"],
+    ["clarity", "Clarity analysis"],
+    ["pacing", "Pacing analysis"],
+  ] as const;
+  function selectMoment(o: Observation) {
+    setReviewTab("moments");
+    setMomentPage(
+      Math.floor(moments.findIndex((item) => item.id === o.id) / 3),
+    );
+    playClip(o);
+  }
   function download() {
     const url = URL.createObjectURL(
-      new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }),
+      new Blob([JSON.stringify(result, null, 2)], { type: "application/json" }),
     );
     const link = document.createElement("a");
     link.href = url;
@@ -528,20 +481,59 @@ function AnalysisStudio({
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  const metricTiles = (rows: [string, number | null][]) =>
-    rows.map(([label, value]) => (
-      <div className="metric" key={label}>
-        <span>{label}</span>
-        <strong>
-          {value ?? "—"}
-          {value !== null && <span>/100</span>}
-        </strong>
-        {value !== null && (
-          <meter min={0} max={100} value={Number(value)} aria-label={label} />
-        )}
-      </div>
-    ));
-
+  // Side navigation: jump to any part of the report, switching tabs first when needed.
+  const navItems = [
+    { id: "scores", label: "Platform scores", views: ["overview"] },
+    { id: "glance", label: "At a glance", views: ["overview"] },
+    { id: "content", label: "Content breakdown", views: ["overview"] },
+    { id: "next", label: "Your next edit", views: ["overview"] },
+    ...(result.posting
+      ? [{ id: "posting", label: "When & where", views: ["overview"] }]
+      : []),
+    ...(result.thumbnails?.items.length
+      ? [{ id: "thumbnails", label: "Thumbnails", views: ["overview"] }]
+      : []),
+    { id: "video", label: "Video review", views: ["overview", "insights"] },
+  ];
+  const [currentSection, setCurrentSection] = useState("scores");
+  const pendingSection = useRef<string | null>(null);
+  const scrollBehavior = () =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "instant"
+      : "smooth";
+  function goTo(id: string, views: string[], tab?: string) {
+    if (tab) setReviewTab(tab);
+    setCurrentSection(id);
+    if (views.includes(view))
+      document
+        .getElementById(`section-${id}`)
+        ?.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
+    else {
+      pendingSection.current = id;
+      setView(views.includes("insights") ? "insights" : views[0]);
+    }
+  }
+  useEffect(() => {
+    // After a tab switch from the side navigation, scroll to the chosen section.
+    const id = pendingSection.current;
+    pendingSection.current = null;
+    if (id)
+      document
+        .getElementById(`section-${id}`)
+        ?.scrollIntoView({ behavior: "instant", block: "start" });
+    // Highlight the section being read.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const hit = entries.find((e) => e.isIntersecting);
+        if (hit) setCurrentSection(hit.target.id.replace("section-", ""));
+      },
+      { rootMargin: "-20% 0px -70% 0px" },
+    );
+    document
+      .querySelectorAll(".results-main [id^='section-']")
+      .forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [view]);
   return (
     <div
       className={`studio-page page-gutter ${embedded ? "embedded-report" : ""}`}
@@ -578,15 +570,15 @@ function AnalysisStudio({
       <div className="demo-notice">
         <span className="status-dot" />
         <p>
-          {live ? (
-            <>
-              <strong>AI-generated estimates.</strong> Use these as creative
-              guidance, not predictions of virality.
-            </>
-          ) : (
+          {result.mode === "demo" ? (
             <>
               <strong>Demo mode.</strong> These are illustrative insights, not
               an AI analysis of your video.
+            </>
+          ) : (
+            <>
+              <strong>AI-generated estimates.</strong> Use these as creative
+              guidance, not predictions of virality.
             </>
           )}
         </p>
@@ -596,528 +588,563 @@ function AnalysisStudio({
           {warning}
         </p>
       ))}
-
-      <div className="report-body">
-        <nav className="report-nav" aria-label="Report sections">
+      <div className="studio-tabs" role="tablist" aria-label="Analysis views">
+        {[
+          ["overview", "Platform overview"],
+          ["insights", "Video insights"],
+        ].map(([id, label]) => (
+          <button
+            id={`tab-${id}`}
+            key={id}
+            role="tab"
+            aria-selected={view === id}
+            aria-controls={`panel-${id}`}
+            tabIndex={view === id ? 0 : -1}
+            onKeyDown={(event) => {
+              if (
+                ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
+              ) {
+                event.preventDefault();
+                const ids = ["overview", "insights"];
+                const index =
+                  event.key === "Home"
+                    ? 0
+                    : event.key === "End"
+                      ? 1
+                      : (ids.indexOf(view) + 1) % 2;
+                setView(ids[index]);
+                document.getElementById(`tab-${ids[index]}`)?.focus();
+              }
+            }}
+            onClick={() => setView(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="results-layout">
+        <nav className="results-nav" aria-label="Report sections">
           <ol>
-            {sections.map((s) => (
-              <li key={s.id}>
+            {navItems.map((item) => (
+              <li key={item.id}>
                 <a
-                  href={`#section-${s.id}`}
-                  aria-current={current === s.id ? "location" : undefined}
+                  href={`#section-${item.id}`}
+                  aria-current={
+                    currentSection === item.id ? "location" : undefined
+                  }
                   onClick={(event) => {
                     event.preventDefault();
-                    jump(s.id);
+                    goTo(item.id, item.views);
                   }}
                 >
-                  <span className="report-nav-dot" aria-hidden="true" />
-                  {s.label}
-                  {!!s.count && <small>{s.count}</small>}
+                  {item.label}
                 </a>
+                {item.id === "video" && (
+                  <ol>
+                    {reviewTabs.map(([id, label]) => (
+                      <li key={id}>
+                        <a
+                          href="#section-video"
+                          aria-current={
+                            currentSection === "video" && reviewTab === id
+                              ? "true"
+                              : undefined
+                          }
+                          onClick={(event) => {
+                            event.preventDefault();
+                            goTo("video", item.views, id);
+                          }}
+                        >
+                          {label}
+                        </a>
+                      </li>
+                    ))}
+                  </ol>
+                )}
               </li>
             ))}
           </ol>
         </nav>
-
-        <div className="report-sections">
-          <section id="section-summary" aria-labelledby="summary-title">
-            <h2 id="summary-title" className="sr-only">
-              Summary
-            </h2>
-            <div className="report-summary">
-              <p className="report-verdict">{result.summary}</p>
-              <div className="report-facts">
-                <div className="report-best">
-                  <span>Best fit</span>
-                  <strong>
-                    <PlatformIcon id={best.id} /> {nameOf(best.id)}
-                  </strong>
-                  <small>{best.score} / 100</small>
-                </div>
-                {shared && metricTiles(shared)}
+        <div
+          role="tabpanel"
+          id={`panel-${view}`}
+          aria-labelledby={`tab-${view}`}
+          className="results-main"
+        >
+          {view === "overview" && (
+            <>
+              <div className="comparison-heading" id="section-scores">
+                <h2>Find your strongest fit.</h2>
+                <span>
+                  {result.mode === "live"
+                    ? "Combined model + available Gemini review / 100"
+                    : "Content-readiness estimates / 100"}
+                </span>
               </div>
-            </div>
-          </section>
-
-          <section id="section-scores" aria-labelledby="scores-title">
-            <div className="section-heading">
-              <h2 id="scores-title">Platform scores</h2>
-              <span>
-                {live
-                  ? `${Math.round((best.modelWeight ?? 0.6) * 100)}% our model + ${100 - Math.round((best.modelWeight ?? 0.6) * 100)}% Gemini content review`
-                  : "Content-readiness estimates"}
-              </span>
-            </div>
-            <div className="score-grid report-scores">
-              {result.platforms.map((p, i) => (
-                <article
-                  key={p.id}
-                  className={`score-card ${best.id === p.id ? "selected" : ""}`}
-                >
-                  <div className="score-card-heading">
-                    <PlatformIcon id={p.id} />
-                    <span>{nameOf(p.id)}</span>
-                    {best.id === p.id && (
-                      <span className="best-label">
-                        {live ? "Highest estimate" : "Best fit"}
-                      </span>
-                    )}
-                  </div>
-                  <div className="score-number">
-                    {p.score}
-                    <span>/ 100</span>
-                  </div>
-                  <div className="score-track">
-                    <motion.div
-                      initial={false}
-                      animate={{ width: `${p.score}%` }}
-                      transition={{ duration: 0.6 }}
-                    />
-                  </div>
-                  <p>{p.assessment}</p>
-                  {!shared && (
-                    <p className="score-source">
-                      {metricRows[i]
-                        .map(([label, value]) => `${label} ${value ?? "—"}`)
-                        .join(" · ")}
-                    </p>
-                  )}
-                  {live && (
-                    <p className="score-source">
-                      Model {p.modelScore?.toFixed(0)} ·{" "}
-                      {p.contentScore == null
-                        ? "Gemini unavailable"
-                        : `Gemini ${p.contentScore.toFixed(0)}`}
-                    </p>
-                  )}
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section id="section-moments" aria-labelledby="moments-title">
-            <div className="section-heading">
-              <h2 id="moments-title">Video moments</h2>
-              <span>
-                {moments.length
-                  ? `${moments.length} flagged · click one to play it`
-                  : "Nothing flagged"}
-              </span>
-            </div>
-            <div className="moments-layout">
-              <div className="video-panel">
-                <div className="video-screen">
-                  {playable ? (
-                    <video
-                      ref={video}
-                      src={videoUrl!}
-                      controls
-                      playsInline
-                      preload="metadata"
-                      onError={() => setMediaError(true)}
-                      onTimeUpdate={() => {
-                        const time = video.current?.currentTime ?? 0;
-                        setCurrentTime(time);
-                        if (
-                          clipEnd.current !== null &&
-                          time >= clipEnd.current
-                        ) {
-                          clipEnd.current = null;
-                          clipStart.current = null;
-                          video.current?.pause();
-                        }
-                      }}
-                      onSeeking={() => {
-                        // A manual seek outside the clip ends clip playback.
-                        const time = video.current?.currentTime ?? 0;
-                        if (
-                          clipStart.current !== null &&
-                          clipEnd.current !== null &&
-                          (time < clipStart.current - 0.5 ||
-                            time > clipEnd.current)
-                        ) {
-                          clipStart.current = null;
-                          clipEnd.current = null;
-                        }
-                      }}
-                      aria-label="Video player"
-                    />
-                  ) : (
-                    <div className="video-unavailable">
-                      <FileVideo />
-                      <p>Video preview isn’t available.</p>
+              <div className="score-grid">
+                {result.platforms.map((p) => (
+                  <button
+                    key={p.id}
+                    className={`score-card ${selected === p.id ? "selected" : ""}`}
+                    aria-pressed={selected === p.id}
+                    onClick={() => setSelected(p.id)}
+                  >
+                    <div className="score-card-heading">
+                      <PlatformIcon id={p.id} />
+                      <span>{nameOf(p.id)}</span>
+                      {best.id === p.id && (
+                        <span className="best-label">
+                          {result.mode === "live"
+                            ? "Highest estimate"
+                            : "Best fit"}
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
-                <div className="timeline">
-                  <div className="timeline-label">
-                    <span>{timecode(currentTime)}</span>
-                    <span>{timecode(result.video.durationSeconds)}</span>
-                  </div>
-                  {activeMoment && (
-                    <div
-                      className="timeline-selection"
-                      aria-hidden="true"
-                      style={{
-                        left: `${(activeMoment.time / result.video.durationSeconds) * 100}%`,
-                        width: `${Math.max(0.5, ((activeMoment.end - activeMoment.time) / result.video.durationSeconds) * 100)}%`,
-                      }}
-                    />
-                  )}
-                  <input
-                    aria-label="Seek video"
-                    type="range"
-                    min={0}
-                    max={result.video.durationSeconds}
-                    step={0.1}
-                    value={currentTime}
-                    disabled={!playable}
-                    onChange={(event) => seek(Number(event.target.value))}
-                  />
-                  <div className="timeline-observations">
-                    {moments.map((o) => (
-                      <button
-                        key={o.id}
-                        title={`${timecode(o.time)} · ${kindLabels[o.kind]}: ${o.title}`}
-                        aria-label={`Play ${timecode(o.time)} to ${timecode(o.end)}: ${o.title}`}
-                        style={{
-                          left: `${Math.min(96, (o.time / result.video.durationSeconds) * 100)}%`,
-                        }}
-                        onClick={() => playClip(o)}
-                        className={`${o.kind} ${activeObservation === o.id ? "selected" : ""}`}
-                        aria-pressed={activeObservation === o.id}
-                        disabled={!playable}
+                    <div className="score-number">
+                      {p.score}
+                      <span>/ 100</span>
+                      <ArrowUpRight size={28} />
+                    </div>
+                    <div className="score-track">
+                      <motion.div
+                        initial={false}
+                        animate={{ width: `${p.score}%` }}
+                        transition={{ duration: 0.6 }}
                       />
-                    ))}
-                  </div>
-                </div>
+                    </div>
+                    <p>{p.assessment}</p>
+                    {result.mode === "live" && (
+                      <p className="score-source">
+                        Model {p.modelScore?.toFixed(1)} ·{" "}
+                        {p.contentScore == null
+                          ? "Gemini unavailable"
+                          : `Gemini ${p.contentScore.toFixed(1)} (${Math.round((p.modelWeight ?? 0.6) * 100)}% model / ${Math.round((1 - (p.modelWeight ?? 0.6)) * 100)}% content)`}
+                      </p>
+                    )}
+                  </button>
+                ))}
               </div>
-              {moments.length ? (
-                <ol className="moment-list">
-                  {moments.map((o) => (
-                    <li
-                      key={o.id}
-                      className={activeObservation === o.id ? "active" : ""}
-                    >
-                      <button
-                        className="moment-play"
-                        disabled={!playable}
-                        onClick={() => playClip(o)}
-                        aria-label={`Play ${timecode(o.time)} to ${timecode(o.end)}`}
-                      >
-                        <Play size={13} /> {timecode(o.time)}–{timecode(o.end)}
-                      </button>
-                      <div>
+              <div className="platform-detail" id="section-glance">
+                <div>
+                  <h3>{nameOf(selected)} at a glance</h3>
+                  <p>{active.assessment}</p>
+                </div>
+                <div className="metric-group">
+                  {metricsOf(active, result.mode === "live").map(
+                    ([label, value]) => (
+                      <div className="metric" key={label}>
+                        <span>{label}</span>
                         <strong>
-                          <em className={`moment-kind ${o.kind}`}>
-                            {kindLabels[o.kind]}
-                          </em>
-                          {o.title}
+                          {value ?? "Unavailable"}
+                          {value !== null && <span>/100</span>}
                         </strong>
-                        <p>{o.detail}</p>
-                        {o.fix && (
-                          <p className="moment-fix">
-                            <ArrowUpRight size={14} /> {o.fix}
-                          </p>
+                        {value !== null && (
+                          <meter
+                            min={0}
+                            max={100}
+                            value={Number(value)}
+                            aria-label={String(label)}
+                          />
                         )}
                       </div>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="report-empty">
-                  No specific moment was flagged. Whole-video edits are in What
-                  to change.
-                </p>
-              )}
-            </div>
-          </section>
-
-          <section id="section-opening">
-            <HookReview
-              review={result.hookAnalysis}
-              playable={playable}
-              reviewed={result.platforms.some((p) => p.geminiUsed)}
-              omitEvidence
-              onPlay={(start, end, id) =>
-                playClip({
-                  id,
-                  time: start,
-                  end,
-                  kind: "improve",
-                  title: "Opening review",
-                  detail: "",
-                  fix: "",
-                })
-              }
-            />
-          </section>
-
-          <section
-            id="section-changes"
-            className="report-card"
-            aria-labelledby="changes-title"
-          >
-            <div className="section-heading">
-              <h2 id="changes-title">What to change</h2>
-              <span>For the whole video</span>
-            </div>
-            <div className="overall-grid">
-              <div>
-                <h3>Edits</h3>
-                {overall.length ? (
-                  <ol className="overall-list">
-                    {overall.map((text) => (
-                      <li key={text}>{text}</li>
-                    ))}
-                  </ol>
-                ) : (
-                  <p className="report-empty">
-                    Your edits are the flagged moments above.
-                  </p>
-                )}
+                    ),
+                  )}
+                </div>
               </div>
-              {strengths.length > 0 && (
-                <div>
-                  <h3>What works</h3>
-                  <ul className="post-strengths">
-                    {strengths.map((text) => (
-                      <li key={text}>
-                        <Check size={15} /> {text}
+              <div className="comparison-details">
+                <section
+                  id="section-content"
+                  className="comparison-chart"
+                  aria-label="Platform comparison chart"
+                >
+                  <h3>
+                    {result.mode === "live"
+                      ? "The content behind the score."
+                      : "The same idea, through four lenses."}
+                  </h3>
+                  <p>
+                    {result.mode === "live"
+                      ? "Gemini's hook, visual quality and clarity ratings, judged by each platform's own norms: how fast its viewers decide, how the video fits its player, and whether they watch with sound."
+                      : "Hook, pacing and format fit, compared on a 100-point scale."}
+                  </p>
+                  <div className="chart-legend">
+                    <span>Hook</span>
+                    <span>
+                      {result.mode === "live" ? "Visual quality" : "Pacing"}
+                    </span>
+                    <span>{result.mode === "live" ? "Clarity" : "Format"}</span>
+                  </div>
+                  {result.platforms.map((p) => (
+                    <div className="comparison-chart-row" key={p.id}>
+                      <strong>{nameOf(p.id)}</strong>
+                      <div>
+                        {metricsOf(p, result.mode === "live").map(
+                          ([label, value], i) => (
+                            <div
+                              key={label}
+                              className={`comparison-bar bar-${i}`}
+                            >
+                              {value !== null && (
+                                <span style={{ width: `${value}%` }} />
+                              )}
+                              <b>
+                                {label}: {value ?? "Unavailable"}
+                              </b>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </section>
+                <section className="platform-opportunities" id="section-next">
+                  <h3>Your next edit for {nameOf(selected)}.</h3>
+                  <ul>
+                    {active.opportunities.map((item) => (
+                      <li key={item}>
+                        <ArrowUpRight size={18} />
+                        {item}
                       </li>
                     ))}
                   </ul>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {result.posting && (
-            <section id="section-posting">
-              <PostingReview result={result} />
-            </section>
+                </section>
+              </div>
+              <div id="section-posting">
+                <PostingReview result={result} />
+              </div>
+              <div id="section-thumbnails">
+                <ThumbnailReview result={result} />
+              </div>
+            </>
           )}
-          {!!result.thumbnails?.items.length && (
-            <section id="section-thumbnails">
-              <ThumbnailReview result={result} />
-            </section>
+          {(view === "overview" || view === "insights") && (
+            <>
+              <div className="insight-grid review-workbench" id="section-video">
+                <section className="video-panel">
+                  <div className="panel-heading">
+                    <h2>The video, with perspective.</h2>
+                    <span>
+                      {result.mode === "demo"
+                        ? "Sample observations"
+                        : "AI observations"}
+                    </span>
+                  </div>
+                  <div className="video-screen">
+                    {videoUrl && !mediaError ? (
+                      <video
+                        ref={video}
+                        src={videoUrl}
+                        controls
+                        playsInline
+                        preload="metadata"
+                        onError={() => setMediaError(true)}
+                        onTimeUpdate={() => {
+                          const time = video.current?.currentTime ?? 0;
+                          setCurrentTime(time);
+                          if (
+                            clipEnd.current !== null &&
+                            time >= clipEnd.current
+                          ) {
+                            clipEnd.current = null;
+                            clipStart.current = null;
+                            video.current?.pause();
+                          }
+                        }}
+                        onSeeking={() => {
+                          // A manual seek outside the clip ends clip playback.
+                          const time = video.current?.currentTime ?? 0;
+                          if (
+                            clipStart.current !== null &&
+                            clipEnd.current !== null &&
+                            (time < clipStart.current - 0.5 ||
+                              time > clipEnd.current)
+                          ) {
+                            clipStart.current = null;
+                            clipEnd.current = null;
+                          }
+                        }}
+                        aria-label="Video insights player"
+                      />
+                    ) : (
+                      <div className="video-unavailable">
+                        <FileVideo />
+                        <p>
+                          Video preview isn’t available.
+                          <br />
+                          Your insights are still here.
+                        </p>
+                        <Link href="/upload" className="text-link">
+                          Choose a playable video
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                  <div className="timeline">
+                    <div className="timeline-label">
+                      <span>{timecode(currentTime)}</span>
+                      <span>{timecode(result.video.durationSeconds)}</span>
+                    </div>
+                    {activeMoment && (
+                      <div
+                        className="timeline-selection"
+                        aria-hidden="true"
+                        style={{
+                          left: `${(activeMoment.time / result.video.durationSeconds) * 100}%`,
+                          width: `${Math.max(0.5, ((activeMoment.end - activeMoment.time) / result.video.durationSeconds) * 100)}%`,
+                        }}
+                      />
+                    )}
+                    <input
+                      aria-label="Seek video"
+                      type="range"
+                      min={0}
+                      max={result.video.durationSeconds}
+                      step={0.1}
+                      value={currentTime}
+                      disabled={!videoUrl || mediaError}
+                      onChange={(event) => seek(Number(event.target.value))}
+                    />
+                    <div className="timeline-observations">
+                      {moments.map((o) => (
+                        <button
+                          key={o.id}
+                          title={`${timecode(o.time)} · ${kindLabels[o.kind]}: ${o.title}`}
+                          aria-label={`Play ${timecode(o.time)} to ${timecode(o.end)}: ${o.title}`}
+                          style={{
+                            left: `${Math.min(96, (o.time / result.video.durationSeconds) * 100)}%`,
+                          }}
+                          onClick={() => selectMoment(o)}
+                          className={`${o.kind} ${activeObservation === o.id ? "selected" : ""}`}
+                          aria-pressed={activeObservation === o.id}
+                          disabled={!videoUrl || mediaError}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </section>
+                <section
+                  className="observations-panel review-panel"
+                  aria-label="Video analysis and suggestions"
+                >
+                  <div
+                    className="review-tabs"
+                    role="tablist"
+                    aria-label="Review categories"
+                  >
+                    {reviewTabs.map(([id, label], index) => (
+                      <button
+                        type="button"
+                        key={id}
+                        id={`review-tab-${id}`}
+                        role="tab"
+                        aria-selected={reviewTab === id}
+                        aria-controls={`review-panel-${id}`}
+                        tabIndex={reviewTab === id ? 0 : -1}
+                        onClick={() => setReviewTab(id)}
+                        onKeyDown={(event) => {
+                          const next =
+                            event.key === "ArrowRight"
+                              ? (index + 1) % reviewTabs.length
+                              : event.key === "ArrowLeft"
+                                ? (index + reviewTabs.length - 1) %
+                                  reviewTabs.length
+                                : event.key === "Home"
+                                  ? 0
+                                  : event.key === "End"
+                                    ? reviewTabs.length - 1
+                                    : -1;
+                          if (next >= 0) {
+                            event.preventDefault();
+                            setReviewTab(reviewTabs[next][0]);
+                            document
+                              .getElementById(
+                                `review-tab-${reviewTabs[next][0]}`,
+                              )
+                              ?.focus();
+                          }
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div
+                    role="tabpanel"
+                    id={`review-panel-${reviewTab}`}
+                    aria-labelledby={`review-tab-${reviewTab}`}
+                    tabIndex={0}
+                    className="review-tab-content"
+                  >
+                    {reviewTab === "moments" && (
+                      <>
+                        <div className="panel-heading">
+                          <h2>Moments that matter.</h2>
+                          <span>{moments.length} findings</span>
+                        </div>
+                        {!moments.length && (
+                          <p>
+                            No timestamped findings in this report. See Overall
+                            suggestions for whole-video feedback.
+                          </p>
+                        )}
+                        <div className="review-moments">
+                          {moments
+                            .slice(momentPage * 3, momentPage * 3 + 3)
+                            .map((o) => (
+                              <article
+                                key={o.id}
+                                className={`review-moment ${activeObservation === o.id ? "active" : ""}`}
+                              >
+                                <div className="moment-heading">
+                                  <button
+                                    className="moment-timestamp"
+                                    disabled={!videoUrl || mediaError}
+                                    onClick={() => selectMoment(o)}
+                                  >
+                                    {timecode(o.time)}–{timecode(o.end)}
+                                  </button>
+                                  <em className={`moment-kind ${o.kind}`}>
+                                    {kindLabels[o.kind]}
+                                  </em>
+                                </div>
+                                <h3>{o.title}</h3>
+                                <p>{o.detail}</p>
+                                {o.fix && (
+                                  <p className="moment-fix">
+                                    <strong>Suggested edit:</strong> {o.fix}
+                                  </p>
+                                )}
+                                <button
+                                  className="clip-play"
+                                  disabled={!videoUrl || mediaError}
+                                  onClick={() => selectMoment(o)}
+                                >
+                                  <Play size={13} /> Watch moment
+                                </button>
+                              </article>
+                            ))}
+                        </div>
+                        {moments.length > 3 && (
+                          <nav
+                            className="moment-pagination"
+                            aria-label="More findings"
+                          >
+                            <button
+                              disabled={momentPage === 0}
+                              onClick={() => setMomentPage((p) => p - 1)}
+                            >
+                              Previous
+                            </button>
+                            <span aria-live="polite">
+                              {momentPage * 3 + 1}–
+                              {Math.min(moments.length, momentPage * 3 + 3)} of{" "}
+                              {moments.length}
+                            </span>
+                            <button
+                              disabled={(momentPage + 1) * 3 >= moments.length}
+                              onClick={() => setMomentPage((p) => p + 1)}
+                            >
+                              Next
+                            </button>
+                          </nav>
+                        )}
+                      </>
+                    )}
+                    {reviewTab === "overall" && (
+                      <>
+                        <div className="panel-heading">
+                          <h2>For the whole video.</h2>
+                          <span>
+                            {result.mode === "demo"
+                              ? "Sample review"
+                              : "AI review"}
+                          </span>
+                        </div>
+                        <div className="insight-takeaway">
+                          <Sparkles size={19} />
+                          <p>{result.summary}</p>
+                        </div>
+                        {overallSuggestions.length ? (
+                          <ol className="overall-list">
+                            {overallSuggestions.map((text) => (
+                              <li key={text}>{text}</li>
+                            ))}
+                          </ol>
+                        ) : (
+                          <p>Your specific edits are in Moments that matter.</p>
+                        )}
+                        {!!active.strengths?.length && (
+                          <details className="review-strengths">
+                            <summary>What works for {nameOf(selected)}</summary>
+                            <ul>
+                              {active.strengths.map((text) => (
+                                <li key={text}>{text}</li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
+                      </>
+                    )}
+                    {(reviewTab === "clarity" || reviewTab === "pacing") && (
+                      <FocusReview
+                        kind={reviewTab}
+                        review={
+                          reviewTab === "clarity"
+                            ? result.clarityAnalysis
+                            : result.pacingAnalysis
+                        }
+                        playable={!!videoUrl && !mediaError}
+                        reviewed={result.platforms.some((p) => p.geminiUsed)}
+                        onPlay={(start, end, id) =>
+                          playClip({
+                            id,
+                            time: start,
+                            end,
+                            kind:
+                              reviewTab === "clarity" ? "unclear" : "pacing",
+                            title:
+                              reviewTab === "clarity" ? "Clarity" : "Pacing",
+                            detail: "",
+                            fix: "",
+                          })
+                        }
+                      />
+                    )}
+                    {reviewTab === "opening" && (
+                      <HookReview
+                        review={result.hookAnalysis}
+                        playable={!!videoUrl && !mediaError}
+                        reviewed={result.platforms.some((p) => p.geminiUsed)}
+                        omitEvidence
+                        onPlay={(start, end, id) =>
+                          playClip({
+                            id,
+                            time: start,
+                            end,
+                            kind: "improve",
+                            title: "Opening review",
+                            detail: "",
+                            fix: "",
+                          })
+                        }
+                      />
+                    )}
+                  </div>
+                </section>
+              </div>
+            </>
           )}
-          <section id="section-copy">
-            <Optimizer
-              result={report}
-              selected={selected}
-              onSelect={setSelected}
-              tone={tone}
-              onTone={setTone}
-              onRewrite={(id, suggestions) =>
-                setReport((prev) => ({
-                  ...prev,
-                  platforms: prev.platforms.map((p) =>
-                    p.id === id ? { ...p, suggestions } : p,
-                  ),
-                }))
-              }
-            />
-          </section>
         </div>
       </div>
       <footer className="studio-footer">
         <span>Your creative judgment comes first.</span>
         <span>
-          {live ? "AI-generated estimates" : "Illustrative estimates"} · Not a
-          guarantee of performance
+          {result.mode === "demo"
+            ? "Illustrative estimates"
+            : "AI-generated estimates"}{" "}
+          · Not a guarantee of performance
         </span>
       </footer>
     </div>
-  );
-}
-
-function Optimizer({
-  result,
-  selected,
-  onSelect,
-  onRewrite,
-  tone,
-  onTone,
-}: {
-  result: AnalysisResult;
-  selected: PlatformId;
-  onSelect: (id: PlatformId) => void;
-  onRewrite: (id: PlatformId, suggestions: Suggestions) => void;
-  tone: RewriteRequest["tone"];
-  onTone: (tone: RewriteRequest["tone"]) => void;
-}) {
-  const reduceMotion = useReducedMotion();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const request = useRef<AbortController | null>(null);
-  useEffect(() => () => request.current?.abort(), []);
-  async function regenerate() {
-    const controller = new AbortController();
-    request.current = controller;
-    const target = selected;
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      let next: Suggestions;
-      if (result.mode === "demo") {
-        await delay(700, controller.signal);
-        next = makeSuggestions(target, tone);
-      } else
-        next = (
-          await analysisApi.rewrite(
-            result.id,
-            { platform: target, tone },
-            controller.signal,
-          )
-        ).suggestions;
-      onRewrite(target, next);
-      setNotice(
-        result.mode === "demo"
-          ? "Sample suggestions updated for this tone."
-          : "New suggestions are ready.",
-      );
-    } catch (e) {
-      if (!controller.signal.aborted)
-        setError(
-          e instanceof Error
-            ? e.message
-            : "Couldn’t generate suggestions. Try again.",
-        );
-    } finally {
-      if (!controller.signal.aborted) setBusy(false);
-    }
-  }
-  const value = result.platforms.find((p) => p.id === selected)!.suggestions;
-  const copy: [keyof Omit<Suggestions, "edits">, string][] = [
-    ["hook", "Opening hook"],
-    ["title", "Title"],
-    ["caption", "Caption"],
-    ["description", "Description"],
-    ["cta", "Call to action"],
-  ];
-  return (
-    <section className="optimizer">
-      <div className="optimizer-heading">
-        <div>
-          <h2>A little sharper. Still you.</h2>
-          <p>
-            {result.mode === "demo"
-              ? "Explore sample copy, then make it your own."
-              : "Start with AI suggestions. Keep your own voice."}
-          </p>
-        </div>
-        <div className="rewrite-controls">
-          <label htmlFor="tone">
-            Tone
-            <select
-              id="tone"
-              value={tone}
-              disabled={busy}
-              onChange={(e) => onTone(e.target.value as RewriteRequest["tone"])}
-            >
-              <option value="direct">Direct</option>
-              <option value="playful">Playful</option>
-              <option value="educational">Educational</option>
-            </select>
-          </label>
-          <button
-            className="button button-accent button-small"
-            disabled={busy}
-            onClick={regenerate}
-          >
-            {busy ? (
-              <Loader2 className="spin" size={17} />
-            ) : (
-              <RefreshCw size={17} />
-            )}
-            {busy
-              ? "Preparing…"
-              : result.mode === "demo"
-                ? "Try sample tone"
-                : value.hook
-                  ? "Regenerate"
-                  : "Generate copy"}
-          </button>
-        </div>
-      </div>
-      <div
-        className="optimizer-platforms"
-        role="group"
-        aria-label="Suggestion platform"
-      >
-        {result.platforms.map((p) => (
-          <button
-            disabled={busy}
-            aria-pressed={selected === p.id}
-            className={selected === p.id ? "active" : ""}
-            key={p.id}
-            onClick={() => {
-              onSelect(p.id);
-              setNotice("");
-            }}
-          >
-            <PlatformIcon id={p.id} size={17} />
-            {nameOf(p.id)}
-          </button>
-        ))}
-      </div>
-      {error && (
-        <p className="error-message" role="alert">
-          {error}
-        </p>
-      )}
-      <p className="rewrite-status" role="status">
-        {notice}
-      </p>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={selected}
-          initial={reduceMotion ? false : { opacity: 0.5, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0.5 }}
-          transition={{ duration: reduceMotion ? 0 : 0.18 }}
-          className="suggestion-grid"
-        >
-          {copy.map(([key, title]) => (
-            <article className={`suggestion suggestion-${key}`} key={key}>
-              <header>
-                <h3>{title}</h3>
-                {value[key] && (
-                  <CopyButton
-                    key={`${selected}-${value[key]}`}
-                    text={value[key]}
-                    label={`Copy ${title.toLowerCase()}`}
-                  />
-                )}
-              </header>
-              <p>
-                {value[key] ||
-                  "Choose a tone and generate publishing copy from your review."}
-              </p>
-            </article>
-          ))}
-          <article className="suggestion edits">
-            <header>
-              <h3>In the edit</h3>
-              <CopyButton
-                text={value.edits.join("\n")}
-                label="Copy editing recommendations"
-              />
-            </header>
-            <ul>
-              {value.edits.map((edit) => (
-                <li key={edit}>
-                  <Check size={16} />
-                  {edit}
-                </li>
-              ))}
-            </ul>
-          </article>
-        </motion.div>
-      </AnimatePresence>
-    </section>
   );
 }

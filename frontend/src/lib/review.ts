@@ -7,29 +7,13 @@ const normalized = (text: string) =>
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
 
-/** Share of the shorter span covered by both spans (0-1). */
-function overlap(
-  a: { time: number; end: number },
-  b: { time: number; end: number },
-) {
-  const shared = Math.min(a.end, b.end) - Math.max(a.time, b.time);
-  const shorter = Math.max(Math.min(a.end - a.time, b.end - b.time), 0.1);
-  return Math.max(shared, 0) / shorter;
-}
-const clock = (text: string) =>
-  [...text.matchAll(/\b(\d{1,2}):(\d{2})\b/g)].map(
-    ([, m, s]) => Number(m) * 60 + Number(s),
-  );
-
 // Conservative equivalence: same observation or fix in the same time span.
-// Different edits at the same timestamp remain separate findings. The opening
-// review's evidence is a second look at the same video, so evidence that mostly
-// overlaps an existing finding is folded into it instead of listed again.
+// Different edits at the same timestamp remain separate findings.
 export function collectReview(result: AnalysisResult) {
   const moments: Moment[] = [];
-  const observations = result.observations.map((o) => ({ ...o }));
-  const evidence: Moment[] = (result.hookAnalysis?.evidence ?? [])
-    .map((item, index) => ({
+  const candidates: Moment[] = [
+    ...result.observations,
+    ...(result.hookAnalysis?.evidence ?? []).map((item, index) => ({
       id: `hook-evidence-${index}`,
       time: item.start,
       end: item.end,
@@ -37,13 +21,8 @@ export function collectReview(result: AnalysisResult) {
       title: "Opening improvement",
       detail: item.observation,
       fix: item.edit,
-    }))
-    .filter((item) => {
-      const covering = observations.find((o) => overlap(o, item) >= 0.5);
-      if (covering && !covering.fix && item.fix) covering.fix = item.fix;
-      return !covering;
-    });
-  const candidates: Moment[] = [...observations, ...evidence];
+    })),
+  ];
   for (const item of candidates) {
     const existing = moments.find(
       (other) =>
@@ -69,20 +48,9 @@ export function collectReview(result: AnalysisResult) {
   const suggestions = result.overallSuggestions?.length
     ? result.overallSuggestions
     : result.platforms.flatMap((platform) => platform.opportunities);
-  // A whole-video edit that names a time inside a flagged moment repeats that moment's fix.
-  const coveredByMoment = (text: string) =>
-    clock(text).some((t) =>
-      moments.some((m) => t >= m.time - 0.5 && t <= m.end + 0.5),
-    );
   const overall = suggestions.filter((text) => {
     const key = normalized(text);
-    if (
-      !key ||
-      seen.has(key) ||
-      timestampText.has(key) ||
-      coveredByMoment(text)
-    )
-      return false;
+    if (!key || seen.has(key) || timestampText.has(key)) return false;
     seen.add(key);
     return true;
   });
