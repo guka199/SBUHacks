@@ -2,6 +2,8 @@
 
 A cinematic creator studio for SBUHacks. An automatic desktop loop shows the problem; six connected scroll scenes demonstrate video analysis, platform fit, optimization and a unified dashboard. The red/yellow identity continues through the app.
 
+For new frontend work, follow [UI/UX guidelines](UI_UX_GUIDELINES.md). This includes the user's preservation rules and a dated skill-installation audit; earlier skill-usage notes below describe historical work rather than the current installed catalog.
+
 ## Start the frontend
 
 Requires Node.js 22+ and npm. From this frontend/ directory:

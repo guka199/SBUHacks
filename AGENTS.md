@@ -3,6 +3,8 @@
 Read this before making changes. It is the single source of truth for every teammate's AI assistant
 (Claude Code, Cursor, Copilot, Codex, ...). When a decision changes, update this file in the same PR.
 
+Frontend UI work must follow `frontend/UI_UX_GUIDELINES.md` and `frontend/AGENTS.md`: preserve the approved red/yellow identity, typography, homepage animations and existing backend behavior; reuse current tokens/components, keep one primary page scrollbar and verify desktop/mobile layouts. The guidelines include the current dated audit of requested skills, separate from historical usage claims.
+
 ## Project
 
 **PostPilot** — SBUHacks 2026 hackathon project (24h). One place for content creators and business pages to:
